@@ -10,7 +10,8 @@ async function getQueryFunction() {
 }
 
 import Anthropic from '@anthropic-ai/sdk';
-import { Agent } from 'magnitude-core';
+import { startBrowserAgent } from 'magnitude-core';
+import { z } from 'zod';
 import { IntentSpec } from '../flows/types';
 import { validateIntentSpec, sanitizeIntentSpec } from './intent-spec-validator';
 import { serializeRecording } from './recording-serializer';
@@ -34,42 +35,65 @@ function getAnthropicClient(): Anthropic {
   return anthropicClient;
 }
 
-// Initialize Magnitude agent with proper model configuration
-let magnitudeAgent: Agent | null = null;
+// Magnitude agent singleton
+let magnitudeAgent: any = null;
 
-function getMagnitudeAgent(): Agent {
+async function getMagnitudeAgent() {
   if (!magnitudeAgent) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is required');
+      throw new Error('ANTHROPIC_API_KEY environment variable is required for Magnitude');
     }
-    
-    magnitudeAgent = new Agent({
+
+    // Initialize Magnitude with proper model configuration
+    // Using array format for multiple model configurations
+    magnitudeAgent = await startBrowserAgent({
       llm: [
         {
-          provider: 'anthropic',
+          provider: 'anthropic' as const,
           options: {
-            model: SONNET_MODEL,
-            apiKey,
-            temperature: 0.3
+            model: SONNET_MODEL, // claude-sonnet-4-20250514
+            apiKey: apiKey,
+            temperature: 0.2,
+            maxTokens: 1500,
+            system: 'You operate a browser. Be concise, deterministic, and prefer role/label selectors.'
           },
-          roles: ['act']
+          roles: ['act'] as const
         },
         {
-          provider: 'anthropic',
+          provider: 'anthropic' as const,
           options: {
-            model: OPUS_MODEL,
-            apiKey,
-            temperature: 0.1
+            model: OPUS_MODEL, // claude-opus-4-1-20250805
+            apiKey: apiKey,
+            temperature: 0,
+            maxTokens: 1200,
+            system: 'Return only JSON that matches the provided schema. No extra text.'
           },
-          roles: ['extract', 'query']
+          roles: ['extract'] as const
+        },
+        {
+          provider: 'anthropic' as const,
+          options: {
+            model: OPUS_MODEL, // claude-opus-4-1-20250805
+            apiKey: apiKey,
+            temperature: 0.3,
+            maxTokens: 1200,
+            system: 'You are a planner/arbiter. Respond with short, strict JSON when asked.'
+          },
+          roles: ['query'] as const
         }
       ],
-      telemetry: false
-    });
+      browser: { 
+        launchOptions: { 
+          headless: true // Set to false for debugging
+        } 
+      },
+      narration: { level: 'silent' } // Set to 'normal' for debugging
+    } as any);
   }
   return magnitudeAgent;
 }
+
 
 // Interfaces
 interface AnalysisRequest {
@@ -205,61 +229,106 @@ REQUIRED OUTPUT FORMAT:
   "params": ["PARAM1", "PARAM2"],
   "steps": [
     {
-      "action": "click|type|select|wait|navigate|scroll|hover|press|clear",
-      "selector": "CSS selector or element identifier",
-      "value": "Value to type or {{PARAM}} for variables",
-      "description": "What this step does"
+      "name": "Step name describing the action",
+      "ai_instruction": "Natural language instruction for AI to execute",
+      "snippet": "await page.click('selector'); // Playwright code snippet",
+      "prefer": "snippet",
+      "fallback": "ai",
+      "selector": "CSS selector (optional)",
+      "value": "{{PARAM}} or static value (optional)"
     }
   ],
-  "successCheck": "Selector to verify successful completion (optional)"
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
 }
 
 IMPORTANT RULES:
-1. Use "selector" field (not "target")
-2. Replace dynamic values with {{PARAM_NAME}} and list in params array
-3. Common dynamic values: usernames, passwords, email addresses, dates, IDs
-4. Use descriptive parameter names: {{USERNAME}}, {{PASSWORD}}, {{EMAIL}}, {{SEARCH_TERM}}
-5. action must be one of: click, type, select, wait, navigate, scroll, hover, press, clear
-6. Each step needs action and selector at minimum
-7. Only include "value" if the action requires input (type, select)
-8. Make selectors robust (prefer IDs, then data attributes, then classes)
+1. Each step MUST have: name, ai_instruction, snippet, prefer, fallback
+2. ALWAYS set prefer to "ai" for all steps - AI should be tried first
+3. ALWAYS set fallback to "snippet" for all steps - use snippet if AI fails
+4. snippet should be valid Playwright code
+5. Replace dynamic values with {{PARAM_NAME}} and list in params array
+6. Common dynamic values: usernames, passwords, email addresses, dates, IDs
+7. Use descriptive parameter names: {{USERNAME}}, {{PASSWORD}}, {{EMAIL}}, {{SEARCH_TERM}}
+8. ai_instruction should be clear natural language instructions
+9. Make selectors robust (prefer IDs, then data attributes, then classes)
+10. preferences MUST have dynamic_elements and simple_steps (set both to "ai")
 
 EXAMPLE OUTPUT:
 {
-  "name": "Login Flow",
-  "description": "Automated login process",
-  "url": "https://example.com/login",
-  "params": ["USERNAME", "PASSWORD"],
+  "name": "Zoho Inventory Login",
+  "description": "Automated login process for Zoho Inventory",
+  "url": "https://inventory.zoho.com/",
+  "params": ["EMAIL", "PASSWORD"],
   "steps": [
     {
-      "action": "click",
-      "selector": "input[placeholder='Email']",
-      "description": "Click email field"
+      "name": "Navigate to Google",
+      "ai_instruction": "Navigate to Google search page",
+      "snippet": "await page.goto('https://www.google.com/');",
+      "prefer": "ai",
+      "fallback": "snippet"
     },
     {
-      "action": "type",
-      "selector": "input[placeholder='Email']",
-      "value": "{{USERNAME}}",
-      "description": "Enter username"
+      "name": "Search for Zoho Inventory",
+      "ai_instruction": "Search for 'zoho inventory' in the search box",
+      "snippet": "await page.fill('textarea[name=\"q\"]', 'zoho inventory'); await page.press('textarea[name=\"q\"]', 'Enter');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "value": "zoho inventory"
     },
     {
-      "action": "click",
-      "selector": "input[type='password']",
-      "description": "Click password field"
+      "name": "Click Zoho Inventory link",
+      "ai_instruction": "Click on the Zoho Inventory official website link",
+      "snippet": "await page.click('a[href*=\"zoho.com/inventory\"]');",
+      "prefer": "ai",
+      "fallback": "snippet"
     },
     {
-      "action": "type",
-      "selector": "input[type='password']",
-      "value": "{{PASSWORD}}",
-      "description": "Enter password"
+      "name": "Click Sign In",
+      "ai_instruction": "Click the Sign In button",
+      "snippet": "await page.click('a:has-text(\"Sign In\")');",
+      "prefer": "ai",
+      "fallback": "snippet"
     },
     {
-      "action": "click",
-      "selector": "button[type='submit']",
-      "description": "Click login button"
+      "name": "Enter email",
+      "ai_instruction": "Enter email address in the email field",
+      "snippet": "await page.fill('input[id=\"login_id\"]', '{{EMAIL}}');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "selector": "input[id=\"login_id\"]",
+      "value": "{{EMAIL}}"
+    },
+    {
+      "name": "Click Next",
+      "ai_instruction": "Click the Next button",
+      "snippet": "await page.click('button[id=\"nextbtn\"]');",
+      "prefer": "ai",
+      "fallback": "snippet"
+    },
+    {
+      "name": "Enter password",
+      "ai_instruction": "Enter password in the password field",
+      "snippet": "await page.fill('input[id=\"password\"]', '{{PASSWORD}}');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "selector": "input[id=\"password\"]",
+      "value": "{{PASSWORD}}"
+    },
+    {
+      "name": "Click Sign In to complete login",
+      "ai_instruction": "Click the Sign In button to complete login",
+      "snippet": "await page.click('button[id=\"nextbtn\"]');",
+      "prefer": "ai",
+      "fallback": "snippet"
     }
   ],
-  "successCheck": ".dashboard, .user-profile, [data-testid='dashboard']"
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "ai"
+  }
 }
 
 RECORDING DATA:
@@ -373,7 +442,7 @@ ${JSON.stringify(signals, null, 2)}`;
  */
 export async function executeMagnitudeAct(context: string, action: any): Promise<ActResponse> {
   try {
-    const agent = getMagnitudeAgent();
+    const agent = await getMagnitudeAgent();
     
     const instruction = `Analyze and reason about the following browser automation action in the given context.
 
@@ -393,13 +462,11 @@ Provide reasoning about:
 4. The best approach to execute this action`;
 
     // Use Magnitude agent with Sonnet 4 for act operations
-    await agent.act(instruction);
+    const result = await agent.act(instruction);
     
-    // Since agent.act() doesn't return a value, we'll create a successful response
-    // The actual action execution is handled by the MagnitudeExecutor
     return {
       action: 'Action reasoning completed',
-      result: 'Magnitude agent has analyzed the action and provided guidance',
+      result: result || 'Magnitude agent has analyzed the action and provided guidance',
       success: true
     };
   } catch (error) {
@@ -485,7 +552,7 @@ Return the extracted data as JSON.`;
  */
 export async function executeMagnitudeQuery(html: string, query: string): Promise<any> {
   try {
-    const agent = getMagnitudeAgent();
+    const agent = await getMagnitudeAgent();
     
     const extractionQuery = `Extract data based on this query from the provided HTML content.
 
@@ -511,12 +578,56 @@ Instructions:
       confidence: z.number().optional().describe('Confidence level (0-1) in the extraction')
     });
 
-    const result = await agent.query(extractionQuery, schema);
+    const result = await agent.extract(extractionQuery, schema);
     
     // Return the extracted data
     return result.data || result;
   } catch (error) {
     throw new Error(`Magnitude query failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Execute Magnitude decision using Opus 4.1 for decision making
+ * This function uses agent.query() for decision-making operations
+ */
+export async function executeMagnitudeDecision(context: string, options: any): Promise<{ choice: string; confidence: number; rationale: string }> {
+  try {
+    const agent = await getMagnitudeAgent();
+    
+    const decisionQuery = `Make a decision based on the provided context and options.
+
+Context:
+${context}
+
+Options:
+${JSON.stringify(options, null, 2)}
+
+Instructions:
+- Analyze the context and available options
+- Make a reasoned decision based on the information provided
+- Return your choice with confidence level and rationale
+- Consider factors like reliability, efficiency, and appropriateness`;
+
+    // Import zod for schema definition
+    const { z } = await import('zod');
+    
+    // Define a zod schema for decision response
+    const schema = z.object({
+      choice: z.string().describe('The chosen option'),
+      confidence: z.number().min(0).max(1).describe('Confidence level (0-1) in the decision'),
+      rationale: z.string().describe('Brief explanation of the decision reasoning')
+    });
+
+    const result = await agent.query(decisionQuery, schema);
+    
+    return {
+      choice: result.choice,
+      confidence: result.confidence,
+      rationale: result.rationale
+    };
+  } catch (error) {
+    throw new Error(`Magnitude decision failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

@@ -1,0 +1,76 @@
+{
+  "name": "Zoho Inventory Login",
+  "description": "Automated login process for Zoho Inventory through Google search",
+  "url": "https://www.google.com/",
+  "params": [
+    "EMAIL",
+    "PASSWORD"
+  ],
+  "steps": [
+    {
+      "name": "Navigate to Google",
+      "ai_instruction": "Navigate to Google search page",
+      "snippet": "await page.goto('https://www.google.com/');",
+      "prefer": "ai",
+      "fallback": "snippet"
+    },
+    {
+      "name": "Search for Zoho Inventory",
+      "ai_instruction": "Search for 'zoho inventory' in the search box",
+      "snippet": "await page.fill('textarea[name=\"q\"]', 'zoho inventory'); await page.press('textarea[name=\"q\"]', 'Enter');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "value": "zoho inventory"
+    },
+    {
+      "name": "Click Zoho Inventory link",
+      "ai_instruction": "Click on the Zoho Inventory official website link in search results",
+      "snippet": "await page.click('a[href*=\"inventory.zoho.com\"]');",
+      "prefer": "ai",
+      "fallback": "snippet"
+    },
+    {
+      "name": "Click Sign In",
+      "ai_instruction": "Click the Sign In button on Zoho Inventory homepage",
+      "snippet": "await page.click('a:has-text(\"Sign In\")');",
+      "prefer": "ai",
+      "fallback": "snippet"
+    },
+    {
+      "name": "Enter email",
+      "ai_instruction": "Enter email address in the email field",
+      "snippet": "await page.fill('input[type=\"email\"]', '{{EMAIL}}');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "selector": "input[type=\"email\"]",
+      "value": "{{EMAIL}}"
+    },
+    {
+      "name": "Click Next",
+      "ai_instruction": "Click the Next button after entering email",
+      "snippet": "await page.click('button:has-text(\"Next\")');",
+      "prefer": "ai",
+      "fallback": "snippet"
+    },
+    {
+      "name": "Enter password",
+      "ai_instruction": "Enter password in the password field",
+      "snippet": "await page.fill('input[type=\"password\"]', '{{PASSWORD}}');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "selector": "input[type=\"password\"]",
+      "value": "{{PASSWORD}}"
+    },
+    {
+      "name": "Click Sign In to complete login",
+      "ai_instruction": "Click the Sign In button to complete the login process",
+      "snippet": "await page.click('button:has-text(\"Sign In\")');",
+      "prefer": "ai",
+      "fallback": "snippet"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "ai"
+  }
+}
