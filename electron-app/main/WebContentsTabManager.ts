@@ -136,13 +136,19 @@ export class WebContentsTabManager extends EventEmitter {
     // Setup WebContents event handlers
     this.setupWebContentsHandlers(tab);
 
-    // Set proper user agent to avoid bot detection
-    view.webContents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
+    // Set proper user agent to avoid bot detection - use latest Chrome version
+    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    view.webContents.setUserAgent(userAgent);
+    console.log(`Set user agent for tab ${tabId}: ${userAgent}`);
 
     // Set additional headers for better Google compatibility
     view.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
       details.requestHeaders['Accept-Language'] = 'en-US,en;q=0.9';
       details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
+      details.requestHeaders['Sec-Fetch-Site'] = 'none';
+      details.requestHeaders['Sec-Fetch-Mode'] = 'navigate';
+      details.requestHeaders['Sec-Fetch-User'] = '?1';
+      details.requestHeaders['Sec-Fetch-Dest'] = 'document';
       callback({ requestHeaders: details.requestHeaders });
     });
 

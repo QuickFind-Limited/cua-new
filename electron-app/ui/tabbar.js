@@ -136,7 +136,13 @@ function addTabToUI(tab) {
         }
     });
     
-    tabsContainer.appendChild(tabElement);
+    // Insert tab before the + button (which is the last child)
+    const newTabBtn = document.getElementById('new-tab-btn');
+    if (newTabBtn && newTabBtn.parentNode === tabsContainer) {
+        tabsContainer.insertBefore(tabElement, newTabBtn);
+    } else {
+        tabsContainer.appendChild(tabElement);
+    }
 }
 
 function switchToTab(tabId) {
