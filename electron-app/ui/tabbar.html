@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <title>WebView2 Multi-Tab Browser</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Tab Bar -->
+    <div class="tab-bar" id="tab-bar">
+        <div class="tabs-container" id="tabs-container">
+            <!-- Tabs will be dynamically added here -->
+        </div>
+        <button class="new-tab-btn" id="new-tab-btn" title="New Tab">+</button>
+    </div>
+
+    <!-- Navigation Bar -->
+    <div class="nav-bar">
+        <button class="nav-btn" id="back-btn" title="Back" disabled>←</button>
+        <button class="nav-btn" id="forward-btn" title="Forward" disabled>→</button>
+        <button class="nav-btn" id="reload-btn" title="Reload">⟳</button>
+        <input type="text" class="address-bar" id="address-bar" placeholder="Enter URL or search...">
+        <button class="nav-btn" id="go-btn" title="Go">Go</button>
+        <div class="recording-controls">
+            <button class="record-btn" id="record-btn" title="Start Recording">
+                <span class="record-icon">⬤</span>
+                <span class="record-text">Record</span>
+            </button>
+            <button class="analyze-btn" id="analyze-btn" title="Analyze Recording" style="display: none;">
+                Analyze
+            </button>
+        </div>
+    </div>
+
+    <!-- Main content area managed by WebContentsView in main process -->
+
+    <!-- Variables Panel (initially hidden) -->
+    <div id="vars-panel" class="vars-panel hidden">
+        <div class="vars-panel-header">
+            <h3>Flow Variables</h3>
+            <button class="close-panel-btn" id="close-panel-btn">×</button>
+        </div>
+        <div class="vars-panel-content">
+            <div id="flow-info"></div>
+            <div id="variables-form"></div>
+            <div class="vars-panel-actions">
+                <button class="run-flow-btn" id="run-flow-btn">Run Flow</button>
+                <button class="save-flow-btn" id="save-flow-btn">Save Flow</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <span id="status-text">Ready</span>
+        <span id="tab-count" class="tab-count">0 tabs</span>
+    </div>
+
+    <!-- Load scripts -->
+    <script src="tabbar.js"></script>
+</body>
+</html>
