@@ -466,7 +466,28 @@ function updateTabDisplay(tabsData, activeId) {
         tabs.clear();
         const tabsContainer = document.getElementById('tabs-container');
         if (tabsContainer) {
+            // Save the + button before clearing
+            const newTabBtn = document.getElementById('new-tab-btn');
+            const savedBtn = newTabBtn ? newTabBtn.cloneNode(true) : null;
+            
+            // Clear all tabs
             tabsContainer.innerHTML = '';
+            
+            // Always ensure + button exists
+            if (savedBtn) {
+                tabsContainer.appendChild(savedBtn);
+                // Re-attach event listener since cloneNode doesn't copy listeners
+                savedBtn.addEventListener('click', () => createNewTab());
+            } else {
+                // Create + button if it doesn't exist
+                const plusBtn = document.createElement('button');
+                plusBtn.className = 'new-tab-btn';
+                plusBtn.id = 'new-tab-btn';
+                plusBtn.title = 'New Tab';
+                plusBtn.textContent = '+';
+                plusBtn.addEventListener('click', () => createNewTab());
+                tabsContainer.appendChild(plusBtn);
+            }
         }
         
         tabsData.forEach(tabData => {

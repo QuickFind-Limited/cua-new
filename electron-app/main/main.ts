@@ -9,6 +9,12 @@ let tabManager: WebContentsTabManager | null = null;
 // WebContentsView is used for tab management - enable remote debugging for Playwright CDP
 app.commandLine.appendSwitch('remote-debugging-port', '9222');
 
+// Disable automation detection to avoid Google bot detection
+app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor,TranslateUI');
+app.commandLine.appendSwitch('exclude-switches', 'enable-automation');
+app.commandLine.appendSwitch('disable-automation');
+
 function createWindow(): void {
   // Create the browser window
   mainWindow = new BrowserWindow({

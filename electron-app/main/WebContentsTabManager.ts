@@ -118,7 +118,11 @@ export class WebContentsTabManager extends EventEmitter {
         preload: this.preloadPath,
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: false
+        sandbox: false,
+        // Additional settings to avoid automation detection
+        webSecurity: true,
+        allowRunningInsecureContent: false,
+        experimentalFeatures: false
       }
     });
 
@@ -254,25 +258,61 @@ export class WebContentsTabManager extends EventEmitter {
   }
 
   /**
-   * Go back in tab history
+   * Go back in tab history - using webContents methods with proper checks
    */
   public async goBack(tabId: string): Promise<boolean> {
     const tab = this.tabs.get(tabId);
-    if (!tab || !tab.canGoBack) return false;
+    if (!tab) return false;
 
-    tab.view.webContents.goBack();
-    return true;
+    // Try navigationHistory API first, fallback to webContents
+    try {
+      const webContents = tab.view.webContents;
+      const canGoBack = (webContents as any).navigationHistory?.canGoBack?.() ?? webContents.canGoBack?.();
+      
+      if (!canGoBack) return false;
+
+      console.log(`Going back in tab ${tabId}`);
+      
+      if ((webContents as any).navigationHistory?.goBack) {
+        (webContents as any).navigationHistory.goBack();
+      } else if (webContents.goBack) {
+        webContents.goBack();
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error in goBack:', error);
+      return false;
+    }
   }
 
   /**
-   * Go forward in tab history
+   * Go forward in tab history - using webContents methods with proper checks
    */
   public async goForward(tabId: string): Promise<boolean> {
     const tab = this.tabs.get(tabId);
-    if (!tab || !tab.canGoForward) return false;
+    if (!tab) return false;
 
-    tab.view.webContents.goForward();
-    return true;
+    // Try navigationHistory API first, fallback to webContents
+    try {
+      const webContents = tab.view.webContents;
+      const canGoForward = (webContents as any).navigationHistory?.canGoForward?.() ?? webContents.canGoForward?.();
+      
+      if (!canGoForward) return false;
+
+      console.log(`Going forward in tab ${tabId}`);
+      
+      if ((webContents as any).navigationHistory?.goForward) {
+        (webContents as any).navigationHistory.goForward();
+      } else if (webContents.goForward) {
+        webContents.goForward();
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error in goForward:', error);
+      return false;
+    }
   }
 
   /**
@@ -319,8 +359,9 @@ export class WebContentsTabManager extends EventEmitter {
     // Navigation completed
     webContents.on('did-finish-load', () => {
       tab.isLoading = false;
-      tab.canGoBack = webContents.canGoBack();
-      tab.canGoForward = webContents.canGoForward();
+      // Use navigationHistory API with fallback for proper state tracking
+      tab.canGoBack = (webContents as any).navigationHistory?.canGoBack?.() ?? webContents.canGoBack?.() ?? false;
+      tab.canGoForward = (webContents as any).navigationHistory?.canGoForward?.() ?? webContents.canGoForward?.() ?? false;
       this.sendTabUpdate();
     });
 
@@ -333,8 +374,9 @@ export class WebContentsTabManager extends EventEmitter {
     // URL changed
     webContents.on('did-navigate', (event, url) => {
       tab.url = url;
-      tab.canGoBack = webContents.canGoBack();
-      tab.canGoForward = webContents.canGoForward();
+      // Use navigationHistory API with fallback for proper state tracking
+      tab.canGoBack = (webContents as any).navigationHistory?.canGoBack?.() ?? webContents.canGoBack?.() ?? false;
+      tab.canGoForward = (webContents as any).navigationHistory?.canGoForward?.() ?? webContents.canGoForward?.() ?? false;
       this.emit('tab-url-changed', tab.id, url);
       this.sendTabUpdate();
     });
