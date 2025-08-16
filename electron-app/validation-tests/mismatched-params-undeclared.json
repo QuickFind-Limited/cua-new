@@ -1,0 +1,20 @@
+{
+  "name": "Mismatched Parameters - Undeclared",
+  "description": "Intent Spec using parameters not declared in params array",
+  "url": "https://example.com",
+  "params": ["searchTerm"],
+  "steps": [
+    {
+      "name": "Enter Search Term",
+      "ai_instruction": "Type the search term {{searchTerm}} and username {{userName}} into the fields",
+      "snippet": "await page.fill('#search', '{{searchTerm}}'); await page.fill('#user', '{{userName}}');",
+      "prefer": "snippet",
+      "fallback": "ai",
+      "value": "{{searchTerm}} - {{userName}}"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

@@ -1,0 +1,4 @@
+ExecutionID,StepIndex,StepName,PathUsed,FallbackOccurred,Success,Duration,Error,Timestamp
+test-failed-004,0,"Navigate to admin panel",ai,false,true,1400,,2025-08-16T13:55:08.974Z
+test-failed-004,1,"Authenticate with 2FA",ai,false,false,8000,"2FA token expired - authentication timeout",2025-08-16T13:55:08.974Z
+test-failed-004,2,"Access user management",snippet,true,false,1200,"Access denied - insufficient permissions",2025-08-16T13:55:08.974Z

@@ -1,0 +1,82 @@
+{
+  "executionId": "test-mixed-002",
+  "steps": [
+    {
+      "name": "Navigate to e-commerce site",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1100,
+      "screenshot": "/screenshots/mixed-step1.png"
+    },
+    {
+      "name": "Search for product",
+      "pathUsed": "snippet",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 650,
+      "screenshot": "/screenshots/mixed-step2.png"
+    },
+    {
+      "name": "Select product from results",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1800,
+      "screenshot": "/screenshots/mixed-step3.png"
+    },
+    {
+      "name": "Add to cart",
+      "pathUsed": "snippet",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 500,
+      "screenshot": "/screenshots/mixed-step4.png"
+    },
+    {
+      "name": "Proceed to checkout",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1200,
+      "screenshot": "/screenshots/mixed-step5.png"
+    },
+    {
+      "name": "Fill shipping details",
+      "pathUsed": "snippet",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 2100,
+      "screenshot": "/screenshots/mixed-step6.png"
+    }
+  ],
+  "aiUsageCount": 3,
+  "snippetUsageCount": 3,
+  "fallbackCount": 0,
+  "screenshots": [
+    "/screenshots/mixed-step1.png",
+    "/screenshots/mixed-step2.png",
+    "/screenshots/mixed-step3.png",
+    "/screenshots/mixed-step4.png",
+    "/screenshots/mixed-step5.png",
+    "/screenshots/mixed-step6.png"
+  ],
+  "overallSuccess": true,
+  "suggestions": [
+    "Consider optimizing product selection for better AI performance"
+  ],
+  "totalDuration": 7350,
+  "successStateMatch": true,
+  "generatedAt": "2025-08-16T13:55:08.969Z",
+  "summary": {
+    "successfulSteps": 6,
+    "successRate": 100,
+    "fallbackRate": 0,
+    "aiUsageRate": 50
+  },
+  "analysis": {
+    "performanceScore": 99,
+    "reliabilityScore": 100,
+    "adaptabilityScore": 50
+  }
+}

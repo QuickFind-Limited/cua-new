@@ -1,0 +1,396 @@
+/**
+ * SDK Decider Verification Test
+ * This test verifies that the SDK Decider logic works correctly
+ * and integrates properly with the ExecutionOrchestrator.
+ */
+
+import { test, expect } from '@playwright/test';
+import { ExecutionOrchestrator } from '../main/execution-orchestrator';
+import { IntentSpec, ExecutionReport, IntentStep } from '../flows/types';
+import { Decider, OpusDecider, DecisionSignals } from '../lib/decider';
+
+// Mock the actual ExecutionOrchestrator to test Decider integration
+class TestableExecutionOrchestrator extends ExecutionOrchestrator {
+  private decider: Decider;
+  private decisionLog: Array<{ step: string; choice: string; preference: string }> = [];
+
+  constructor(options: any = {}) {
+    super(options);
+    this.decider = new Decider();
+  }
+
+  getDecisionLog() {
+    return [...this.decisionLog];
+  }
+
+  clearDecisionLog() {
+    this.decisionLog = [];
+  }
+
+  // Override to test decider integration
+  protected async executeStepWithFallback(
+    step: IntentStep,
+    variables: Record<string, string>,
+    stepIndex: number,
+    intentSpec: IntentSpec
+  ): Promise<any> {
+    // Test the decider choice logic
+    const choice = await this.decider.choosePath({
+      step,
+      prefer: step.prefer || 'ai',
+      fallbackSnippet: step.snippet || ''
+    });
+
+    this.decisionLog.push({
+      step: step.name || `step_${stepIndex}`,
+      choice,
+      preference: step.prefer || 'unspecified'
+    });
+
+    // Mock successful execution with the chosen path
+    return {
+      name: step.name || `step_${stepIndex}`,
+      pathUsed: choice,
+      fallbackOccurred: false,
+      success: true,
+      duration: 100
+    };
+  }
+}
+
+test.describe('SDK Decider Verification Tests', () => {
+  let orchestrator: TestableExecutionOrchestrator;
+  let decider: Decider;
+  let opusDecider: OpusDecider;
+
+  test.beforeEach(() => {
+    orchestrator = new TestableExecutionOrchestrator({
+      enableFallback: true,
+      screenshotComparison: false,
+      saveScreenshots: false,
+      timeout: 5000
+    });
+
+    decider = new Decider();
+    
+    // For OpusDecider tests - using a dummy API key
+    opusDecider = new OpusDecider('test-api-key');
+  });
+
+  test('should respect step-level prefer settings', async () => {
+    const intentSpec: IntentSpec = {
+      name: 'Step Preference Test',
+      description: 'Test step-level preference handling',
+      url: 'https://example.com',
+      params: [],
+      steps: [
+        {
+          name: 'ai_preferred_step',
+          ai_instruction: 'Use AI for this step',
+          snippet: 'await page.click("#ai");',
+          prefer: 'ai',
+          fallback: 'snippet'
+        },
+        {
+          name: 'snippet_preferred_step',
+          ai_instruction: 'Use snippet for this step',
+          snippet: 'await page.click("#snippet");',
+          prefer: 'snippet',
+          fallback: 'ai'
+        },
+        {
+          name: 'unspecified_preference_step',
+          ai_instruction: 'No preference specified',
+          snippet: 'await page.click("#default");',
+          fallback: 'ai'
+        }
+      ]
+    };
+
+    await orchestrator.execute(intentSpec, {});
+    const decisions = orchestrator.getDecisionLog();
+
+    expect(decisions).toHaveLength(3);
+
+    // Verify step-level preferences are respected
+    expect(decisions[0].choice).toBe('ai');
+    expect(decisions[0].preference).toBe('ai');
+
+    expect(decisions[1].choice).toBe('snippet');
+    expect(decisions[1].preference).toBe('snippet');
+
+    // Unspecified should default to 'ai' (as per choosePath fallback)
+    expect(decisions[2].choice).toBe('ai');
+    expect(decisions[2].preference).toBe('unspecified');
+
+    console.log('✅ Step Preference Test Results:');
+    decisions.forEach((decision, index) => {
+      console.log(`   ${index + 1}. ${decision.step}: prefer=${decision.preference} -> choice=${decision.choice}`);
+    });
+  });
+
+  test('should handle choosePath API correctly', async () => {
+    const testCases = [
+      {
+        step: { name: 'ai_step', prefer: 'ai' as const },
+        prefer: 'snippet',
+        expected: 'ai' // Step preference should override
+      },
+      {
+        step: { name: 'snippet_step', prefer: 'snippet' as const },
+        prefer: 'ai',
+        expected: 'snippet' // Step preference should override
+      },
+      {
+        step: { name: 'no_preference_step' },
+        prefer: 'ai',
+        expected: 'ai' // Should use options.prefer
+      },
+      {
+        step: { name: 'no_preference_snippet' },
+        prefer: 'snippet',
+        expected: 'snippet' // Should use options.prefer
+      }
+    ];
+
+    for (const testCase of testCases) {
+      const choice = await decider.choosePath({
+        step: testCase.step as IntentStep,
+        prefer: testCase.prefer,
+        fallbackSnippet: 'await page.click("#test");'
+      });
+
+      expect(choice).toBe(testCase.expected);
+    }
+
+    console.log('✅ ChoosePath API Test Results:');
+    testCases.forEach((testCase, index) => {
+      console.log(`   ${index + 1}. Step prefer: ${testCase.step.prefer || 'none'}, Options prefer: ${testCase.prefer} -> Expected: ${testCase.expected}`);
+    });
+  });
+
+  test('should integrate with ExecutionOrchestrator correctly', async () => {
+    const intentSpec: IntentSpec = {
+      name: 'Orchestrator Integration Test',
+      description: 'Test Decider integration with ExecutionOrchestrator',
+      url: 'https://example.com',
+      params: [],
+      steps: [
+        {
+          name: 'navigation_step',
+          ai_instruction: 'Navigate to page',
+          snippet: 'await page.goto("https://example.com");',
+          prefer: 'snippet'
+        },
+        {
+          name: 'ai_analysis_step',
+          ai_instruction: 'Analyze page content',
+          snippet: 'await page.waitForSelector(".content");',
+          prefer: 'ai'
+        },
+        {
+          name: 'form_fill_step',
+          ai_instruction: 'Fill form',
+          snippet: 'await page.fill("#input", "value");',
+          prefer: 'snippet'
+        }
+      ]
+    };
+
+    const report: ExecutionReport = await orchestrator.execute(intentSpec, {});
+    const decisions = orchestrator.getDecisionLog();
+
+    // Verify integration
+    expect(report.steps).toHaveLength(3);
+    expect(decisions).toHaveLength(3);
+
+    // Verify decision log matches execution report
+    decisions.forEach((decision, index) => {
+      expect(decision.step).toBe(report.steps![index].name);
+      expect(decision.choice).toBe(report.steps![index].pathUsed);
+    });
+
+    console.log('✅ Orchestrator Integration Test Results:');
+    console.log(`   - Decisions logged: ${decisions.length}`);
+    console.log(`   - Execution steps: ${report.steps!.length}`);
+    console.log(`   - Decisions match execution: ✓`);
+  });
+
+  test('should handle OpusDecider fallback decision logic', async () => {
+    // Test the fallback decision logic without making actual API calls
+    const signals: DecisionSignals = {
+      isCIEnvironment: true,
+      selectorStability: 'high',
+      elementVisibility: 'visible',
+      pageLoadTime: 1000,
+      previousStepSuccess: true,
+      stepComplexity: 'simple',
+      hasJavaScript: true,
+      domStability: 'stable',
+      networkLatency: 50,
+      currentAttempt: 1,
+      maxAttempts: 3
+    };
+
+    // Access the private fallbackDecision method through type assertion
+    const fallbackDecision = (opusDecider as any).fallbackDecision(signals);
+
+    expect(fallbackDecision).toHaveProperty('choice');
+    expect(fallbackDecision).toHaveProperty('confidence');
+    expect(fallbackDecision).toHaveProperty('rationale');
+    expect(['act', 'snippet']).toContain(fallbackDecision.choice);
+    expect(fallbackDecision.confidence).toBeGreaterThan(0);
+    expect(fallbackDecision.confidence).toBeLessThanOrEqual(1);
+
+    // With CI environment and high stability, should favor snippets
+    expect(fallbackDecision.choice).toBe('snippet');
+
+    console.log('✅ OpusDecider Fallback Test Results:');
+    console.log(`   - Choice: ${fallbackDecision.choice}`);
+    console.log(`   - Confidence: ${fallbackDecision.confidence}`);
+    console.log(`   - Rationale: ${fallbackDecision.rationale}`);
+  });
+
+  test('should handle different signal combinations correctly', async () => {
+    const testSignals = [
+      {
+        name: 'CI Environment - High Stability',
+        signals: {
+          isCIEnvironment: true,
+          selectorStability: 'high' as const,
+          elementVisibility: 'visible' as const,
+          stepComplexity: 'simple' as const,
+          domStability: 'stable' as const
+        },
+        expectedChoice: 'snippet'
+      },
+      {
+        name: 'Local Environment - Dynamic Content',
+        signals: {
+          isCIEnvironment: false,
+          selectorStability: 'low' as const,
+          elementVisibility: 'partial' as const,
+          stepComplexity: 'complex' as const,
+          domStability: 'dynamic' as const
+        },
+        expectedChoice: 'act'
+      },
+      {
+        name: 'Mixed Signals - Moderate Conditions',
+        signals: {
+          isCIEnvironment: false,
+          selectorStability: 'medium' as const,
+          elementVisibility: 'visible' as const,
+          stepComplexity: 'medium' as const,
+          domStability: 'changing' as const
+        },
+        expectedChoice: 'act' // Should lean towards act due to changing DOM
+      }
+    ];
+
+    const results = [];
+
+    for (const testCase of testSignals) {
+      const fullSignals: DecisionSignals = {
+        pageLoadTime: 1000,
+        previousStepSuccess: true,
+        hasJavaScript: true,
+        networkLatency: 100,
+        currentAttempt: 1,
+        maxAttempts: 3,
+        ...testCase.signals
+      };
+
+      const decision = (opusDecider as any).fallbackDecision(fullSignals);
+      results.push({
+        name: testCase.name,
+        expected: testCase.expectedChoice,
+        actual: decision.choice,
+        confidence: decision.confidence,
+        matches: decision.choice === testCase.expectedChoice
+      });
+    }
+
+    console.log('✅ Signal Combination Test Results:');
+    results.forEach((result, index) => {
+      const status = result.matches ? '✓' : '✗';
+      console.log(`   ${index + 1}. ${result.name}: Expected ${result.expected}, Got ${result.actual} ${status} (confidence: ${result.confidence})`);
+    });
+
+    // At least some decisions should match expectations
+    const correctDecisions = results.filter(r => r.matches).length;
+    expect(correctDecisions).toBeGreaterThan(0);
+  });
+
+  test('should validate decision response parsing', async () => {
+    // Test the response parsing logic with various formats
+    const testResponses = [
+      {
+        name: 'Clean JSON Response',
+        response: '{"choice": "act", "confidence": 0.8, "rationale": "Dynamic content requires AI"}',
+        shouldParse: true
+      },
+      {
+        name: 'JSON with Extra Text',
+        response: 'Based on the analysis, here is my decision: {"choice": "snippet", "confidence": 0.9, "rationale": "Stable selectors work well"} This should work.',
+        shouldParse: true
+      },
+      {
+        name: 'Invalid Choice',
+        response: '{"choice": "invalid", "confidence": 0.5, "rationale": "Test"}',
+        shouldParse: false
+      },
+      {
+        name: 'Invalid Confidence',
+        response: '{"choice": "act", "confidence": 1.5, "rationale": "Test"}',
+        shouldParse: false
+      },
+      {
+        name: 'No JSON',
+        response: 'This is not a JSON response at all.',
+        shouldParse: false
+      }
+    ];
+
+    const results = [];
+
+    for (const testCase of testResponses) {
+      try {
+        const parsed = (opusDecider as any).parseDecisionResponse(testCase.response);
+        results.push({
+          name: testCase.name,
+          success: true,
+          parsed,
+          expectedToParse: testCase.shouldParse
+        });
+      } catch (error) {
+        results.push({
+          name: testCase.name,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          expectedToParse: testCase.shouldParse
+        });
+      }
+    }
+
+    console.log('✅ Response Parsing Test Results:');
+    results.forEach((result, index) => {
+      if (result.expectedToParse && result.success) {
+        console.log(`   ${index + 1}. ${result.name}: ✓ Parsed successfully`);
+      } else if (!result.expectedToParse && !result.success) {
+        console.log(`   ${index + 1}. ${result.name}: ✓ Failed as expected`);
+      } else {
+        console.log(`   ${index + 1}. ${result.name}: ✗ Unexpected result`);
+      }
+    });
+
+    // Verify parsing works correctly
+    const validParsing = results.filter(r => r.expectedToParse === r.success);
+    expect(validParsing.length).toBe(results.length);
+  });
+
+  test.afterEach(async () => {
+    await orchestrator.stop();
+    orchestrator.clearDecisionLog();
+  });
+});

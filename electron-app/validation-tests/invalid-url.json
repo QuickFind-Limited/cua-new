@@ -1,0 +1,19 @@
+{
+  "name": "Invalid URL Test",
+  "description": "Intent Spec with invalid URL format",
+  "url": "not-a-valid-url",
+  "params": ["searchTerm"],
+  "steps": [
+    {
+      "name": "Click Search",
+      "ai_instruction": "Click the search button",
+      "snippet": "await page.click('#search');",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

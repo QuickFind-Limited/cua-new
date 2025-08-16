@@ -64,8 +64,7 @@ function isFlowResult(obj) {
 exports.default = {
     CLAUDE_MODELS: exports.CLAUDE_MODELS,
     DEFAULT_CONFIG: exports.DEFAULT_CONFIG,
-    isIntentSpec,
-    isIntentStep,
-    isFlowResult
+    isIntentSpec: isIntentSpec,
+    isIntentStep: isIntentStep,
+    isFlowResult: isFlowResult
 };
-//# sourceMappingURL=types.js.map

@@ -1,0 +1,13 @@
+{
+  "sessionId": "ui-test-1755356227369",
+  "startTime": 1755356227369,
+  "endTime": 1755356233040,
+  "duration": 5671,
+  "url": "https://example.com",
+  "title": "Codegen Recording",
+  "specFile": "ui-test-1755356227369-recording.spec.ts",
+  "screenshotFile": "ui-test-1755356227369-success-state.png",
+  "timestamp": "2025-08-16T14:57:13.224Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

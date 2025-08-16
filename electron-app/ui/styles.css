@@ -22,6 +22,7 @@ body {
   background: #ffffff;
   border-bottom: 1px solid #e0e0e0;
   padding: 5px;
+  padding-bottom: 2px;
   min-height: 40px;
   align-items: center;
 }
@@ -105,9 +106,9 @@ body {
   align-items: center;
   gap: 8px;
   background: #f8f8f8;
-  border-bottom: 1px solid #e0e0e0;
   padding: 8px;
-  min-height: 48px;
+  padding-bottom: 12px;
+  min-height: 52px;
 }
 
 .nav-btn {
@@ -215,6 +216,8 @@ body {
   position: relative;
   overflow: hidden;
   min-height: 0;
+  margin-top: 2px;
+  border-top: 1px solid #d0d0d0;
 }
 
 /* Variables Panel */

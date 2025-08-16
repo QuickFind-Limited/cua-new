@@ -64,6 +64,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onWebviewGoForward: (callback) => ipcRenderer.on('webview-goforward', (event, webviewId) => callback(webviewId)),
   onWebviewReload: (callback) => ipcRenderer.on('webview-reload', (event, webviewId) => callback(webviewId)),
   onTabsUpdated: (callback) => ipcRenderer.on('tabs-updated', (event, data) => callback(data)),
+  onNavigationUpdate: (callback) => ipcRenderer.on('navigation-update', (event, data) => callback(data)),
+  onTabTitleUpdate: (callback) => ipcRenderer.on('tab-title-update', (event, tabId, title) => callback(tabId, title)),
+  onTabUrlUpdate: (callback) => ipcRenderer.on('tab-url-update', (event, tabId, url) => callback(tabId, url)),
   
   // Remove tab update listeners
   removeTabsUpdatedListener: (callback) => ipcRenderer.removeListener('tabs-updated', callback),

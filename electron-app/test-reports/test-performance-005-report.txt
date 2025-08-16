@@ -1,0 +1,77 @@
+
+==============================================
+    INTENT SPEC EXECUTION REPORT
+==============================================
+Execution ID: test-performance-005
+Timestamp: 2025-08-16T13:55:08.974Z
+Duration: 1.0m
+Overall Success: ✓ PASSED
+==============================================
+
+
+EXECUTION SUMMARY
+================
+Total Steps: 4
+Successful Steps: 4
+Success Rate: 100%
+
+EXECUTION PATHS
+===============
+AI Used: 2 times (50%)
+Snippets Used: 2 times (50%)
+Fallbacks Occurred: 0 times (0%)
+
+
+STEP DETAILS
+============
+1. Load large dataset page
+   Status: ✓ AI
+   Duration: 12.0s
+   Screenshot: /screenshots/perf-step1.png
+2. Apply complex filters
+   Status: ✓ SNIPPET
+   Duration: 8.5s
+   Screenshot: /screenshots/perf-step2.png
+3. Generate report
+   Status: ✓ AI
+   Duration: 25.0s
+   Screenshot: /screenshots/perf-step3.png
+4. Download generated file
+   Status: ✓ SNIPPET
+   Duration: 15.0s
+   Screenshot: /screenshots/perf-step4.png
+
+
+USAGE ANALYSIS
+==============
+🔄 Mixed Execution Approach
+   
+   Analysis:
+   - Combination of AI (2) and snippet (2) execution
+   - Balanced approach providing both intelligence and reliability
+   - Review failed AI steps for potential improvements
+
+
+SUCCESS STATE ANALYSIS
+=====================
+✓ Success State Verified
+   
+   The final execution state matches the expected success screenshot.
+   The Intent Spec appears to be working correctly.
+   
+   Screenshots Captured: 4
+   - /screenshots/perf-step1.png
+   - /screenshots/perf-step2.png
+   - /screenshots/perf-step3.png
+   - /screenshots/perf-step4.png
+
+
+RECOMMENDATIONS
+===============
+⏱️  Long execution time - consider adding more specific selectors or optimizing wait conditions
+💡 Screenshot Analysis Suggestions:
+   - Consider optimizing data loading performance
+   - Report generation could benefit from background processing
+
+For more details, review the execution logs and screenshots.
+Consider updating the Intent Spec based on these findings.

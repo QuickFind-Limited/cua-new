@@ -1,0 +1,18 @@
+{
+  "description": "Intent Spec missing name field",
+  "url": "https://example.com",
+  "params": ["searchTerm"],
+  "steps": [
+    {
+      "name": "Click Search",
+      "ai_instruction": "Click the search button",
+      "snippet": "await page.click('#search');",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

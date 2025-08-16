@@ -1,0 +1,19 @@
+{
+  "name": "Invalid Step Bad Prefer Value",
+  "description": "Intent Spec with step having invalid prefer field",
+  "url": "https://example.com",
+  "params": ["searchTerm"],
+  "steps": [
+    {
+      "name": "Click Search",
+      "ai_instruction": "Click the search button",
+      "snippet": "await page.click('#search');",
+      "prefer": "invalid_value",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

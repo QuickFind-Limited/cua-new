@@ -128,10 +128,10 @@ function createWindow(): void {
     console.log(`[MAIN-WINDOW] [${level}] ${message}`);
   });
 
-  // Open DevTools in development
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
+  // Open DevTools in development (disabled for cleaner startup)
+  // if (process.env.NODE_ENV === 'development') {
+  //   mainWindow.webContents.openDevTools();
+  // }
 
   // Handle permission requests for WebContentsView instances
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {

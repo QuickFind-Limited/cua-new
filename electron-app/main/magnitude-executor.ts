@@ -1,8 +1,8 @@
 import { IntentSpec, IntentStep, FlowResult, FlowMetrics, ActionContext, LogEntry, ExtractionResult } from '../flows/types';
-import { executeMagnitudeAct, executeMagnitudeQuery } from './llm';
 import { PlaywrightExecutor } from './playwright-executor';
 import { FlowStorage } from './flow-storage';
 import { EventEmitter } from 'events';
+import Anthropic from '@anthropic-ai/sdk';
 
 export interface MagnitudeExecutionOptions {
   headless?: boolean;
@@ -24,9 +24,184 @@ export interface ExecutionProgress {
 }
 
 /**
+ * Magnitude Agent configuration and models
+ */
+interface MagnitudeAgentConfig {
+  act: string;      // Model for browser actions
+  extract: string;  // Model for data extraction  
+  query: string;    // Model for planning
+}
+
+/**
+ * Internal Magnitude Agent class for handling different AI operations
+ */
+class MagnitudeAgent {
+  private config: MagnitudeAgentConfig;
+  private anthropicClient: Anthropic | null = null;
+  private claudeCodeQuery: any = null;
+
+  constructor(config: MagnitudeAgentConfig) {
+    this.config = config;
+  }
+
+  private getAnthropicClient(): Anthropic {
+    if (!this.anthropicClient) {
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        throw new Error('ANTHROPIC_API_KEY environment variable is required');
+      }
+      this.anthropicClient = new Anthropic({ apiKey });
+    }
+    return this.anthropicClient;
+  }
+
+  private async getClaudeCodeQuery() {
+    if (!this.claudeCodeQuery) {
+      const claudeCode = await import('@anthropic-ai/claude-code');
+      this.claudeCodeQuery = claudeCode.query;
+    }
+    return this.claudeCodeQuery;
+  }
+
+  /**
+   * Execute action reasoning using Sonnet 4
+   */
+  async act(context: string, action: any): Promise<{ action: string; result: any; success: boolean; error?: string }> {
+    try {
+      const client = this.getAnthropicClient();
+      
+      const prompt = `Analyze and reason about the following browser automation action in the given context.
+
+Context:
+${context}
+
+Action to perform:
+- Type: ${action.action}
+- Target: ${action.target}
+- Value: ${action.value}
+${action.description ? `- Description: ${action.description}` : ''}
+
+Provide reasoning about:
+1. How to locate the target element effectively
+2. What the action should accomplish
+3. Any potential issues or considerations
+4. The best approach to execute this action
+
+Return JSON with: {"action": "reasoning and approach", "result": "guidance for execution", "success": true, "confidence": 0-100}`;
+
+      const response = await client.messages.create({
+        model: this.config.act,
+        max_tokens: 3000,
+        temperature: 0.3,
+        messages: [{ role: 'user', content: prompt }]
+      });
+
+      const content = response.content[0];
+      if (content.type !== 'text') {
+        throw new Error('Unexpected response type');
+      }
+
+      try {
+        return JSON.parse(content.text);
+      } catch {
+        return {
+          action: 'Action reasoning',
+          result: content.text,
+          success: true
+        };
+      }
+    } catch (error) {
+      return {
+        action: 'Action reasoning',
+        result: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Extract data using Opus 4.1
+   */
+  async extract(html: string, extractionGoal: string): Promise<any> {
+    const prompt = `Extract data based on this query from the provided HTML content.
+
+Query: ${extractionGoal}
+
+HTML Content:
+${html}
+
+Instructions:
+- Focus on extracting the specific information requested in the query
+- Return structured data in JSON format when possible
+- If extracting multiple items, return them as an array
+- Include confidence level if uncertain about the extraction
+- Return null if the requested information is not found
+
+Response format: Return the extracted data directly as JSON.`;
+
+    try {
+      const queryFunction = await this.getClaudeCodeQuery();
+      let result = '';
+      
+      for await (const message of queryFunction({
+        prompt,
+        options: {
+          maxTurns: 1
+        }
+      })) {
+        if (message.type === 'result' && message.subtype === 'success') {
+          result = message.result;
+        }
+      }
+
+      try {
+        return JSON.parse(result);
+      } catch {
+        return result;
+      }
+    } catch (error) {
+      throw new Error(`Data extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Process queries and planning using Opus 4.1
+   */
+  async query(queryText: string, context?: string): Promise<any> {
+    const prompt = `Answer the following query:
+
+Query: ${queryText}
+${context ? `Context: ${context}` : ''}
+
+Return JSON: {"answer": "detailed answer", "sources": ["source1"], "confidence": 0-100}`;
+
+    try {
+      const queryFunction = await this.getClaudeCodeQuery();
+      let result = '';
+      
+      for await (const message of queryFunction({
+        prompt,
+        options: {
+          maxTurns: 1
+        }
+      })) {
+        if (message.type === 'result' && message.subtype === 'success') {
+          result = message.result;
+        }
+      }
+
+      return JSON.parse(result);
+    } catch (error) {
+      throw new Error(`Query failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+}
+
+/**
  * Main class for executing Intent Specs using hybrid model approach
  * - Uses Sonnet 4 for 'act' operations (reasoning about actions)
- * - Uses Opus 4.1 for 'query' operations (data extraction)
+ * - Uses Opus 4.1 for 'extract' and 'query' operations (data extraction and planning)
  * - Orchestrates Playwright for browser automation
  */
 export class MagnitudeExecutor extends EventEmitter {
@@ -35,6 +210,7 @@ export class MagnitudeExecutor extends EventEmitter {
   private metrics: FlowMetrics;
   private logs: LogEntry[] = [];
   private currentContext: ActionContext | null = null;
+  private magnitudeAgent: MagnitudeAgent;
 
   constructor(options: MagnitudeExecutionOptions = {}) {
     super();
@@ -44,6 +220,13 @@ export class MagnitudeExecutor extends EventEmitter {
       saveScreenshots: options.saveScreenshots ?? true
     });
     this.flowStorage = new FlowStorage();
+    
+    // Initialize Magnitude agent with specified models
+    this.magnitudeAgent = new MagnitudeAgent({
+      act: 'claude-sonnet-4-20250514',      // Sonnet 4 for browser actions
+      extract: 'claude-opus-4-1-20250805',  // Opus 4.1 for data extraction
+      query: 'claude-opus-4-1-20250805'     // Opus 4.1 for planning
+    });
     
     this.metrics = {
       startTime: new Date(),
@@ -184,7 +367,7 @@ export class MagnitudeExecutor extends EventEmitter {
     // 1. Use Sonnet 4 for reasoning about the action
     this.log('debug', 'Using Sonnet 4 for action reasoning...');
     const context = await this.getCurrentPageContext();
-    const actionReasoning = await executeMagnitudeAct(context, step);
+    const actionReasoning = await this.magnitudeAgent.act(context, step);
     this.metrics.llmCalls.act++;
 
     this.log('debug', `Action reasoning: ${actionReasoning.action}`);
@@ -221,7 +404,7 @@ export class MagnitudeExecutor extends EventEmitter {
       } as ExecutionProgress);
 
       const pageContent = await this.playwrightExecutor.getPageContent();
-      const extractedResult = await executeMagnitudeQuery(pageContent.html, (step as any).extract);
+      const extractedResult = await this.magnitudeAgent.extract(pageContent.html, (step as any).extract);
       this.metrics.llmCalls.query++;
 
       extractedData[`step_${stepIndex + 1}`] = extractedResult;
@@ -266,9 +449,9 @@ export class MagnitudeExecutor extends EventEmitter {
       const pageContent = await this.playwrightExecutor.getPageContent();
       
       // Use Opus 4.1 for verification
-      const verificationResult = await executeMagnitudeQuery(
-        pageContent.html, 
-        `Verify if this condition is met: ${processedCheck}. Return {"success": true/false, "reason": "explanation"}`
+      const verificationResult = await this.magnitudeAgent.query(
+        `Verify if this condition is met: ${processedCheck}. Return {"success": true/false, "reason": "explanation"}`,
+        pageContent.html
       );
       this.metrics.llmCalls.query++;
 

@@ -1,0 +1,16 @@
+{
+  "name": "Invalid Preferences - Not Object",
+  "description": "Intent Spec with preferences as string instead of object",
+  "url": "https://example.com",
+  "params": ["searchTerm"],
+  "steps": [
+    {
+      "name": "Click Search",
+      "ai_instruction": "Click the search button",
+      "snippet": "await page.click('#search');",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": "this should be an object"
+}

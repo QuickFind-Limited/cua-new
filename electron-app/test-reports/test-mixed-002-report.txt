@@ -1,0 +1,85 @@
+
+==============================================
+    INTENT SPEC EXECUTION REPORT
+==============================================
+Execution ID: test-mixed-002
+Timestamp: 2025-08-16T13:55:08.968Z
+Duration: 7.3s
+Overall Success: ✓ PASSED
+==============================================
+
+
+EXECUTION SUMMARY
+================
+Total Steps: 6
+Successful Steps: 6
+Success Rate: 100%
+
+EXECUTION PATHS
+===============
+AI Used: 3 times (50%)
+Snippets Used: 3 times (50%)
+Fallbacks Occurred: 0 times (0%)
+
+
+STEP DETAILS
+============
+1. Navigate to e-commerce site
+   Status: ✓ AI
+   Duration: 1.1s
+   Screenshot: /screenshots/mixed-step1.png
+2. Search for product
+   Status: ✓ SNIPPET
+   Duration: 650ms
+   Screenshot: /screenshots/mixed-step2.png
+3. Select product from results
+   Status: ✓ AI
+   Duration: 1.8s
+   Screenshot: /screenshots/mixed-step3.png
+4. Add to cart
+   Status: ✓ SNIPPET
+   Duration: 500ms
+   Screenshot: /screenshots/mixed-step4.png
+5. Proceed to checkout
+   Status: ✓ AI
+   Duration: 1.2s
+   Screenshot: /screenshots/mixed-step5.png
+6. Fill shipping details
+   Status: ✓ SNIPPET
+   Duration: 2.1s
+   Screenshot: /screenshots/mixed-step6.png
+
+
+USAGE ANALYSIS
+==============
+🔄 Mixed Execution Approach
+   
+   Analysis:
+   - Combination of AI (3) and snippet (3) execution
+   - Balanced approach providing both intelligence and reliability
+   - Review failed AI steps for potential improvements
+
+
+SUCCESS STATE ANALYSIS
+=====================
+✓ Success State Verified
+   
+   The final execution state matches the expected success screenshot.
+   The Intent Spec appears to be working correctly.
+   
+   Screenshots Captured: 6
+   - /screenshots/mixed-step1.png
+   - /screenshots/mixed-step2.png
+   - /screenshots/mixed-step3.png
+   - /screenshots/mixed-step4.png
+   - /screenshots/mixed-step5.png
+   - /screenshots/mixed-step6.png
+
+
+RECOMMENDATIONS
+===============
+💡 Screenshot Analysis Suggestions:
+   - Consider optimizing product selection for better AI performance
+
+For more details, review the execution logs and screenshots.
+Consider updating the Intent Spec based on these findings.

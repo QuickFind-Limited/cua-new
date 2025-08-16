@@ -1,0 +1,30 @@
+{
+  "name": "Generated from test-session-1755352118167-recording.spec.ts",
+  "description": "Intent spec generated from Playwright recording",
+  "url": "https://example.com",
+  "params": [],
+  "steps": [
+    {
+      "name": "Navigate to https://example.com",
+      "ai_instruction": "Navigate to the page at https://example.com",
+      "snippet": "await page.goto('https://example.com');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "action": "goto",
+      "description": "Navigate to https://example.com"
+    },
+    {
+      "name": "Wait for page to load",
+      "ai_instruction": "Wait for the page to finish loading",
+      "snippet": "await page.waitForLoadState('domcontentloaded');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "action": "waitForLoad",
+      "description": "Wait for page to load"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "snippet",
+    "simple_steps": "ai"
+  }
+}

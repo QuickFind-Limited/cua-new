@@ -1,0 +1,59 @@
+{
+  "executionId": "test-failed-004",
+  "steps": [
+    {
+      "name": "Navigate to admin panel",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1400,
+      "screenshot": "/screenshots/failed-step1.png"
+    },
+    {
+      "name": "Authenticate with 2FA",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": false,
+      "duration": 8000,
+      "error": "2FA token expired - authentication timeout",
+      "screenshot": "/screenshots/failed-step2.png"
+    },
+    {
+      "name": "Access user management",
+      "pathUsed": "snippet",
+      "fallbackOccurred": true,
+      "success": false,
+      "duration": 1200,
+      "error": "Access denied - insufficient permissions",
+      "screenshot": "/screenshots/failed-step3.png"
+    }
+  ],
+  "aiUsageCount": 2,
+  "snippetUsageCount": 1,
+  "fallbackCount": 1,
+  "screenshots": [
+    "/screenshots/failed-step1.png",
+    "/screenshots/failed-step2.png",
+    "/screenshots/failed-step3.png"
+  ],
+  "overallSuccess": false,
+  "suggestions": [
+    "Implement 2FA token refresh mechanism",
+    "Add permission validation before attempting admin operations",
+    "Consider adding retry logic for authentication steps"
+  ],
+  "totalDuration": 10600,
+  "successStateMatch": false,
+  "generatedAt": "2025-08-16T13:55:08.973Z",
+  "summary": {
+    "successfulSteps": 1,
+    "successRate": 33,
+    "fallbackRate": 33,
+    "aiUsageRate": 67
+  },
+  "analysis": {
+    "performanceScore": 25,
+    "reliabilityScore": 33,
+    "adaptabilityScore": 67
+  }
+}

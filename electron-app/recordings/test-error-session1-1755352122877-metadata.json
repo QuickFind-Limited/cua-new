@@ -1,0 +1,13 @@
+{
+  "sessionId": "test-error-session1-1755352122877",
+  "startTime": 1755352122877,
+  "endTime": 1755352123708,
+  "duration": 831,
+  "url": "https://example.com",
+  "title": "Codegen Recording",
+  "specFile": "test-error-session1-1755352122877-recording.spec.ts",
+  "screenshotFile": "test-error-session1-1755352122877-success-state.png",
+  "timestamp": "2025-08-16T13:48:43.869Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

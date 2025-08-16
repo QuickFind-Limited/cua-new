@@ -1,0 +1,13 @@
+{
+  "sessionId": "test-files-1755352124871",
+  "startTime": 1755352124871,
+  "endTime": 1755352126550,
+  "duration": 1679,
+  "url": "https://httpbin.org/html",
+  "title": "Codegen Recording",
+  "specFile": "test-files-1755352124871-recording.spec.ts",
+  "screenshotFile": "test-files-1755352124871-success-state.png",
+  "timestamp": "2025-08-16T13:48:46.694Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

@@ -1,0 +1,76 @@
+{
+  "executionId": "test-fallback-003",
+  "steps": [
+    {
+      "name": "Open complex form",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1300,
+      "screenshot": "/screenshots/fallback-step1.png"
+    },
+    {
+      "name": "Fill dynamic date picker",
+      "pathUsed": "snippet",
+      "fallbackOccurred": true,
+      "success": true,
+      "duration": 2800,
+      "screenshot": "/screenshots/fallback-step2.png"
+    },
+    {
+      "name": "Handle file upload",
+      "pathUsed": "snippet",
+      "fallbackOccurred": true,
+      "success": true,
+      "duration": 3200,
+      "screenshot": "/screenshots/fallback-step3.png"
+    },
+    {
+      "name": "Submit form",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1100,
+      "screenshot": "/screenshots/fallback-step4.png"
+    },
+    {
+      "name": "Handle CAPTCHA",
+      "pathUsed": "snippet",
+      "fallbackOccurred": true,
+      "success": false,
+      "duration": 5000,
+      "error": "CAPTCHA detection failed - manual intervention required",
+      "screenshot": "/screenshots/fallback-step5.png"
+    }
+  ],
+  "aiUsageCount": 2,
+  "snippetUsageCount": 3,
+  "fallbackCount": 3,
+  "screenshots": [
+    "/screenshots/fallback-step1.png",
+    "/screenshots/fallback-step2.png",
+    "/screenshots/fallback-step3.png",
+    "/screenshots/fallback-step4.png",
+    "/screenshots/fallback-step5.png"
+  ],
+  "overallSuccess": false,
+  "suggestions": [
+    "Consider adding manual CAPTCHA handling step",
+    "Review date picker implementation for AI compatibility",
+    "File upload patterns may need optimization"
+  ],
+  "totalDuration": 13400,
+  "successStateMatch": false,
+  "generatedAt": "2025-08-16T13:55:08.972Z",
+  "summary": {
+    "successfulSteps": 4,
+    "successRate": 80,
+    "fallbackRate": 60,
+    "aiUsageRate": 40
+  },
+  "analysis": {
+    "performanceScore": 66,
+    "reliabilityScore": 80,
+    "adaptabilityScore": 53
+  }
+}

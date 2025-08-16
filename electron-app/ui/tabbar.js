@@ -5,7 +5,8 @@ let tabs = new Map();
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing tab manager...');
+    console.log('🚀 Initializing tab manager...');
+    console.log('📋 Available electronAPI methods:', Object.keys(window.electronAPI || {}));
     initializeUI();
     // Initial tab will be created by main process
 });
@@ -25,8 +26,25 @@ function initializeUI() {
     const addressBar = document.getElementById('address-bar');
     const recordBtn = document.getElementById('record-btn');
 
-    if (backBtn) backBtn.addEventListener('click', () => navigateBack());
-    if (forwardBtn) forwardBtn.addEventListener('click', () => navigateForward());
+    if (backBtn) {
+        console.log('🔙 Back button found, adding event listener');
+        backBtn.addEventListener('click', () => {
+            console.log('🔙 Back button clicked directly');
+            navigateBack();
+        });
+    } else {
+        console.error('❌ Back button not found!');
+    }
+    
+    if (forwardBtn) {
+        console.log('🔜 Forward button found, adding event listener');
+        forwardBtn.addEventListener('click', () => {
+            console.log('🔜 Forward button clicked directly');
+            navigateForward();
+        });
+    } else {
+        console.error('❌ Forward button not found!');
+    }
     if (reloadBtn) reloadBtn.addEventListener('click', () => reloadPage());
     if (goBtn) goBtn.addEventListener('click', () => navigateToUrl());
     if (recordBtn) recordBtn.addEventListener('click', () => toggleRecording());
@@ -249,15 +267,31 @@ function navigateToUrl() {
     }
 }
 
-function navigateBack() {
+async function navigateBack() {
+    console.log('🔙 Back button clicked, activeTabId:', activeTabId);
     if (window.electronAPI && activeTabId) {
-        window.electronAPI.goBack(activeTabId);
+        try {
+            const result = await window.electronAPI.goBack(activeTabId);
+            console.log('🔙 Navigation back result:', result);
+        } catch (error) {
+            console.error('❌ Navigation back error:', error);
+        }
+    } else {
+        console.error('❌ No electronAPI or activeTabId available');
     }
 }
 
-function navigateForward() {
+async function navigateForward() {
+    console.log('🔜 Forward button clicked, activeTabId:', activeTabId);
     if (window.electronAPI && activeTabId) {
-        window.electronAPI.goForward(activeTabId);
+        try {
+            const result = await window.electronAPI.goForward(activeTabId);
+            console.log('🔜 Navigation forward result:', result);
+        } catch (error) {
+            console.error('❌ Navigation forward error:', error);
+        }
+    } else {
+        console.error('❌ No electronAPI or activeTabId available');
     }
 }
 

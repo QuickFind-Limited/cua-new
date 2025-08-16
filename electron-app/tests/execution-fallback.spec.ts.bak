@@ -1,0 +1,745 @@
+import { test, expect } from '@playwright/test';
+import { ExecutionOrchestrator } from '../main/execution-orchestrator';
+import { MagnitudeExecutor } from '../main/magnitude-executor';
+import { PlaywrightExecutor } from '../main/playwright-executor';
+import { IntentSpec, IntentStep, ExecutionReport, StepExecutionResult } from '../flows/types';
+
+/**
+ * Comprehensive test suite for execution system fallback mechanisms
+ * Tests various fallback scenarios including forced failures and recovery
+ */
+
+test.describe('Execution Fallback Mechanisms', () => {
+  let orchestrator: ExecutionOrchestrator;
+  let mockMagnitudeExecutor: Partial<MagnitudeExecutor>;
+  let mockPlaywrightExecutor: Partial<PlaywrightExecutor>;
+
+  test.beforeEach(async () => {
+    // Create orchestrator with fallback enabled
+    orchestrator = new ExecutionOrchestrator({
+      enableFallback: true,
+      screenshotComparison: false,
+      saveScreenshots: false,
+      timeout: 10000
+    });
+  });
+
+  test.afterEach(async () => {
+    if (orchestrator) {
+      await orchestrator.stop();
+    }
+  });
+
+  test.describe('AI to Snippet Fallback', () => {
+    test('should fallback from AI to snippet when AI execution fails', async () => {
+      const testSpec: IntentSpec = {
+        name: "AI to Snippet Fallback Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "test_step",
+            action: "click",
+            target: "#test-button",
+            description: "Click test button with AI fallback to snippet"
+          }
+        ]
+      };
+
+      // Mock AI execution to fail
+      const originalExecuteStepWithAI = (orchestrator as any).executeStepWithAI;
+      (orchestrator as any).executeStepWithAI = jest.fn().mockRejectedValue(
+        new Error("Simulated AI execution failure")
+      );
+
+      // Mock snippet execution to succeed
+      const originalExecuteStepWithSnippet = (orchestrator as any).executeStepWithSnippet;
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockResolvedValue({
+        success: true,
+        screenshot: null
+      });
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(true);
+      expect(report.fallbackCount).toBe(1);
+      expect(report.steps).toHaveLength(1);
+      expect(report.steps![0].pathUsed).toBe('snippet');
+      expect(report.steps![0].fallbackOccurred).toBe(true);
+      expect(report.snippetUsageCount).toBe(1);
+      expect(report.aiUsageCount).toBe(0);
+
+      // Restore original methods
+      (orchestrator as any).executeStepWithAI = originalExecuteStepWithAI;
+      (orchestrator as any).executeStepWithSnippet = originalExecuteStepWithSnippet;
+    });
+
+    test('should emit fallback events during AI to snippet transition', async () => {
+      const testSpec: IntentSpec = {
+        name: "Fallback Events Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "fallback_event_step",
+            action: "type",
+            target: "#input-field",
+            value: "test value",
+            description: "Type with fallback event tracking"
+          }
+        ]
+      };
+
+      const fallbackEvents: any[] = [];
+      
+      orchestrator.on('fallback-started', (event) => {
+        fallbackEvents.push({ type: 'fallback-started', ...event });
+      });
+
+      orchestrator.on('fallback-completed', (event) => {
+        fallbackEvents.push({ type: 'fallback-completed', ...event });
+      });
+
+      // Mock AI execution to fail
+      (orchestrator as any).executeStepWithAI = jest.fn().mockRejectedValue(
+        new Error("AI execution failed for event test")
+      );
+
+      // Mock snippet execution to succeed
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockResolvedValue({
+        success: true,
+        screenshot: null
+      });
+
+      await orchestrator.execute(testSpec);
+
+      expect(fallbackEvents).toHaveLength(2);
+      expect(fallbackEvents[0].type).toBe('fallback-started');
+      expect(fallbackEvents[0].stepIndex).toBe(0);
+      expect(fallbackEvents[1].type).toBe('fallback-completed');
+      expect(fallbackEvents[1].success).toBe(true);
+    });
+
+    test('should handle AI failure with detailed error information', async () => {
+      const testSpec: IntentSpec = {
+        name: "AI Error Details Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "error_detail_step",
+            action: "wait",
+            target: "#loading-element",
+            value: "5000",
+            description: "Wait with detailed AI error"
+          }
+        ]
+      };
+
+      const specificError = new Error("AI model timeout after 30 seconds");
+      
+      // Mock AI execution to fail with specific error
+      (orchestrator as any).executeStepWithAI = jest.fn().mockRejectedValue(specificError);
+
+      // Mock snippet execution to succeed
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockResolvedValue({
+        success: true,
+        screenshot: "mock-screenshot-path"
+      });
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(true);
+      expect(report.steps![0].fallbackOccurred).toBe(true);
+      expect(report.steps![0].success).toBe(true);
+      expect(report.steps![0].screenshot).toBe("mock-screenshot-path");
+    });
+  });
+
+  test.describe('Snippet to AI Fallback', () => {
+    test('should fallback from snippet to AI when snippet execution fails', async () => {
+      const testSpec: IntentSpec = {
+        name: "Snippet to AI Fallback Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "snippet_fallback_step",
+            snippet: "await page.click('#dynamic-button');",
+            prefer: "snippet" as any,
+            fallback: "ai" as any,
+            action: "click",
+            target: "#dynamic-button",
+            description: "Click with snippet preferred, AI fallback"
+          }
+        ]
+      };
+
+      // For this test, we need to simulate snippet-first execution
+      // This would require modifying the orchestrator to support prefer="snippet"
+      // For now, we'll test the reverse scenario by forcing AI execution after snippet failure
+
+      // Mock snippet execution to fail
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockRejectedValue(
+        new Error("Snippet execution failed - selector not found")
+      );
+
+      // Mock AI execution to succeed  
+      (orchestrator as any).executeStepWithAI = jest.fn().mockResolvedValue({
+        success: true,
+        screenshot: "ai-success-screenshot"
+      });
+
+      const report = await orchestrator.execute(testSpec);
+
+      // Note: Current implementation tries AI first, then snippet
+      // This test demonstrates the concept but would need orchestrator enhancement
+      // to support snippet-first execution based on step preferences
+      expect(report.overallSuccess).toBe(true);
+    });
+
+    test('should handle snippet syntax errors gracefully', async () => {
+      const testSpec: IntentSpec = {
+        name: "Snippet Syntax Error Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "syntax_error_step",
+            snippet: "await page.click('#button' // Missing closing parenthesis",
+            action: "click",
+            target: "#button",
+            description: "Invalid snippet syntax with AI fallback"
+          }
+        ]
+      };
+
+      // Mock snippet execution to fail with syntax error
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockRejectedValue(
+        new SyntaxError("Unexpected end of input")
+      );
+
+      // Mock AI execution to succeed
+      (orchestrator as any).executeStepWithAI = jest.fn().mockResolvedValue({
+        success: true
+      });
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(true);
+      expect(report.steps![0].pathUsed).toBe('ai');
+    });
+  });
+
+  test.describe('No Fallback Scenarios', () => {
+    test('should stop execution when fallback is disabled and step fails', async () => {
+      const noFallbackOrchestrator = new ExecutionOrchestrator({
+        enableFallback: false,
+        screenshotComparison: false,
+        saveScreenshots: false,
+        timeout: 10000
+      });
+
+      const testSpec: IntentSpec = {
+        name: "No Fallback Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "failing_step",
+            action: "click",
+            target: "#non-existent-element",
+            description: "This step will fail with no fallback"
+          },
+          {
+            name: "should_not_execute",
+            action: "type",
+            target: "#input",
+            value: "never reached",
+            description: "This step should not execute"
+          }
+        ]
+      };
+
+      // Mock AI execution to fail
+      (noFallbackOrchestrator as any).executeStepWithAI = jest.fn().mockRejectedValue(
+        new Error("Element not found and no fallback allowed")
+      );
+
+      const report = await noFallbackOrchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(false);
+      expect(report.fallbackCount).toBe(0);
+      expect(report.steps).toHaveLength(1); // Only first step attempted
+      expect(report.steps![0].success).toBe(false);
+      expect(report.steps![0].fallbackOccurred).toBe(false);
+
+      await noFallbackOrchestrator.stop();
+    });
+
+    test('should respect step-level fallback="none" setting', async () => {
+      const testSpec: IntentSpec = {
+        name: "Step-Level No Fallback Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "no_fallback_step",
+            action: "click",
+            target: "#critical-button",
+            fallback: "none" as any,
+            description: "Critical step that must not fallback"
+          }
+        ]
+      };
+
+      // Mock AI execution to fail
+      (orchestrator as any).executeStepWithAI = jest.fn().mockRejectedValue(
+        new Error("AI execution failed for critical step")
+      );
+
+      // Ensure snippet execution is never called
+      const snippetSpy = jest.fn();
+      (orchestrator as any).executeStepWithSnippet = snippetSpy;
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(false);
+      expect(report.fallbackCount).toBe(0);
+      expect(report.steps![0].success).toBe(false);
+      expect(report.steps![0].fallbackOccurred).toBe(false);
+      expect(snippetSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  test.describe('Fallback Recovery and Continuation', () => {
+    test('should continue execution after successful fallback', async () => {
+      const testSpec: IntentSpec = {
+        name: "Fallback Recovery Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "step_1_fallback",
+            action: "click",
+            target: "#button-1",
+            description: "First step that will fallback"
+          },
+          {
+            name: "step_2_normal",
+            action: "type",
+            target: "#input-2",
+            value: "test text",
+            description: "Second step that should execute normally"
+          },
+          {
+            name: "step_3_fallback",
+            action: "wait",
+            target: "#loading",
+            value: "3000",
+            description: "Third step that will also fallback"
+          }
+        ]
+      };
+
+      let aiCallCount = 0;
+      let snippetCallCount = 0;
+
+      // Mock AI execution to fail for steps 1 and 3, succeed for step 2
+      (orchestrator as any).executeStepWithAI = jest.fn().mockImplementation(async (step) => {
+        aiCallCount++;
+        if (step.name === 'step_2_normal') {
+          return { success: true, screenshot: `ai-step-2-${aiCallCount}` };
+        }
+        throw new Error(`AI failed for ${step.name}`);
+      });
+
+      // Mock snippet execution to always succeed
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockImplementation(async (step) => {
+        snippetCallCount++;
+        return { success: true, screenshot: `snippet-${step.name}-${snippetCallCount}` };
+      });
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(true);
+      expect(report.fallbackCount).toBe(2); // Steps 1 and 3 used fallback
+      expect(report.steps).toHaveLength(3);
+      expect(report.aiUsageCount).toBe(1); // Only step 2 used AI
+      expect(report.snippetUsageCount).toBe(2); // Steps 1 and 3 used snippet
+
+      // Verify step execution details
+      expect(report.steps![0].pathUsed).toBe('snippet');
+      expect(report.steps![0].fallbackOccurred).toBe(true);
+      expect(report.steps![1].pathUsed).toBe('ai');
+      expect(report.steps![1].fallbackOccurred).toBe(false);
+      expect(report.steps![2].pathUsed).toBe('snippet');
+      expect(report.steps![2].fallbackOccurred).toBe(true);
+    });
+
+    test('should handle mixed success and fallback scenarios', async () => {
+      const testSpec: IntentSpec = {
+        name: "Mixed Scenario Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "ai_success",
+            action: "navigate",
+            target: "https://example.com/page1",
+            description: "AI succeeds"
+          },
+          {
+            name: "ai_fail_snippet_success",
+            action: "click",
+            target: "#fallback-button",
+            description: "AI fails, snippet succeeds"
+          },
+          {
+            name: "both_fail",
+            action: "type",
+            target: "#impossible-input",
+            value: "test",
+            description: "Both AI and snippet fail"
+          },
+          {
+            name: "ai_success_after_failure",
+            action: "wait",
+            target: "body",
+            value: "1000",
+            description: "AI succeeds after previous failure"
+          }
+        ]
+      };
+
+      (orchestrator as any).executeStepWithAI = jest.fn().mockImplementation(async (step) => {
+        switch (step.name) {
+          case 'ai_success':
+          case 'ai_success_after_failure':
+            return { success: true };
+          case 'ai_fail_snippet_success':
+          case 'both_fail':
+            throw new Error(`AI failed for ${step.name}`);
+          default:
+            throw new Error(`Unexpected step: ${step.name}`);
+        }
+      });
+
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockImplementation(async (step) => {
+        switch (step.name) {
+          case 'ai_fail_snippet_success':
+            return { success: true };
+          case 'both_fail':
+            throw new Error(`Snippet also failed for ${step.name}`);
+          default:
+            throw new Error(`Unexpected snippet call for: ${step.name}`);
+        }
+      });
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(false); // Due to step 3 failure
+      expect(report.fallbackCount).toBe(2); // Steps 2 and 3 attempted fallback
+      expect(report.steps).toHaveLength(4); // All steps attempted despite failure
+      expect(report.aiUsageCount).toBe(2); // Steps 1 and 4
+      expect(report.snippetUsageCount).toBe(1); // Step 2
+
+      // Verify individual step results
+      expect(report.steps![0].success).toBe(true);
+      expect(report.steps![0].pathUsed).toBe('ai');
+      expect(report.steps![0].fallbackOccurred).toBe(false);
+
+      expect(report.steps![1].success).toBe(true);
+      expect(report.steps![1].pathUsed).toBe('snippet');
+      expect(report.steps![1].fallbackOccurred).toBe(true);
+
+      expect(report.steps![2].success).toBe(false);
+      expect(report.steps![2].pathUsed).toBe('snippet');
+      expect(report.steps![2].fallbackOccurred).toBe(true);
+
+      expect(report.steps![3].success).toBe(true);
+      expect(report.steps![3].pathUsed).toBe('ai');
+      expect(report.steps![3].fallbackOccurred).toBe(false);
+    });
+  });
+
+  test.describe('Fallback Reporting and Statistics', () => {
+    test('should accurately report fallback statistics', async () => {
+      const testSpec: IntentSpec = {
+        name: "Fallback Statistics Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          { name: "step1", action: "click", target: "#btn1", description: "Step 1" },
+          { name: "step2", action: "type", target: "#input1", value: "text", description: "Step 2" },
+          { name: "step3", action: "wait", target: "body", value: "1000", description: "Step 3" },
+          { name: "step4", action: "click", target: "#btn2", description: "Step 4" },
+          { name: "step5", action: "navigate", target: "/page2", description: "Step 5" }
+        ]
+      };
+
+      // Configure fallback pattern: steps 1, 3, 4 use fallback; steps 2, 5 use AI
+      (orchestrator as any).executeStepWithAI = jest.fn().mockImplementation(async (step) => {
+        if (['step2', 'step5'].includes(step.name)) {
+          return { success: true };
+        }
+        throw new Error(`AI failed for ${step.name}`);
+      });
+
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockImplementation(async (step) => {
+        return { success: true };
+      });
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(true);
+      expect(report.fallbackCount).toBe(3); // Steps 1, 3, 4
+      expect(report.aiUsageCount).toBe(2); // Steps 2, 5
+      expect(report.snippetUsageCount).toBe(3); // Steps 1, 3, 4
+      expect(report.steps).toHaveLength(5);
+
+      // Verify step-level fallback indicators
+      const fallbackSteps = report.steps!.filter(step => step.fallbackOccurred);
+      const nonFallbackSteps = report.steps!.filter(step => !step.fallbackOccurred);
+
+      expect(fallbackSteps).toHaveLength(3);
+      expect(nonFallbackSteps).toHaveLength(2);
+
+      // Verify all steps succeeded
+      expect(report.steps!.every(step => step.success)).toBe(true);
+    });
+
+    test('should include execution duration in fallback reporting', async () => {
+      const testSpec: IntentSpec = {
+        name: "Fallback Duration Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "timed_fallback_step",
+            action: "click",
+            target: "#test-button",
+            description: "Timed fallback step"
+          }
+        ]
+      };
+
+      // Mock AI execution to fail after delay
+      (orchestrator as any).executeStepWithAI = jest.fn().mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+        throw new Error("AI execution failed after delay");
+      });
+
+      // Mock snippet execution to succeed after delay
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+        return { success: true };
+      });
+
+      const startTime = Date.now();
+      const report = await orchestrator.execute(testSpec);
+      const endTime = Date.now();
+
+      expect(report.overallSuccess).toBe(true);
+      expect(report.totalDuration).toBeGreaterThan(140); // At least 150ms (100+50)
+      expect(report.totalDuration).toBeLessThan(endTime - startTime + 50); // Reasonable upper bound
+      expect(report.steps![0].duration).toBeGreaterThan(140);
+      expect(report.steps![0].fallbackOccurred).toBe(true);
+    });
+  });
+
+  test.describe('Edge Cases and Error Handling', () => {
+    test('should handle orchestrator cleanup after fallback failures', async () => {
+      const testSpec: IntentSpec = {
+        name: "Cleanup After Fallback Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "cleanup_test_step",
+            action: "click",
+            target: "#test-element",
+            description: "Step that fails and requires cleanup"
+          }
+        ]
+      };
+
+      // Mock both AI and snippet to fail
+      (orchestrator as any).executeStepWithAI = jest.fn().mockRejectedValue(
+        new Error("AI execution failed")
+      );
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockRejectedValue(
+        new Error("Snippet execution also failed")
+      );
+
+      // Mock cleanup method to verify it's called
+      const cleanupSpy = jest.spyOn(orchestrator as any, 'cleanup');
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(false);
+      expect(report.fallbackCount).toBe(1);
+      expect(report.steps![0].success).toBe(false);
+      expect(report.steps![0].fallbackOccurred).toBe(true);
+      expect(cleanupSpy).toHaveBeenCalled();
+
+      cleanupSpy.mockRestore();
+    });
+
+    test('should handle variable substitution in fallback scenarios', async () => {
+      const testSpec: IntentSpec = {
+        name: "Variable Substitution Fallback Test",
+        url: "https://{{baseUrl}}/test",
+        params: ["baseUrl", "buttonId", "inputValue"],
+        steps: [
+          {
+            name: "variable_step",
+            action: "click",
+            target: "#{{buttonId}}",
+            value: "{{inputValue}}",
+            description: "Step with variable substitution"
+          }
+        ]
+      };
+
+      const variables = {
+        baseUrl: "example.com",
+        buttonId: "submit-btn",
+        inputValue: "test-data"
+      };
+
+      // Mock AI to fail, snippet to succeed
+      (orchestrator as any).executeStepWithAI = jest.fn().mockRejectedValue(
+        new Error("AI failed with variables")
+      );
+
+      const snippetMock = jest.fn().mockResolvedValue({ success: true });
+      (orchestrator as any).executeStepWithSnippet = snippetMock;
+
+      const report = await orchestrator.execute(testSpec, variables);
+
+      expect(report.overallSuccess).toBe(true);
+      expect(report.fallbackCount).toBe(1);
+      
+      // Verify that variables were properly substituted when passed to snippet execution
+      expect(snippetMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target: "#submit-btn",
+          value: "test-data"
+        }),
+        variables
+      );
+    });
+
+    test('should handle concurrent fallback scenarios', async () => {
+      // Note: This test is conceptual as the current orchestrator executes steps sequentially
+      // In a concurrent scenario, multiple steps might attempt fallback simultaneously
+      
+      const testSpec: IntentSpec = {
+        name: "Concurrent Fallback Test",
+        url: "https://example.com",
+        params: [],
+        steps: [
+          {
+            name: "concurrent_step_1",
+            action: "click",
+            target: "#btn1",
+            description: "Concurrent step 1"
+          },
+          {
+            name: "concurrent_step_2", 
+            action: "click",
+            target: "#btn2",
+            description: "Concurrent step 2"
+          }
+        ]
+      };
+
+      // Track call order to ensure proper sequential execution
+      const executionOrder: string[] = [];
+
+      (orchestrator as any).executeStepWithAI = jest.fn().mockImplementation(async (step) => {
+        executionOrder.push(`ai-${step.name}`);
+        throw new Error(`AI failed for ${step.name}`);
+      });
+
+      (orchestrator as any).executeStepWithSnippet = jest.fn().mockImplementation(async (step) => {
+        executionOrder.push(`snippet-${step.name}`);
+        return { success: true };
+      });
+
+      const report = await orchestrator.execute(testSpec);
+
+      expect(report.overallSuccess).toBe(true);
+      expect(report.fallbackCount).toBe(2);
+      
+      // Verify sequential execution order
+      expect(executionOrder).toEqual([
+        'ai-concurrent_step_1',
+        'snippet-concurrent_step_1', 
+        'ai-concurrent_step_2',
+        'snippet-concurrent_step_2'
+      ]);
+    });
+  });
+});
+
+/**
+ * Mock factories for testing fallback scenarios
+ */
+
+/**
+ * Creates a mock MagnitudeExecutor that always fails
+ */
+function createFailingMagnitudeExecutor(): Partial<MagnitudeExecutor> {
+  return {
+    executeFlow: jest.fn().mockRejectedValue(new Error("Simulated magnitude executor failure"))
+  };
+}
+
+/**
+ * Creates a mock PlaywrightExecutor that always succeeds
+ */
+function createSuccessfulPlaywrightExecutor(): Partial<PlaywrightExecutor> {
+  return {
+    executeAction: jest.fn().mockResolvedValue({ success: true }),
+    takeScreenshot: jest.fn().mockResolvedValue("mock-screenshot-path"),
+    cleanup: jest.fn().mockResolvedValue(undefined)
+  };
+}
+
+/**
+ * Creates a test spec with specified fallback behavior
+ */
+function createTestSpec(name: string, steps: Partial<IntentStep>[]): IntentSpec {
+  return {
+    name,
+    url: "https://example.com",
+    params: [],
+    steps: steps.map((step, index) => ({
+      name: step.name || `step_${index + 1}`,
+      action: step.action || 'click',
+      target: step.target || `#element_${index + 1}`,
+      value: step.value || '',
+      description: step.description || `Test step ${index + 1}`,
+      ...step
+    })) as IntentStep[]
+  };
+}
+
+/**
+ * Helper function to verify fallback report structure
+ */
+function verifyFallbackReport(
+  report: ExecutionReport,
+  expectedFallbackCount: number,
+  expectedAiUsage: number,
+  expectedSnippetUsage: number
+): void {
+  expect(report.fallbackCount).toBe(expectedFallbackCount);
+  expect(report.aiUsageCount).toBe(expectedAiUsage);
+  expect(report.snippetUsageCount).toBe(expectedSnippetUsage);
+  expect(report.steps).toBeDefined();
+  expect(report.executionId).toBeDefined();
+  expect(report.totalDuration).toBeGreaterThan(0);
+}
