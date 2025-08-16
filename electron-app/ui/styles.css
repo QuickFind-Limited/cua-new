@@ -8,8 +8,8 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #2d2d2d;
-  color: #ffffff;
+  background: #f5f5f5;
+  color: #333333;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -19,8 +19,8 @@ body {
 /* Tab Bar */
 .tab-bar {
   display: flex;
-  background: #1e1e1e;
-  border-bottom: 1px solid #3c3c3c;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
   padding: 5px;
   min-height: 40px;
   align-items: center;
@@ -36,8 +36,8 @@ body {
 .tab {
   display: flex;
   align-items: center;
-  background: #2d2d2d;
-  border: 1px solid #3c3c3c;
+  background: #f0f0f0;
+  border: 1px solid #d0d0d0;
   border-radius: 4px 4px 0 0;
   padding: 8px 12px;
   cursor: pointer;
@@ -45,12 +45,12 @@ body {
   max-width: 200px;
   height: 32px;
   font-size: 13px;
-  color: #cccccc;
+  color: #666666;
 }
 
 .tab.active {
-  background: #1e1e1e;
-  color: #ffffff;
+  background: #ffffff;
+  color: #333333;
   border-bottom-color: transparent;
 }
 
@@ -67,7 +67,7 @@ body {
   height: 16px;
   border: none;
   background: transparent;
-  color: #999;
+  color: #888;
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
@@ -83,9 +83,9 @@ body {
 .new-tab-btn {
   width: 28px;
   height: 28px;
-  border: 1px solid #3c3c3c;
-  background: #2d2d2d;
-  color: #ffffff;
+  border: 1px solid #d0d0d0;
+  background: #f0f0f0;
+  color: #333333;
   border-radius: 4px;
   cursor: pointer;
   font-size: 18px;
@@ -96,7 +96,7 @@ body {
 }
 
 .new-tab-btn:hover {
-  background: #3c3c3c;
+  background: #e0e0e0;
 }
 
 /* Navigation Bar */
@@ -104,8 +104,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #2d2d2d;
-  border-bottom: 1px solid #3c3c3c;
+  background: #f8f8f8;
+  border-bottom: 1px solid #e0e0e0;
   padding: 8px;
   min-height: 48px;
 }
@@ -113,9 +113,9 @@ body {
 .nav-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid #3c3c3c;
-  background: #1e1e1e;
-  color: #ffffff;
+  border: 1px solid #d0d0d0;
+  background: #ffffff;
+  color: #333333;
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
@@ -125,7 +125,7 @@ body {
 }
 
 .nav-btn:hover:not(:disabled) {
-  background: #3c3c3c;
+  background: #f0f0f0;
 }
 
 .nav-btn:disabled {
@@ -136,10 +136,10 @@ body {
 .address-bar {
   flex: 1;
   height: 32px;
-  background: #1e1e1e;
-  border: 1px solid #3c3c3c;
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
   border-radius: 4px;
-  color: #ffffff;
+  color: #333333;
   padding: 0 12px;
   font-size: 14px;
 }
@@ -161,16 +161,16 @@ body {
   gap: 6px;
   padding: 6px 12px;
   height: 32px;
-  background: #1e1e1e;
-  border: 1px solid #3c3c3c;
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
   border-radius: 4px;
-  color: #ffffff;
+  color: #333333;
   cursor: pointer;
   font-size: 13px;
 }
 
 .record-btn:hover {
-  background: #3c3c3c;
+  background: #f0f0f0;
 }
 
 .record-btn.recording {
@@ -211,7 +211,7 @@ body {
 /* Main content area - WebContentsView managed by main process */
 .main-content {
   flex: 1;
-  background: #1e1e1e;
+  background: #ffffff;
   position: relative;
   overflow: hidden;
   min-height: 0;
@@ -224,8 +224,8 @@ body {
   top: 0;
   width: 400px;
   height: 100%;
-  background: #2d2d2d;
-  border-left: 1px solid #3c3c3c;
+  background: #f8f8f8;
+  border-left: 1px solid #e0e0e0;
   transition: right 0.3s ease;
   z-index: 1000;
   display: flex;
@@ -241,14 +241,14 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: #1e1e1e;
-  border-bottom: 1px solid #3c3c3c;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .vars-panel-header h3 {
   margin: 0;
   font-size: 16px;
-  color: #ffffff;
+  color: #333333;
 }
 
 .close-panel-btn {
@@ -256,14 +256,14 @@ body {
   height: 24px;
   border: none;
   background: transparent;
-  color: #999;
+  color: #666;
   cursor: pointer;
   font-size: 20px;
   line-height: 1;
 }
 
 .close-panel-btn:hover {
-  color: #fff;
+  color: #333;
 }
 
 .vars-panel-content {
@@ -274,7 +274,7 @@ body {
 
 .vars-panel-actions {
   padding: 16px;
-  border-top: 1px solid #3c3c3c;
+  border-top: 1px solid #e0e0e0;
   display: flex;
   gap: 8px;
 }
@@ -299,13 +299,13 @@ body {
 }
 
 .save-flow-btn {
-  background: #1e1e1e;
-  color: #ffffff;
-  border: 1px solid #3c3c3c;
+  background: #ffffff;
+  color: #333333;
+  border: 1px solid #d0d0d0;
 }
 
 .save-flow-btn:hover {
-  background: #3c3c3c;
+  background: #f0f0f0;
 }
 
 /* Status Bar */
@@ -313,11 +313,11 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #1e1e1e;
-  border-top: 1px solid #3c3c3c;
+  background: #f8f8f8;
+  border-top: 1px solid #e0e0e0;
   padding: 4px 12px;
   font-size: 12px;
-  color: #999;
+  color: #666;
   min-height: 24px;
 }
 
@@ -335,16 +335,16 @@ body {
   margin-bottom: 4px;
   font-size: 13px;
   font-weight: 500;
-  color: #ffffff;
+  color: #333333;
 }
 
 .variable-input {
   width: 100%;
   padding: 8px 12px;
-  background: #1e1e1e;
-  border: 1px solid #3c3c3c;
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
   border-radius: 4px;
-  color: #ffffff;
+  color: #333333;
   font-size: 13px;
   transition: border-color 0.2s ease;
 }
@@ -360,13 +360,13 @@ body {
 }
 
 .variable-input::placeholder {
-  color: #666;
+  color: #999;
 }
 
 /* Flow information display */
 .flow-info {
-  background: #1e1e1e;
-  border: 1px solid #3c3c3c;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
   border-radius: 6px;
   padding: 16px;
   margin-bottom: 20px;
@@ -375,20 +375,20 @@ body {
 .flow-name {
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
+  color: #333333;
   margin-bottom: 8px;
 }
 
 .flow-description {
   font-size: 13px;
-  color: #cccccc;
+  color: #666666;
   margin-bottom: 8px;
   line-height: 1.4;
 }
 
 .flow-steps {
   font-size: 12px;
-  color: #999;
+  color: #888;
 }
 
 /* Flow steps display */

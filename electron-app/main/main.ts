@@ -62,11 +62,12 @@ app.commandLine.appendSwitch('variations-server-url', '');
 app.commandLine.appendSwitch('disable-field-trial-config');
 
 function createWindow(): void {
-  // Create the browser window
+  // Create the browser window - maximized and in foreground
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     title: 'Electron WebView2 Browser',
+    show: false, // Don't show until ready to ensure foreground appearance
     webPreferences: {
       preload: path.join(__dirname, '..', '..', 'preload.js'),
       contextIsolation: true,
@@ -84,6 +85,14 @@ function createWindow(): void {
 
   // Load the main UI (from source, not dist)
   mainWindow.loadFile(path.join(__dirname, '..', '..', 'ui', 'tabbar.html'));
+
+  // Show window maximized and bring to foreground once ready
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.maximize();
+    mainWindow?.show();
+    mainWindow?.focus();
+    mainWindow?.moveTop();
+  });
 
   // Initialize WebContentsTabManager for multi-tab support
   tabManager = new WebContentsTabManager({
