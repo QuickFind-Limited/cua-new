@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { IntentStep, ExecutionResult } from '../flows/types';
 
 export interface DecisionSignals {
   isCIEnvironment: boolean;
@@ -20,6 +21,44 @@ export interface DecisionResult {
   rationale: string;
 }
 
+// SDK Decider class that implements the exact API
+export class Decider {
+  private fallbackHandler: any; // Will be injected
+  
+  constructor(fallbackHandler?: any) {
+    this.fallbackHandler = fallbackHandler;
+  }
+
+  async choosePath(options: {
+    step: IntentStep;
+    prefer: string;
+    fallbackSnippet: string;
+  }): Promise<'ai' | 'snippet'> {
+    // Use step preference first, then options.prefer
+    const preference = options.step.prefer || options.prefer;
+    
+    // For now, return the preference directly
+    // In a more advanced implementation, this could use AI to make smarter decisions
+    return preference as 'ai' | 'snippet';
+  }
+  
+  async executeWithFallback(options: {
+    step: IntentStep;
+    context: any;
+    variables: Record<string, string>;
+  }): Promise<ExecutionResult> {
+    if (!this.fallbackHandler) {
+      throw new Error('FallbackHandler not initialized');
+    }
+    
+    return await this.fallbackHandler.executeWithFallback(
+      options.step,
+      options.variables
+    );
+  }
+}
+
+// Legacy OpusDecider for backward compatibility
 export class OpusDecider {
   private anthropic: Anthropic;
   
@@ -210,3 +249,6 @@ export async function makeDecision(
   const decider = new OpusDecider(apiKey);
   return await decider.decide(signals, context);
 }
+
+// Export the new Decider class as default
+export default Decider;

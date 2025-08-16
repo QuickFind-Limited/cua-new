@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { BrowserWindow, WebContentsView, ipcMain } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
 import { PlaywrightRecorder, RecordingSession } from './playwright-recorder';
+import { PlaywrightCodegenRecorder, CodegenRecordingSession, CodegenRecordingResult } from './playwright-codegen-recorder';
 
 // WebContentsView-based tab interface
 interface WebContentsTab {
@@ -31,7 +32,9 @@ export class WebContentsTabManager extends EventEmitter {
   private preloadPath: string;
   private readonly chromeHeight = 88; // Height of tab bar + nav bar
   private recorder: PlaywrightRecorder = new PlaywrightRecorder();
+  private codegenRecorder: PlaywrightCodegenRecorder = new PlaywrightCodegenRecorder();
   private recordingTabId: string | null = null;
+  private codegenRecordingActive = false;
 
   constructor(options: WebContentsTabManagerOptions) {
     super();
@@ -411,6 +414,80 @@ export class WebContentsTabManager extends EventEmitter {
   }
 
   /**
+   * Start Playwright codegen recording
+   */
+  public async startCodegenRecording(): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+    try {
+      if (this.codegenRecordingActive) {
+        return { success: false, error: 'Codegen recording is already in progress' };
+      }
+
+      if (this.recorder.getRecordingStatus().isRecording) {
+        return { success: false, error: 'Regular recording is in progress. Stop it first.' };
+      }
+
+      const activeTab = this.tabs.get(this.activeTabId || '');
+      const startUrl = activeTab?.url || 'https://www.google.com';
+      
+      const sessionId = `codegen-${Date.now()}`;
+      const started = await this.codegenRecorder.startRecording(sessionId, startUrl);
+
+      if (started) {
+        this.codegenRecordingActive = true;
+        this.recordingTabId = this.activeTabId;
+        this.emit('codegen-recording-started', { sessionId, tabId: this.activeTabId });
+        return { success: true, sessionId };
+      } else {
+        return { success: false, error: 'Failed to start codegen recording' };
+      }
+    } catch (error) {
+      console.error('Error starting codegen recording:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Stop Playwright codegen recording and return results
+   */
+  public async stopCodegenRecording(): Promise<{ success: boolean; result?: CodegenRecordingResult; error?: string }> {
+    try {
+      if (!this.codegenRecordingActive) {
+        return { success: false, error: 'No codegen recording in progress' };
+      }
+
+      const result = await this.codegenRecorder.stopRecording();
+      if (result) {
+        this.emit('codegen-recording-stopped', { result, tabId: this.recordingTabId });
+        this.codegenRecordingActive = false;
+        this.recordingTabId = null;
+        return { success: true, result };
+      } else {
+        return { success: false, error: 'Failed to stop codegen recording' };
+      }
+    } catch (error) {
+      console.error('Error stopping codegen recording:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Get codegen recording status
+   */
+  public getCodegenRecordingStatus(): { 
+    isRecording: boolean; 
+    sessionId?: string; 
+    startTime?: number;
+    url?: string;
+    tabId?: string; 
+  } {
+    const status = this.codegenRecorder.getRecordingStatus();
+    return {
+      ...status,
+      tabId: this.recordingTabId || undefined
+    };
+  }
+
+  /**
    * Start recording user actions in the active tab
    */
   public async startRecording(): Promise<{ success: boolean; sessionId?: string; error?: string }> {
@@ -522,6 +599,13 @@ export class WebContentsTabManager extends EventEmitter {
    */
   public dispose(): void {
     try {
+      // Clean up codegen recorder
+      if (this.codegenRecorder) {
+        this.codegenRecorder.dispose().catch(e => {
+          console.log('Error disposing codegen recorder (safe to ignore):', e);
+        });
+      }
+
       // Close all tabs
       this.tabs.forEach((tab, tabId) => {
         try {

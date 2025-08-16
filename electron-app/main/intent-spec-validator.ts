@@ -38,52 +38,65 @@ export function validateIntentSpec(spec: any): IntentSpecValidationResult {
     result.valid = false;
   }
 
-  // Validate url (check both url and startUrl fields for backward compatibility)
-  const urlField = spec.url || spec.startUrl;
-  if (!urlField) {
-    result.errors.push('Missing required field: url or startUrl');
+  // Validate description (required)
+  if (!spec.description) {
+    result.errors.push('Missing required field: description');
+    result.valid = false;
+  } else if (typeof spec.description !== 'string') {
+    result.errors.push('Field "description" must be a string');
+    result.valid = false;
+  } else if (spec.description.trim().length === 0) {
+    result.errors.push('Field "description" cannot be empty');
+    result.valid = false;
+  }
+
+  // Validate url (required)
+  if (!spec.url) {
+    result.errors.push('Missing required field: url');
     result.details!.url!.push('URL is required');
     result.valid = false;
-  } else if (typeof urlField !== 'string') {
-    result.errors.push('Field "url/startUrl" must be a string');
+  } else if (typeof spec.url !== 'string') {
+    result.errors.push('Field "url" must be a string');
     result.details!.url!.push('URL must be a string');
     result.valid = false;
   } else {
     try {
-      new URL(urlField);
+      new URL(spec.url);
     } catch {
-      result.errors.push('Field "url/startUrl" must be a valid URL');
+      result.errors.push('Field "url" must be a valid URL');
       result.details!.url!.push('URL must be a valid URL format');
       result.valid = false;
     }
   }
 
-  // Validate params (optional)
-  if (spec.params !== undefined) {
-    if (!Array.isArray(spec.params)) {
-      result.errors.push('Field "params" must be an array');
-      result.details!.params!.push('Params must be an array');
-      result.valid = false;
-    } else {
-      for (let i = 0; i < spec.params.length; i++) {
-        if (typeof spec.params[i] !== 'string') {
-          result.errors.push(`Parameter at index ${i} must be a string`);
-          result.details!.params!.push(`Parameter ${i} must be a string`);
-          result.valid = false;
-        } else if (spec.params[i].trim().length === 0) {
-          result.errors.push(`Parameter at index ${i} cannot be empty`);
-          result.details!.params!.push(`Parameter ${i} cannot be empty`);
-          result.valid = false;
-        }
-      }
-
-      // Check for duplicate params
-      const paramSet = new Set(spec.params);
-      if (paramSet.size !== spec.params.length) {
-        result.errors.push('Duplicate parameters found');
-        result.details!.params!.push('Parameters must be unique');
+  // Validate params (required)
+  if (!spec.params) {
+    result.errors.push('Missing required field: params');
+    result.details!.params!.push('Params is required');
+    result.valid = false;
+  } else if (!Array.isArray(spec.params)) {
+    result.errors.push('Field "params" must be an array');
+    result.details!.params!.push('Params must be an array');
+    result.valid = false;
+  } else {
+    for (let i = 0; i < spec.params.length; i++) {
+      if (typeof spec.params[i] !== 'string') {
+        result.errors.push(`Parameter at index ${i} must be a string`);
+        result.details!.params!.push(`Parameter ${i} must be a string`);
+        result.valid = false;
+      } else if (spec.params[i].trim().length === 0) {
+        result.errors.push(`Parameter at index ${i} cannot be empty`);
+        result.details!.params!.push(`Parameter ${i} cannot be empty`);
         result.valid = false;
       }
+    }
+
+    // Check for duplicate params
+    const paramSet = new Set(spec.params);
+    if (paramSet.size !== spec.params.length) {
+      result.errors.push('Duplicate parameters found');
+      result.details!.params!.push('Parameters must be unique');
+      result.valid = false;
     }
   }
 
@@ -112,6 +125,51 @@ export function validateIntentSpec(spec: any): IntentSpecValidationResult {
     }
   }
 
+  // Validate preferences (required)
+  if (!spec.preferences) {
+    result.errors.push('Missing required field: preferences');
+    result.valid = false;
+  } else if (typeof spec.preferences !== 'object') {
+    result.errors.push('Field "preferences" must be an object');
+    result.valid = false;
+  } else {
+    // Validate required preference keys
+    if (!spec.preferences.dynamic_elements) {
+      result.errors.push('Missing required preference: dynamic_elements');
+      result.valid = false;
+    } else if (!['snippet', 'ai'].includes(spec.preferences.dynamic_elements)) {
+      result.errors.push('Preference "dynamic_elements" must be "snippet" or "ai"');
+      result.valid = false;
+    }
+
+    if (!spec.preferences.simple_steps) {
+      result.errors.push('Missing required preference: simple_steps');
+      result.valid = false;
+    } else if (!['snippet', 'ai'].includes(spec.preferences.simple_steps)) {
+      result.errors.push('Preference "simple_steps" must be "snippet" or "ai"');
+      result.valid = false;
+    }
+
+    // Validate additional preference values
+    Object.entries(spec.preferences).forEach(([key, value]) => {
+      if (!['snippet', 'ai'].includes(value as string)) {
+        result.errors.push(`Preference "${key}" must be "snippet" or "ai"`);
+        result.valid = false;
+      }
+    });
+  }
+
+  // Validate optional fields
+  if (spec.success_screenshot !== undefined && typeof spec.success_screenshot !== 'string') {
+    result.errors.push('Field "success_screenshot" must be a string');
+    result.valid = false;
+  }
+
+  if (spec.recording_spec !== undefined && typeof spec.recording_spec !== 'string') {
+    result.errors.push('Field "recording_spec" must be a string');
+    result.valid = false;
+  }
+
   // Validate parameter usage in steps
   if (spec.params && spec.steps) {
     const usedParams = extractParametersFromSteps(spec.steps);
@@ -137,7 +195,7 @@ export function validateIntentSpec(spec: any): IntentSpecValidationResult {
 }
 
 /**
- * Validates a single Intent Step
+ * Validates a single Intent Step with new dual-path structure
  */
 export function validateIntentStep(step: any, index?: number): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -148,45 +206,98 @@ export function validateIntentStep(step: any, index?: number): { valid: boolean;
     return { valid: false, errors };
   }
 
-  // Validate action (required)
-  if (!step.action) {
-    errors.push('Missing required field: action');
+  // Validate name (required)
+  if (!step.name) {
+    errors.push('Missing required field: name');
     valid = false;
-  } else if (typeof step.action !== 'string') {
-    errors.push('Field "action" must be a string');
+  } else if (typeof step.name !== 'string') {
+    errors.push('Field "name" must be a string');
     valid = false;
-  } else if (step.action.trim().length === 0) {
-    errors.push('Field "action" cannot be empty');
+  } else if (step.name.trim().length === 0) {
+    errors.push('Field "name" cannot be empty');
     valid = false;
-  } else {
-    // Validate action type
-    const validActions = [
-      'click', 'type', 'select', 'wait', 'navigate', 'scroll', 
-      'hover', 'drag', 'drop', 'upload', 'download', 'screenshot', 
-      'extract', 'custom', 'press', 'clear', 'refresh'
-    ];
-    if (!validActions.includes(step.action.toLowerCase())) {
-      errors.push(`Unknown action type: "${step.action}". Valid actions: ${validActions.join(', ')}`);
+  }
+
+  // Validate ai_instruction (required)
+  if (!step.ai_instruction) {
+    errors.push('Missing required field: ai_instruction');
+    valid = false;
+  } else if (typeof step.ai_instruction !== 'string') {
+    errors.push('Field "ai_instruction" must be a string');
+    valid = false;
+  } else if (step.ai_instruction.trim().length === 0) {
+    errors.push('Field "ai_instruction" cannot be empty');
+    valid = false;
+  }
+
+  // Validate snippet (required)
+  if (!step.snippet) {
+    errors.push('Missing required field: snippet');
+    valid = false;
+  } else if (typeof step.snippet !== 'string') {
+    errors.push('Field "snippet" must be a string');
+    valid = false;
+  } else if (step.snippet.trim().length === 0) {
+    errors.push('Field "snippet" cannot be empty');
+    valid = false;
+  }
+
+  // Validate prefer (required)
+  if (!step.prefer) {
+    errors.push('Missing required field: prefer');
+    valid = false;
+  } else if (!['ai', 'snippet'].includes(step.prefer)) {
+    errors.push('Field "prefer" must be either "ai" or "snippet"');
+    valid = false;
+  }
+
+  // Validate fallback (required)
+  if (!step.fallback) {
+    errors.push('Missing required field: fallback');
+    valid = false;
+  } else if (!['ai', 'snippet', 'none'].includes(step.fallback)) {
+    errors.push('Field "fallback" must be "ai", "snippet", or "none"');
+    valid = false;
+  }
+
+  // Validate selector (optional)
+  if (step.selector !== undefined) {
+    if (typeof step.selector !== 'string') {
+      errors.push('Field "selector" must be a string');
+      valid = false;
+    } else if (step.selector.trim().length === 0) {
+      errors.push('Field "selector" cannot be empty when provided');
       valid = false;
     }
   }
 
-  // Validate selector/target (required - check both for backward compatibility)
-  const selectorField = step.selector || step.target;
-  if (!selectorField) {
-    errors.push('Missing required field: selector or target');
-    valid = false;
-  } else if (typeof selectorField !== 'string') {
-    errors.push('Field "selector/target" must be a string');
-    valid = false;
-  } else if (selectorField.trim().length === 0) {
-    errors.push('Field "selector/target" cannot be empty');
+  // Validate value (optional)
+  if (step.value !== undefined && step.value !== null && typeof step.value !== 'string') {
+    errors.push('Field "value" must be a string');
     valid = false;
   }
 
-  // Validate value (optional, but validate if present)
-  if (step.value !== undefined && step.value !== null && typeof step.value !== 'string') {
-    errors.push('Field "value" must be a string');
+  // Legacy field validations (optional for backward compatibility)
+  if (step.action !== undefined) {
+    if (typeof step.action !== 'string') {
+      errors.push('Legacy field "action" must be a string');
+      valid = false;
+    } else {
+      const validActions = [
+        'click', 'type', 'select', 'wait', 'navigate', 'scroll', 
+        'hover', 'drag', 'drop', 'upload', 'download', 'screenshot', 
+        'extract', 'custom', 'press', 'clear', 'refresh'
+      ];
+      if (!validActions.includes(step.action.toLowerCase())) {
+        errors.push(`Unknown legacy action type: "${step.action}". Valid actions: ${validActions.join(', ')}`);
+        valid = false;
+      }
+    }
+  }
+
+  // Validate target (legacy, optional)
+  if (step.target !== undefined && typeof step.target !== 'string') {
+    errors.push('Legacy field "target" must be a string');
     valid = false;
   }
 
@@ -229,22 +340,24 @@ export function extractParametersFromSteps(steps: IntentStep[]): Set<string> {
   const paramRegex = /\{\{([^}]+)\}\}/g;
 
   for (const step of steps) {
-    if (step.value) {
-      let match;
-      while ((match = paramRegex.exec(step.value)) !== null) {
-        params.add(match[1].trim());
+    // Check all string fields that might contain parameters
+    const fieldsToCheck = [
+      step.value,
+      step.selector,
+      step.ai_instruction,
+      step.snippet,
+      step.target // legacy field
+    ];
+
+    fieldsToCheck.forEach(field => {
+      if (field && typeof field === 'string') {
+        let match;
+        paramRegex.lastIndex = 0; // Reset regex
+        while ((match = paramRegex.exec(field)) !== null) {
+          params.add(match[1].trim());
+        }
       }
-    }
-    
-    // Also check selector/target for parameters (though less common)
-    const selectorField = step.selector || step.target;
-    if (selectorField) {
-      let match;
-      paramRegex.lastIndex = 0; // Reset regex
-      while ((match = paramRegex.exec(selectorField)) !== null) {
-        params.add(match[1].trim());
-      }
-    }
+    });
   }
 
   return params;
@@ -258,13 +371,22 @@ export function isValidIntentSpecStructure(obj: any): obj is IntentSpec {
     obj &&
     typeof obj === 'object' &&
     typeof obj.name === 'string' &&
-    (typeof obj.url === 'string' || typeof obj.startUrl === 'string') &&
+    typeof obj.description === 'string' &&
+    typeof obj.url === 'string' &&
+    Array.isArray(obj.params) &&
     Array.isArray(obj.steps) &&
     obj.steps.every((step: any) => 
       step &&
-      typeof step.action === 'string' &&
-      (typeof step.selector === 'string' || typeof step.target === 'string')
-    )
+      typeof step.name === 'string' &&
+      typeof step.ai_instruction === 'string' &&
+      typeof step.snippet === 'string' &&
+      ['ai', 'snippet'].includes(step.prefer) &&
+      ['ai', 'snippet', 'none'].includes(step.fallback)
+    ) &&
+    obj.preferences &&
+    typeof obj.preferences === 'object' &&
+    ['snippet', 'ai'].includes(obj.preferences.dynamic_elements) &&
+    ['snippet', 'ai'].includes(obj.preferences.simple_steps)
   );
 }
 
@@ -294,12 +416,12 @@ export function sanitizeIntentSpec(spec: any): Partial<IntentSpec> {
     }
   }
 
-  // Sanitize description
+  // Sanitize description (required)
   if (typeof spec.description === 'string' && spec.description.trim().length > 0) {
     sanitized.description = spec.description.trim();
   }
 
-  // Sanitize params
+  // Sanitize params (required)
   if (Array.isArray(spec.params)) {
     const validParams = spec.params
       .filter((param: any) => typeof param === 'string' && param.trim().length > 0)
@@ -307,9 +429,9 @@ export function sanitizeIntentSpec(spec: any): Partial<IntentSpec> {
     
     // Remove duplicates
     const uniqueParams: string[] = Array.from(new Set(validParams));
-    if (uniqueParams.length > 0) {
-      sanitized.params = uniqueParams as string[];
-    }
+    sanitized.params = uniqueParams;
+  } else {
+    sanitized.params = [];
   }
 
   // Sanitize steps
@@ -317,21 +439,37 @@ export function sanitizeIntentSpec(spec: any): Partial<IntentSpec> {
     const validSteps: IntentStep[] = [];
     
     for (const step of spec.steps) {
-      const selectorField = step?.selector || step?.target;
-      if (step && typeof step.action === 'string' && typeof selectorField === 'string') {
+      if (step && 
+          typeof step.name === 'string' && 
+          typeof step.ai_instruction === 'string' && 
+          typeof step.snippet === 'string' &&
+          ['ai', 'snippet'].includes(step.prefer) &&
+          ['ai', 'snippet', 'none'].includes(step.fallback)) {
+        
         const sanitizedStep: IntentStep = {
-          action: step.action.trim(),
+          name: step.name.trim(),
+          ai_instruction: step.ai_instruction.trim(),
+          snippet: step.snippet.trim(),
+          prefer: step.prefer,
+          fallback: step.fallback
         };
 
-        // Prefer selector over target
-        if (step.selector) {
+        // Optional fields
+        if (typeof step.selector === 'string' && step.selector.trim().length > 0) {
           sanitizedStep.selector = step.selector.trim();
-        } else if (step.target) {
-          sanitizedStep.selector = step.target.trim();
         }
 
         if (typeof step.value === 'string') {
           sanitizedStep.value = step.value;
+        }
+
+        // Legacy fields
+        if (typeof step.action === 'string' && step.action.trim().length > 0) {
+          sanitizedStep.action = step.action.trim();
+        }
+
+        if (typeof step.target === 'string' && step.target.trim().length > 0) {
+          sanitizedStep.target = step.target.trim();
         }
 
         if (typeof step.description === 'string' && step.description.trim().length > 0) {
@@ -355,7 +493,49 @@ export function sanitizeIntentSpec(spec: any): Partial<IntentSpec> {
     }
   }
 
-  // Sanitize successCheck
+  // Sanitize preferences (required)
+  if (spec.preferences && typeof spec.preferences === 'object') {
+    const validPreferences: any = {};
+    
+    // Required preferences
+    if (['snippet', 'ai'].includes(spec.preferences.dynamic_elements)) {
+      validPreferences.dynamic_elements = spec.preferences.dynamic_elements;
+    } else {
+      validPreferences.dynamic_elements = 'ai'; // default
+    }
+    
+    if (['snippet', 'ai'].includes(spec.preferences.simple_steps)) {
+      validPreferences.simple_steps = spec.preferences.simple_steps;
+    } else {
+      validPreferences.simple_steps = 'snippet'; // default
+    }
+    
+    // Additional custom preferences
+    Object.entries(spec.preferences).forEach(([key, value]) => {
+      if (key !== 'dynamic_elements' && key !== 'simple_steps' && ['snippet', 'ai'].includes(value as string)) {
+        validPreferences[key] = value;
+      }
+    });
+    
+    sanitized.preferences = validPreferences;
+  } else {
+    // Default preferences if not provided
+    sanitized.preferences = {
+      dynamic_elements: 'ai',
+      simple_steps: 'snippet'
+    };
+  }
+  
+  // Sanitize optional fields
+  if (typeof spec.success_screenshot === 'string' && spec.success_screenshot.trim().length > 0) {
+    sanitized.success_screenshot = spec.success_screenshot.trim();
+  }
+  
+  if (typeof spec.recording_spec === 'string' && spec.recording_spec.trim().length > 0) {
+    sanitized.recording_spec = spec.recording_spec.trim();
+  }
+
+  // Legacy fields
   if (typeof spec.successCheck === 'string' && spec.successCheck.trim().length > 0) {
     sanitized.successCheck = spec.successCheck.trim();
   }

@@ -623,6 +623,79 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  // Codegen Recording: Start codegen recording
+  ipcMain.handle('start-codegen-recording', async (event: IpcMainInvokeEvent) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      const result = await tabManager.startCodegenRecording();
+      return {
+        success: result.success,
+        data: result.success ? { sessionId: result.sessionId } : undefined,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('Start codegen recording error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Codegen Recording: Stop codegen recording
+  ipcMain.handle('stop-codegen-recording', async (event: IpcMainInvokeEvent) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      const result = await tabManager.stopCodegenRecording();
+      return {
+        success: result.success,
+        data: result.success ? { 
+          result: result.result,
+          specFilePath: result.result?.session.specFilePath,
+          screenshotPath: result.result?.session.screenshotPath,
+          metadataPath: result.result?.session.metadataPath
+        } : undefined,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('Stop codegen recording error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Codegen Recording: Get codegen recording status
+  ipcMain.handle('codegen-recording-status', async (event: IpcMainInvokeEvent) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      const status = tabManager.getCodegenRecordingStatus();
+      return {
+        success: true,
+        data: status
+      };
+    } catch (error) {
+      console.error('Get codegen recording status error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
   // Execute flow handler
   ipcMain.handle('execute-flow', async (event: IpcMainInvokeEvent, params: ExecuteFlowParams) => {
     try {
@@ -890,6 +963,11 @@ export function removeIpcHandlers(): void {
   ipcMain.removeAllListeners('generate-playwright-code');
   ipcMain.removeAllListeners('export-recording-session');
   ipcMain.removeAllListeners('import-recording-session');
+  
+  // Codegen recording handlers
+  ipcMain.removeAllListeners('start-codegen-recording');
+  ipcMain.removeAllListeners('stop-codegen-recording');
+  ipcMain.removeAllListeners('codegen-recording-status');
   
   // Flow execution handlers
   ipcMain.removeAllListeners('execute-flow');

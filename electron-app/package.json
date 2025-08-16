@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Electron application with Claude integration",
   "main": "dist/main/index.js",
+  "bin": {
+    "claude-code": "./dist/cli/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "npm run build && electron .",
@@ -35,6 +38,7 @@
     "@anthropic-ai/claude-code": "^1.0.83",
     "@anthropic-ai/sdk": "^0.24.0",
     "@playwright/test": "^1.54.2",
+    "commander": "^9.5.0",
     "dotenv": "^17.2.1",
     "playwright": "^1.45.0",
     "playwright-core": "^1.45.0",

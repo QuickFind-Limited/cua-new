@@ -19,10 +19,18 @@ export interface IntentParam {
 }
 
 export interface IntentStep {
-  action: string;
-  selector?: string;  // New preferred field
-  target?: string;    // Legacy field for backward compatibility  
-  value?: string;
+  // New fields (optional for backward compatibility)
+  name?: string;
+  ai_instruction?: string;  // AI-based instruction
+  snippet?: string;          // Playwright code snippet
+  prefer?: 'ai' | 'snippet'; // Which to try first
+  fallback?: 'ai' | 'snippet' | 'none'; // Fallback option
+  selector?: string;        // Optional selector for AI
+  value?: string;           // Optional value with {{variables}}
+  
+  // Legacy fields for backward compatibility
+  action?: string;
+  target?: string;
   description?: string;
   timeout?: number;
   retries?: number;
@@ -30,11 +38,20 @@ export interface IntentStep {
 
 export interface IntentSpec {
   name: string;
-  description?: string;
-  url?: string;         // New preferred field
-  startUrl?: string;    // Legacy field for backward compatibility
-  params?: string[];
+  description?: string;  // Made optional for backward compatibility
+  url?: string;  // Made optional for backward compatibility
+  params: string[];
   steps: IntentStep[];
+  preferences?: {  // Made optional for backward compatibility
+    dynamic_elements: 'snippet' | 'ai';
+    simple_steps: 'snippet' | 'ai';
+    [key: string]: 'snippet' | 'ai';
+  };
+  success_screenshot?: string; // Path to success state screenshot
+  recording_spec?: string;     // Path to original recording.spec.ts
+  
+  // Legacy fields for backward compatibility
+  startUrl?: string;
   successCheck?: string;
   failureCheck?: string;
   metadata?: {
@@ -53,6 +70,47 @@ export interface FlowResult {
   logs: string[];
   metrics?: FlowMetrics;
   screenshots?: string[];
+}
+
+// SDK Decider Result Types
+export interface ExecutionResult {
+  success: boolean;
+  pathUsed: 'ai' | 'snippet';
+  fallbackOccurred: boolean;
+  error?: string;
+  data?: any;
+}
+
+export interface StepExecutionResult {
+  name: string;
+  pathUsed: 'ai' | 'snippet';
+  fallbackOccurred: boolean;
+  success: boolean;
+  error?: string;
+  duration?: number;
+  screenshot?: string;
+}
+
+export interface ExecutionReport {
+  executionId?: string;
+  steps?: StepExecutionResult[];
+  aiUsageCount?: number;
+  snippetUsageCount?: number;
+  fallbackCount?: number;
+  screenshots?: string[];
+  overallSuccess?: boolean;
+  suggestions?: string[];
+  totalDuration?: number;
+  successStateMatch?: boolean;
+  
+  // Legacy field for backward compatibility
+  results?: Array<{
+    step: string;
+    pathUsed: 'ai' | 'snippet';
+    fallbackOccurred: boolean;
+    success: boolean;
+    error?: string;
+  }>;
 }
 
 export interface FlowMetrics {
@@ -342,6 +400,24 @@ export function isFlowResult(obj: any): obj is FlowResult {
     typeof obj.success === 'boolean' &&
     Array.isArray(obj.logs)
   );
+}
+
+// Execution Orchestrator Types - Duplicate removed, merged with earlier definition
+
+// Duplicate removed - using the one defined earlier
+
+export interface ScreenshotComparison {
+  match: boolean;
+  similarity: number;
+  suggestions: string[];
+  differences?: any[];
+}
+
+export interface ExecutionOrchestratorOptions {
+  enableFallback?: boolean;
+  screenshotComparison?: boolean;
+  saveScreenshots?: boolean;
+  timeout?: number;
 }
 
 // Export all types

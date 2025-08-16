@@ -150,6 +150,7 @@ export async function newsCollectionExample() {
   // Create a news search intent
   const newsIntent: IntentSpec = {
     name: 'News Search and Collection',
+    params: [],
     startUrl: 'https://news.ycombinator.com',
     steps: [
       {

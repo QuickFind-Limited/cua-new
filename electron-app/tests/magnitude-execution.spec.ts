@@ -36,6 +36,7 @@ test.describe('Magnitude Execution System', () => {
   test('should execute simple navigation flow', async () => {
     const simpleFlow: IntentSpec = {
       name: "Simple Navigation Test",
+      params: [],
       startUrl: "https://example.com",
       steps: [
         {
@@ -81,6 +82,7 @@ test.describe('Magnitude Execution System', () => {
   test('should handle execution failure gracefully', async () => {
     const failingFlow: IntentSpec = {
       name: "Failing Flow Test",
+      params: [],
       startUrl: "https://httpstat.us/404",
       steps: [
         {
@@ -109,6 +111,7 @@ test.describe('Magnitude Execution System', () => {
 
     const simpleFlow: IntentSpec = {
       name: "Progress Test Flow",
+      params: [],
       startUrl: "https://example.com",
       steps: [
         {
@@ -208,6 +211,7 @@ test.describe('FlowStorage', () => {
     storage = new FlowStorage();
     testFlow = {
       name: "Test Storage Flow",
+      params: [],
       startUrl: "https://example.com",
       steps: [
         {
@@ -349,6 +353,7 @@ test.describe('Integration Tests', () => {
 
     const integrationFlow: IntentSpec = {
       name: "Integration Test Flow",
+      params: [],
       startUrl: "https://httpbin.org/forms/post",
       steps: [
         {

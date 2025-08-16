@@ -215,6 +215,7 @@ export async function demonstrateErrorHandling() {
   // Intentionally problematic flow for demonstration
   const problematicFlow: IntentSpec = {
     name: "Error Handling Demo",
+    params: [],
     startUrl: "https://httpstat.us/500", // Returns 500 error
     steps: [
       {

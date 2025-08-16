@@ -1,6 +1,7 @@
 // Utility libraries for electron-app automation
 
 export {
+  Decider,
   OpusDecider,
   makeDecision,
   type DecisionSignals,
