@@ -245,13 +245,13 @@ function navigateToUrl() {
 
 function navigateBack() {
     if (window.electronAPI && activeTabId) {
-        window.electronAPI.navigateBack(activeTabId);
+        window.electronAPI.goBack(activeTabId);
     }
 }
 
 function navigateForward() {
     if (window.electronAPI && activeTabId) {
-        window.electronAPI.navigateForward(activeTabId);
+        window.electronAPI.goForward(activeTabId);
     }
 }
 
@@ -284,17 +284,18 @@ async function toggleRecording() {
         console.log('Stopping recording...');
         
         try {
-            // Send IPC message to stop recording
+            // Send IPC message to stop Codegen recording
             if (window.electronAPI) {
-                const result = await window.electronAPI.stopRecording();
+                const result = await window.electronAPI.stopCodegenRecording();
                 
-                if (result.success && result.data && result.data.session) {
-                    const session = result.data.session;
-                    console.log('Recording stopped successfully:', session);
-                    console.log(`Captured ${session.actions.length} actions in ${((session.endTime - session.startTime) / 1000).toFixed(1)}s`);
+                if (result.success && result.data && result.data.result) {
+                    const recordingResult = result.data.result;
+                    console.log('Recording stopped successfully:', recordingResult);
+                    console.log(`Recording saved to: ${recordingResult.recordingPath}`);
+                    console.log(`Screenshot saved to: ${recordingResult.screenshotPath}`);
                     
                     // Handle the recording data
-                    handleRecordingComplete(session);
+                    handleRecordingComplete(recordingResult);
                 } else {
                     console.error('Failed to stop recording:', result.error);
                     showRecordingError('Failed to stop recording: ' + (result.error || 'Unknown error'));
@@ -309,9 +310,9 @@ async function toggleRecording() {
         console.log('Starting recording...');
         
         try {
-            // Send IPC message to start recording
+            // Send IPC message to start Codegen recording (uses Playwright)
             if (window.electronAPI) {
-                const result = await window.electronAPI.startRecording();
+                const result = await window.electronAPI.startCodegenRecording();
                 
                 if (result.success && result.data && result.data.sessionId) {
                     recordBtn.classList.add('recording');

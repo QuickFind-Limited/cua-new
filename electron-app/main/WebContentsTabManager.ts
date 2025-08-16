@@ -136,6 +136,16 @@ export class WebContentsTabManager extends EventEmitter {
     // Setup WebContents event handlers
     this.setupWebContentsHandlers(tab);
 
+    // Set proper user agent to avoid bot detection
+    view.webContents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
+
+    // Set additional headers for better Google compatibility
+    view.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+      details.requestHeaders['Accept-Language'] = 'en-US,en;q=0.9';
+      details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
+      callback({ requestHeaders: details.requestHeaders });
+    });
+
     // Add view to window (initially hidden)
     this.window.contentView.addChildView(view);
     
@@ -150,10 +160,8 @@ export class WebContentsTabManager extends EventEmitter {
     // Load the URL
     view.webContents.loadURL(url);
 
-    // If this is the first tab or no active tab, make it active
-    if (this.tabs.size === 1 || !this.activeTabId) {
-      await this.switchTab(tabId);
-    }
+    // Always switch to newly created tabs (bring them to foreground)
+    await this.switchTab(tabId);
 
     this.emit('tab-created', this.getTabForRenderer(tabId));
     this.sendTabUpdate();

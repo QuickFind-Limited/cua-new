@@ -68,26 +68,33 @@ export class PlaywrightCodegenRecorder {
         title: 'Codegen Recording'
       };
 
-      // Launch browser in non-headless mode for recording
-      this.browser = await chromium.launch({
-        headless: false,
-        args: [
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--enable-automation'
-        ]
-      });
-
-      // Create context with codegen capabilities
-      this.context = await this.browser.newContext({
-        // Enable device emulation for consistent recording
-        viewport: { width: 1280, height: 720 },
-        recordVideo: undefined, // We'll handle screenshots separately
-        ignoreHTTPSErrors: true
-      });
-
-      // Create page and enable codegen
-      this.page = await this.context.newPage();
+      // Connect to Electron's remote debugging port instead of launching new browser
+      const cdpUrl = 'http://localhost:9222';
+      console.log(`Connecting to Electron via CDP at ${cdpUrl}`);
+      
+      // Wait a moment for Electron to be ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      this.browser = await chromium.connectOverCDP(cdpUrl);
+      
+      // Get all contexts - Electron typically has one main context
+      const contexts = this.browser.contexts();
+      if (contexts.length === 0) {
+        throw new Error('No browser contexts found in Electron instance');
+      }
+      
+      this.context = contexts[0]; // Use the first (main) context
+      
+      // Get existing pages or create a new one
+      const pages = this.context.pages();
+      if (pages.length > 0) {
+        // Use the most recently created page (likely the active tab)
+        this.page = pages[pages.length - 1];
+        console.log(`Using existing page: ${this.page.url()}`);
+      } else {
+        this.page = await this.context.newPage();
+        console.log('Created new page in Electron context');
+      }
       
       // Start code generation tracking
       await this.startCodeGeneration();
@@ -359,30 +366,19 @@ test('recorded flow - ${sessionId}', async ({ page }) => {
   private async cleanup(): Promise<void> {
     this.isRecording = false;
     
-    try {
-      if (this.page && !this.page.isClosed()) {
-        await this.page.close();
-      }
-    } catch (error) {
-      // Ignore page close errors
-    }
-    
-    try {
-      if (this.context) {
-        await this.context.close();
-      }
-    } catch (error) {
-      // Ignore context close errors
-    }
+    // For CDP connections, we don't close pages or contexts as they belong to Electron
+    // We just disconnect from the browser
     
     try {
       if (this.browser) {
+        // Disconnect from CDP connection (don't close the Electron browser)
         await this.browser.close();
       }
     } catch (error) {
-      // Ignore browser close errors
+      console.warn('Error disconnecting from CDP:', error);
     }
     
+    // Clear references but don't close pages/contexts as they're owned by Electron
     this.page = null;
     this.context = null;
     this.browser = null;

@@ -42,6 +42,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startRecording: () => ipcRenderer.invoke('start-recording'),
   stopRecording: () => ipcRenderer.invoke('stop-recording'),
   getRecordingStatus: () => ipcRenderer.invoke('recording-status'),
+  // Codegen recording (Playwright-based) - NEW
+  startCodegenRecording: () => ipcRenderer.invoke('start-codegen-recording'),
+  stopCodegenRecording: () => ipcRenderer.invoke('stop-codegen-recording'),
+  getCodegenRecordingStatus: () => ipcRenderer.invoke('codegen-recording-status'),
   recordAction: (action) => ipcRenderer.invoke('record-action', action),
   generatePlaywrightCode: (session) => ipcRenderer.invoke('generate-playwright-code', session),
   exportRecordingSession: (session) => ipcRenderer.invoke('export-recording-session', session),

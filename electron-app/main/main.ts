@@ -6,7 +6,8 @@ import { registerIpcHandlers } from './ipc';
 let mainWindow: BrowserWindow | null = null;
 let tabManager: WebContentsTabManager | null = null;
 
-// WebContentsView is used for tab management - no additional switches needed
+// WebContentsView is used for tab management - enable remote debugging for Playwright CDP
+app.commandLine.appendSwitch('remote-debugging-port', '9222');
 
 function createWindow(): void {
   // Create the browser window
