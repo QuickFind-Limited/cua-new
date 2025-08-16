@@ -3,10 +3,26 @@
  */
 
 // Core Intent Types
+export interface IntentParam {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'email' | 'url' | 'date';
+  required?: boolean;
+  description?: string;
+  defaultValue?: any;
+  validation?: {
+    pattern?: string;
+    minLength?: number;
+    maxLength?: number;
+    min?: number;
+    max?: number;
+  };
+}
+
 export interface IntentStep {
   action: string;
-  target: string;
-  value: string;
+  selector?: string;  // New preferred field
+  target?: string;    // Legacy field for backward compatibility  
+  value?: string;
   description?: string;
   timeout?: number;
   retries?: number;
@@ -15,10 +31,11 @@ export interface IntentStep {
 export interface IntentSpec {
   name: string;
   description?: string;
-  startUrl: string;
+  url?: string;         // New preferred field
+  startUrl?: string;    // Legacy field for backward compatibility
   params?: string[];
   steps: IntentStep[];
-  successCheck: string;
+  successCheck?: string;
   failureCheck?: string;
   metadata?: {
     version?: string;
@@ -161,6 +178,21 @@ export interface ValidationResult {
   warnings: string[];
 }
 
+export interface IntentSpecValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  details?: {
+    name?: string[];
+    url?: string[];
+    params?: string[];
+    steps?: Array<{
+      index: number;
+      errors: string[];
+    }>;
+  };
+}
+
 export interface ParameterValidation {
   valid: boolean;
   missing: string[];
@@ -283,9 +315,8 @@ export function isIntentSpec(obj: any): obj is IntentSpec {
   return (
     obj &&
     typeof obj.name === 'string' &&
-    typeof obj.startUrl === 'string' &&
-    Array.isArray(obj.steps) &&
-    typeof obj.successCheck === 'string'
+    (typeof obj.url === 'string' || typeof obj.startUrl === 'string') &&
+    Array.isArray(obj.steps)
   );
 }
 
@@ -293,8 +324,15 @@ export function isIntentStep(obj: any): obj is IntentStep {
   return (
     obj &&
     typeof obj.action === 'string' &&
-    typeof obj.target === 'string' &&
-    typeof obj.value === 'string'
+    (typeof obj.selector === 'string' || typeof obj.target === 'string')
+  );
+}
+
+export function isIntentParam(obj: any): obj is IntentParam {
+  return (
+    obj &&
+    typeof obj.name === 'string' &&
+    typeof obj.type === 'string'
   );
 }
 

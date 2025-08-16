@@ -35,15 +35,25 @@
                     📁 Load Flow File
                 </button>
                 
-                <button 
-                    class="run-flow-btn" 
-                    id="runFlowBtn" 
-                    onclick="executeFlow()" 
-                    disabled
-                    style="margin-top: 8px;"
-                >
-                    Run Flow
-                </button>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button 
+                        class="run-flow-btn btn-success" 
+                        id="runFlowBtn" 
+                        onclick="executeFlow()" 
+                        disabled
+                        style="flex: 1;"
+                    >
+                        Run Flow
+                    </button>
+                    <button 
+                        class="save-flow-btn btn-secondary" 
+                        id="saveFlowBtn" 
+                        onclick="saveFlow()"
+                        style="flex: 1;"
+                    >
+                        Save Flow
+                    </button>
+                </div>
             </div>
             
             <!-- Status and results -->
@@ -69,6 +79,7 @@
         </div>
     </div>
 
+    <script src="flow-executor.js"></script>
     <script src="vars-panel.js"></script>
 </body>
 </html>

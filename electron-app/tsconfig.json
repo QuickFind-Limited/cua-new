@@ -18,12 +18,19 @@
     "useUnknownInCatchVariables": false
   },
   "include": [
-    "**/*.ts",
-    "**/*.js"
+    "main/**/*.ts",
+    "flows/**/*.ts",
+    "lib/**/*.ts",
+    "tests/**/*.ts",
+    "shell/**/*.ts",
+    "snippets/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "dist-electron"
+    "dist-electron",
+    "examples",
+    "ui",
+    "**/*.js"
   ]
 }

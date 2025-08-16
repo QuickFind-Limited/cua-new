@@ -7,6 +7,12 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import './main';
 
+// Export Magnitude execution system
+export { MagnitudeExecutor } from './magnitude-executor';
+export { PlaywrightExecutor } from './playwright-executor';
+export { FlowStorage } from './flow-storage';
+export * from './llm';
+
 // Check if API key is set
 if (!process.env.ANTHROPIC_API_KEY) {
   console.warn('ANTHROPIC_API_KEY not set. Please add it to the .env file or set as environment variable.');

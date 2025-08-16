@@ -3,8 +3,10 @@
 class VarsPanelManager {
     constructor() {
         this.currentFlow = null;
+        this.currentIntentSpec = null;
         this.variables = {};
         this.isExecuting = false;
+        this.isVisible = false;
         
         this.initializeElements();
         this.setupEventListeners();
@@ -56,12 +58,12 @@ class VarsPanelManager {
         // Setup IPC communication with main process
         if (window.electronAPI) {
             // Listen for flow execution results
-            window.electronAPI.onFlowExecutionResult((result) => {
+            window.electronAPI.onFlowComplete && window.electronAPI.onFlowComplete((result) => {
                 this.handleFlowExecutionResult(result);
             });
 
             // Listen for flow execution progress
-            window.electronAPI.onFlowExecutionProgress((progress) => {
+            window.electronAPI.onFlowProgress && window.electronAPI.onFlowProgress((progress) => {
                 this.handleFlowExecutionProgress(progress);
             });
         }
@@ -333,17 +335,53 @@ class VarsPanelManager {
         // Create flow with substituted variables
         const executableFlow = this.createExecutableFlow(this.currentFlow, variables);
         
-        // Notify main process to execute flow
-        if (window.electronAPI) {
-            window.electronAPI.executeFlow(executableFlow, variables);
+        // Use FlowExecutor for execution
+        if (window.flowExecutor) {
+            window.flowExecutor.executeFlow(
+                executableFlow,
+                variables,
+                (progress) => this.handleFlowExecutionProgress(progress),
+                (result) => this.handleFlowExecutionResult(result)
+            );
         } else {
-            // Fallback for testing without electron
-            setTimeout(() => {
-                this.handleFlowExecutionResult({
-                    success: true,
-                    message: 'Flow executed successfully (demo mode)'
+            // Fallback direct API call
+            if (window.electronAPI && window.electronAPI.executeFlow) {
+                window.electronAPI.executeFlow(executableFlow, variables);
+            } else {
+                // Demo mode fallback
+                setTimeout(() => {
+                    this.handleFlowExecutionResult({
+                        success: true,
+                        message: 'Flow executed successfully (demo mode)'
+                    });
+                }, 2000);
+            }
+        }
+    }
+
+    saveFlow() {
+        if (!this.currentFlow && !this.currentIntentSpec) {
+            this.showStatus('No flow to save', 'error');
+            return;
+        }
+
+        const specToSave = this.currentIntentSpec || this.currentFlow;
+        
+        if (window.electronAPI && window.electronAPI.saveFlow) {
+            window.electronAPI.saveFlow(specToSave)
+                .then((result) => {
+                    if (result.success) {
+                        this.showStatus('Flow saved successfully', 'success');
+                    } else {
+                        this.showStatus(result.error || 'Failed to save flow', 'error');
+                    }
+                })
+                .catch((error) => {
+                    this.showStatus('Error saving flow: ' + error.message, 'error');
                 });
-            }, 2000);
+        } else {
+            // Fallback for standalone usage
+            this.showStatus('Save Flow (demo mode - not actually saved)', 'info');
         }
     }
 
@@ -464,12 +502,46 @@ class VarsPanelManager {
         this.statusContainer.innerHTML = '';
     }
 
+    showVarsPanel(intentSpec) {
+        this.currentIntentSpec = intentSpec;
+        
+        // Convert Intent Spec to flow format for compatibility
+        const flowData = this.convertIntentSpecToFlow(intentSpec);
+        this.loadFlow(flowData);
+        
+        // Show panel with animation
+        this.panel.classList.add('visible');
+        this.isVisible = true;
+        
+        this.showStatus('Intent Spec loaded successfully - ready to configure and execute', 'success');
+    }
+
+    hideVarsPanel() {
+        this.panel.classList.remove('visible');
+        this.isVisible = false;
+        this.currentIntentSpec = null;
+        this.currentFlow = null;
+        this.variables = {};
+        this.clearStatus();
+    }
+
+    convertIntentSpecToFlow(intentSpec) {
+        // Convert Intent Spec format to flow format for compatibility
+        return {
+            name: intentSpec.name || 'Recorded Intent',
+            description: intentSpec.description || 'Generated from recording',
+            steps: intentSpec.steps || [],
+            params: intentSpec.variables || [],
+            startUrl: intentSpec.startUrl,
+            successCheck: intentSpec.successCheck
+        };
+    }
+
     closePanel() {
-        if (window.electronAPI) {
+        this.hideVarsPanel();
+        
+        if (window.electronAPI && window.electronAPI.closeVarsPanel) {
             window.electronAPI.closeVarsPanel();
-        } else {
-            // Fallback for standalone usage
-            this.panel.classList.remove('open');
         }
     }
 
@@ -495,6 +567,10 @@ function executeFlow() {
 
 function closePanel() {
     varsPanelManager.closePanel();
+}
+
+function saveFlow() {
+    varsPanelManager.saveFlow();
 }
 
 // Initialize panel manager when DOM is loaded

@@ -60,6 +60,11 @@ function initializeUI() {
                 updateAddressBar(url);
             }
         });
+
+        // Listen for recording completion
+        window.electronAPI.onRecordingComplete && window.electronAPI.onRecordingComplete((intentSpec) => {
+            handleRecordingComplete(intentSpec);
+        });
     }
 }
 
@@ -268,7 +273,7 @@ function updateNavigationState(data) {
     }
 }
 
-function toggleRecording() {
+async function toggleRecording() {
     const recordBtn = document.getElementById('record-btn');
     if (!recordBtn) return;
     
@@ -276,22 +281,164 @@ function toggleRecording() {
         // Stop recording
         recordBtn.classList.remove('recording');
         recordBtn.querySelector('.record-text').textContent = 'Record';
-        console.log('Recording stopped');
+        console.log('Stopping recording...');
         
-        // Send IPC message to stop recording
-        if (window.electronAPI) {
-            window.electronAPI.stopRecording();
+        try {
+            // Send IPC message to stop recording
+            if (window.electronAPI) {
+                const result = await window.electronAPI.stopRecording();
+                
+                if (result.success && result.data && result.data.session) {
+                    const session = result.data.session;
+                    console.log('Recording stopped successfully:', session);
+                    console.log(`Captured ${session.actions.length} actions in ${((session.endTime - session.startTime) / 1000).toFixed(1)}s`);
+                    
+                    // Handle the recording data
+                    handleRecordingComplete(session);
+                } else {
+                    console.error('Failed to stop recording:', result.error);
+                    showRecordingError('Failed to stop recording: ' + (result.error || 'Unknown error'));
+                }
+            }
+        } catch (error) {
+            console.error('Error stopping recording:', error);
+            showRecordingError('Error stopping recording: ' + error.message);
         }
     } else {
         // Start recording
-        recordBtn.classList.add('recording');
-        recordBtn.querySelector('.record-text').textContent = 'Stop';
-        console.log('Recording started');
+        console.log('Starting recording...');
         
-        // Send IPC message to start recording
-        if (window.electronAPI) {
-            window.electronAPI.startRecording();
+        try {
+            // Send IPC message to start recording
+            if (window.electronAPI) {
+                const result = await window.electronAPI.startRecording();
+                
+                if (result.success && result.data && result.data.sessionId) {
+                    recordBtn.classList.add('recording');
+                    recordBtn.querySelector('.record-text').textContent = 'Stop';
+                    console.log('Recording started successfully:', result.data.sessionId);
+                    showRecordingStatus('Recording started');
+                } else {
+                    console.error('Failed to start recording:', result.error);
+                    showRecordingError('Failed to start recording: ' + (result.error || 'Unknown error'));
+                }
+            }
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            showRecordingError('Error starting recording: ' + error.message);
         }
+    }
+}
+
+// Handle completed recording data
+function handleRecordingComplete(session) {
+    console.log('Recording session complete:', session);
+    
+    // Show recording summary
+    showRecordingSummary(session);
+    
+    // Optionally trigger onRecordingComplete callback if set
+    if (window.recordingCompleteCallback) {
+        window.recordingCompleteCallback(session);
+    }
+    
+    // Emit custom event for other parts of the app to listen to
+    window.dispatchEvent(new CustomEvent('recordingComplete', { detail: session }));
+}
+
+// Show recording summary in UI
+function showRecordingSummary(session) {
+    const statusText = document.getElementById('status-text');
+    if (statusText) {
+        statusText.textContent = `Recording complete: ${session.actions.length} actions captured`;
+        
+        // Reset status after 5 seconds
+        setTimeout(() => {
+            statusText.textContent = 'Ready';
+        }, 5000);
+    }
+    
+    // Log detailed summary to console
+    console.group('Recording Summary');
+    console.log('Session ID:', session.id);
+    console.log('Duration:', ((session.endTime - session.startTime) / 1000).toFixed(1) + 's');
+    console.log('Actions:', session.actions.length);
+    console.log('URL:', session.url);
+    console.log('Title:', session.title);
+    
+    // Group actions by type
+    const actionsByType = {};
+    session.actions.forEach(action => {
+        actionsByType[action.type] = (actionsByType[action.type] || 0) + 1;
+    });
+    console.log('Action breakdown:', actionsByType);
+    console.groupEnd();
+}
+
+// Show recording status message
+function showRecordingStatus(message) {
+    const statusText = document.getElementById('status-text');
+    if (statusText) {
+        statusText.textContent = message;
+        
+        // Reset status after 3 seconds
+        setTimeout(() => {
+            statusText.textContent = 'Ready';
+        }, 3000);
+    }
+}
+
+// Show recording error message
+function showRecordingError(errorMessage) {
+    const statusText = document.getElementById('status-text');
+    if (statusText) {
+        statusText.textContent = errorMessage;
+        statusText.style.color = '#ff6b6b';
+        
+        // Reset status and color after 5 seconds
+        setTimeout(() => {
+            statusText.textContent = 'Ready';
+            statusText.style.color = '';
+        }, 5000);
+    }
+    
+    console.error('Recording Error:', errorMessage);
+}
+
+// Function to set a callback for recording completion
+function onRecordingComplete(callback) {
+    window.recordingCompleteCallback = callback;
+}
+
+// Make functions globally available
+window.onRecordingComplete = onRecordingComplete;
+
+// Legacy function for compatibility (if needed elsewhere)
+function handleRecordingCompleteIntent(intentSpec) {
+    console.log('Recording completed, showing vars panel with Intent Spec:', intentSpec);
+    // Reset recording button
+    const recordBtn = document.getElementById('record-btn');
+    if (recordBtn) {
+        recordBtn.classList.remove('recording');
+        recordBtn.querySelector('.record-text').textContent = 'Record';
+    }
+    
+    // Show vars panel with the Intent Spec
+    showVarsPanel(intentSpec);
+}
+
+function showVarsPanel(intentSpec) {
+    // Access the vars panel manager from the global scope
+    if (window.varsPanelManager) {
+        window.varsPanelManager.showVarsPanel(intentSpec);
+    } else {
+        console.error('VarsPanelManager not available');
+    }
+}
+
+function hideVarsPanel() {
+    if (window.varsPanelManager) {
+        window.varsPanelManager.hideVarsPanel();
     }
 }
 
@@ -341,5 +488,8 @@ function updateTabDisplay(tabsData, activeId) {
     }
 }
 
-// Make closeTab globally available for onclick handlers
+// Make functions globally available for onclick handlers and external access
 window.closeTab = closeTab;
+window.showVarsPanel = showVarsPanel;
+window.hideVarsPanel = hideVarsPanel;
+window.handleRecordingComplete = handleRecordingComplete;

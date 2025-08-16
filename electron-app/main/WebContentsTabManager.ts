@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { BrowserWindow, WebContentsView, ipcMain } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
+import { PlaywrightRecorder, RecordingSession } from './playwright-recorder';
 
 // WebContentsView-based tab interface
 interface WebContentsTab {
@@ -29,6 +30,8 @@ export class WebContentsTabManager extends EventEmitter {
   private window: BrowserWindow;
   private preloadPath: string;
   private readonly chromeHeight = 88; // Height of tab bar + nav bar
+  private recorder: PlaywrightRecorder = new PlaywrightRecorder();
+  private recordingTabId: string | null = null;
 
   constructor(options: WebContentsTabManagerOptions) {
     super();
@@ -405,6 +408,113 @@ export class WebContentsTabManager extends EventEmitter {
       tabs: this.getTabsForRenderer(),
       activeTabId: this.activeTabId
     });
+  }
+
+  /**
+   * Start recording user actions in the active tab
+   */
+  public async startRecording(): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+    try {
+      if (!this.activeTabId) {
+        return { success: false, error: 'No active tab to record' };
+      }
+
+      if (this.recorder.getRecordingStatus().isRecording) {
+        return { success: false, error: 'Recording is already in progress' };
+      }
+
+      const activeTab = this.tabs.get(this.activeTabId);
+      if (!activeTab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
+      const sessionId = `recording-${this.activeTabId}-${Date.now()}`;
+      const started = await this.recorder.startRecording(activeTab.view, sessionId);
+
+      if (started) {
+        this.recordingTabId = this.activeTabId;
+        this.emit('recording-started', { sessionId, tabId: this.activeTabId });
+        return { success: true, sessionId };
+      } else {
+        return { success: false, error: 'Failed to start recording' };
+      }
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Stop recording and return the session data
+   */
+  public stopRecording(): { success: boolean; session?: RecordingSession; error?: string } {
+    try {
+      if (!this.recorder.getRecordingStatus().isRecording) {
+        return { success: false, error: 'No recording in progress' };
+      }
+
+      const session = this.recorder.stopRecording();
+      if (session) {
+        this.emit('recording-stopped', { session, tabId: this.recordingTabId });
+        this.recordingTabId = null;
+        return { success: true, session };
+      } else {
+        return { success: false, error: 'Failed to stop recording' };
+      }
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Get current recording status
+   */
+  public getRecordingStatus(): { 
+    isRecording: boolean; 
+    sessionId?: string; 
+    actionCount?: number; 
+    tabId?: string; 
+  } {
+    const status = this.recorder.getRecordingStatus();
+    return {
+      ...status,
+      tabId: this.recordingTabId || undefined
+    };
+  }
+
+  /**
+   * Process a recorded action from the injected script
+   */
+  public processRecordedAction(action: any): boolean {
+    try {
+      this.recorder.processActionFromPage(action);
+      return true;
+    } catch (error) {
+      console.error('Error processing recorded action:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Generate Playwright code from a recording session
+   */
+  public generatePlaywrightCode(session: RecordingSession): string {
+    return this.recorder.generatePlaywrightCode(session);
+  }
+
+  /**
+   * Export recording session as JSON
+   */
+  public exportRecordingSession(session: RecordingSession): string {
+    return this.recorder.exportSession(session);
+  }
+
+  /**
+   * Import recording session from JSON
+   */
+  public importRecordingSession(jsonData: string): RecordingSession | null {
+    return this.recorder.importSession(jsonData);
   }
 
   /**

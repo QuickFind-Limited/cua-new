@@ -30,11 +30,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Flow operations
   runFlow: (params) => ipcRenderer.invoke('flows:runOne', params),
+  executeFlow: (flowSpec, variables) => ipcRenderer.invoke('execute-flow', { flowSpec, variables }),
+  saveFlow: (flowSpec, filePath) => ipcRenderer.invoke('save-flow', { flowSpec, filePath }),
+
+  // Flow events
+  onFlowProgress: (callback) => ipcRenderer.on('flow-progress', (event, progress) => callback(progress)),
+  onFlowComplete: (callback) => ipcRenderer.on('flow-complete', (event, result) => callback(result)),
+  onRecordingComplete: (callback) => ipcRenderer.on('recording-complete', (event, intentSpec) => callback(intentSpec)),
 
   // Recording operations
-  startRecording: () => ipcRenderer.invoke('recording:start'),
-  stopRecording: () => ipcRenderer.invoke('recording:stop'),
-  getRecording: () => ipcRenderer.invoke('recording:get'),
+  startRecording: () => ipcRenderer.invoke('start-recording'),
+  stopRecording: () => ipcRenderer.invoke('stop-recording'),
+  getRecordingStatus: () => ipcRenderer.invoke('recording-status'),
+  recordAction: (action) => ipcRenderer.invoke('record-action', action),
+  generatePlaywrightCode: (session) => ipcRenderer.invoke('generate-playwright-code', session),
+  exportRecordingSession: (session) => ipcRenderer.invoke('export-recording-session', session),
+  importRecordingSession: (jsonData) => ipcRenderer.invoke('import-recording-session', jsonData),
+  onRecordingComplete: (callback) => {
+    // Set up callback for recording completion
+    window.addEventListener('recordingComplete', (event) => callback(event.detail));
+  },
 
   // WebView2 bridge events - from main to renderer
   onCreateWebview: (callback) => ipcRenderer.on('create-webview', (event, data) => callback(data)),
@@ -49,6 +64,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Remove tab update listeners
   removeTabsUpdatedListener: (callback) => ipcRenderer.removeListener('tabs-updated', callback),
   removeAllTabsUpdatedListeners: () => ipcRenderer.removeAllListeners('tabs-updated'),
+
+  // Remove flow event listeners
+  removeFlowProgressListener: (callback) => ipcRenderer.removeListener('flow-progress', callback),
+  removeFlowCompleteListener: (callback) => ipcRenderer.removeListener('flow-complete', callback),
+  removeRecordingCompleteListener: (callback) => ipcRenderer.removeListener('recording-complete', callback),
+  removeAllFlowListeners: () => {
+    ipcRenderer.removeAllListeners('flow-progress');
+    ipcRenderer.removeAllListeners('flow-complete');
+    ipcRenderer.removeAllListeners('recording-complete');
+  },
 
   // WebView2 bridge events - from renderer to main
   sendWebviewTitleUpdate: (tabId, title) => ipcRenderer.send('webview:titleUpdated', tabId, title),

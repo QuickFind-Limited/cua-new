@@ -35,6 +35,16 @@ interface RunFlowParams {
   context?: string;
 }
 
+interface ExecuteFlowParams {
+  flowSpec: any;
+  variables?: Record<string, any>;
+}
+
+interface SaveFlowParams {
+  flowSpec: any;
+  filePath?: string;
+}
+
 interface TabOperationParams {
   tabId?: string;
   url?: string;
@@ -113,11 +123,14 @@ export function registerIpcHandlers(): void {
       }
 
       // Use Sonnet 4 ONLY for Magnitude act operations
-      const result = await executeMagnitudeAct({
-        instruction: params.instruction,
-        context: params.context,
-        parameters: params.parameters
-      });
+      const context = params.context || "IPC request for browser automation";
+      const action = {
+        action: "custom",
+        target: "IPC",
+        value: params.instruction,
+        description: params.instruction
+      };
+      const result = await executeMagnitudeAct(context, action);
 
       return {
         success: true,
@@ -441,6 +454,228 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  // Recording: Start recording
+  ipcMain.handle('start-recording', async (event: IpcMainInvokeEvent) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      const result = await tabManager.startRecording();
+      return {
+        success: result.success,
+        data: result.success ? { sessionId: result.sessionId } : undefined,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('Start recording error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Recording: Stop recording
+  ipcMain.handle('stop-recording', async (event: IpcMainInvokeEvent) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      const result = tabManager.stopRecording();
+      return {
+        success: result.success,
+        data: result.success ? { session: result.session } : undefined,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('Stop recording error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Recording: Get recording status
+  ipcMain.handle('recording-status', async (event: IpcMainInvokeEvent) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      const status = tabManager.getRecordingStatus();
+      return {
+        success: true,
+        data: status
+      };
+    } catch (error) {
+      console.error('Get recording status error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Recording: Process recorded action from injected script
+  ipcMain.handle('record-action', async (event: IpcMainInvokeEvent, action: any) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      const result = tabManager.processRecordedAction(action);
+      return {
+        success: result,
+        error: result ? undefined : 'Failed to process recorded action'
+      };
+    } catch (error) {
+      console.error('Process recorded action error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Recording: Generate Playwright code from session
+  ipcMain.handle('generate-playwright-code', async (event: IpcMainInvokeEvent, session: any) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      if (!session) {
+        throw new Error('No session data provided');
+      }
+
+      const code = tabManager.generatePlaywrightCode(session);
+      return {
+        success: true,
+        data: { code }
+      };
+    } catch (error) {
+      console.error('Generate Playwright code error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Recording: Export session as JSON
+  ipcMain.handle('export-recording-session', async (event: IpcMainInvokeEvent, session: any) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      if (!session) {
+        throw new Error('No session data provided');
+      }
+
+      const jsonData = tabManager.exportRecordingSession(session);
+      return {
+        success: true,
+        data: { jsonData }
+      };
+    } catch (error) {
+      console.error('Export recording session error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Recording: Import session from JSON
+  ipcMain.handle('import-recording-session', async (event: IpcMainInvokeEvent, jsonData: string) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+
+      if (!jsonData || typeof jsonData !== 'string') {
+        throw new Error('Invalid JSON data provided');
+      }
+
+      const session = tabManager.importRecordingSession(jsonData);
+      return {
+        success: !!session,
+        data: session ? { session } : undefined,
+        error: session ? undefined : 'Failed to import session data'
+      };
+    } catch (error) {
+      console.error('Import recording session error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Execute flow handler
+  ipcMain.handle('execute-flow', async (event: IpcMainInvokeEvent, params: ExecuteFlowParams) => {
+    try {
+      // Validate input
+      if (!params.flowSpec) {
+        throw new Error('Flow specification is required');
+      }
+
+      // Check API key is configured
+      if (!isApiKeyConfigured()) {
+        throw new Error('Anthropic API key not configured. Please set ANTHROPIC_API_KEY environment variable.');
+      }
+
+      // For now, delegate to the Magnitude act system
+      // In a full implementation, this would execute the flow steps directly
+      const result = await executeFlowSteps(params.flowSpec, params.variables);
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Execute flow error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Save flow handler
+  ipcMain.handle('save-flow', async (event: IpcMainInvokeEvent, params: SaveFlowParams) => {
+    try {
+      // Validate input
+      if (!params.flowSpec) {
+        throw new Error('Flow specification is required');
+      }
+
+      const result = await saveFlowToFile(params.flowSpec, params.filePath);
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Save flow error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
   console.log('IPC handlers registered successfully');
 }
 
@@ -464,6 +699,168 @@ async function executeFlow(params: RunFlowParams): Promise<any> {
 }
 
 /**
+ * Execute flow steps using Magnitude Act system
+ */
+async function executeFlowSteps(flowSpec: any, variables?: Record<string, any>): Promise<any> {
+  try {
+    console.log('Executing flow:', flowSpec.name || 'Unnamed Flow');
+    
+    if (!flowSpec.steps || !Array.isArray(flowSpec.steps)) {
+      throw new Error('Flow must have valid steps array');
+    }
+
+    const results = [];
+    for (let i = 0; i < flowSpec.steps.length; i++) {
+      const step = flowSpec.steps[i];
+      console.log(`Executing step ${i + 1}/${flowSpec.steps.length}:`, step.action);
+      
+      // Convert step to Magnitude instruction
+      const instruction = formatStepForMagnitude(step, variables);
+      
+      // Execute via Magnitude Act
+      const context = `Step ${i + 1} of flow: ${flowSpec.name || 'Unnamed Flow'}`;
+      const stepResult = await executeMagnitudeAct(context, step);
+      
+      results.push({
+        stepIndex: i,
+        step: step,
+        result: stepResult,
+        timestamp: Date.now()
+      });
+      
+      // Add delay between steps to avoid overwhelming the system
+      if (i < flowSpec.steps.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    return {
+      flowId: flowSpec.id || 'generated',
+      flowName: flowSpec.name || 'Unnamed Flow',
+      status: 'completed',
+      stepsExecuted: results.length,
+      totalSteps: flowSpec.steps.length,
+      results: results,
+      executionTime: Date.now(),
+      variables: variables
+    };
+    
+  } catch (error) {
+    console.error('Flow execution error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Format a flow step for Magnitude Act execution
+ */
+function formatStepForMagnitude(step: any, variables?: Record<string, any>): string {
+  const action = step.action || 'unknown';
+  const target = step.target || '';
+  const value = step.value || '';
+  
+  // Substitute variables in target and value
+  const substitutedTarget = substituteVariables(target, variables);
+  const substitutedValue = substituteVariables(value, variables);
+  
+  switch (action.toLowerCase()) {
+    case 'click':
+      return `Click on the element: ${substitutedTarget}`;
+    case 'type':
+      return `Type "${substitutedValue}" into the element: ${substitutedTarget}`;
+    case 'navigate':
+      return `Navigate to URL: ${substitutedTarget || substitutedValue}`;
+    case 'wait':
+      return `Wait for ${substitutedTarget || substitutedValue || '1000'} milliseconds`;
+    case 'scroll':
+      return `Scroll ${substitutedTarget || 'down'} on the page`;
+    case 'hover':
+      return `Hover over the element: ${substitutedTarget}`;
+    case 'select':
+      return `Select "${substitutedValue}" from the dropdown: ${substitutedTarget}`;
+    case 'submit':
+      return `Submit the form: ${substitutedTarget}`;
+    default:
+      return `Perform ${action} action on ${substitutedTarget}${substitutedValue ? ` with value: ${substitutedValue}` : ''}`;
+  }
+}
+
+/**
+ * Substitute variables in a string using {{variable}} syntax
+ */
+function substituteVariables(text: string, variables?: Record<string, any>): string {
+  if (!text || typeof text !== 'string' || !variables) {
+    return text;
+  }
+  
+  let result = text;
+  for (const [key, value] of Object.entries(variables)) {
+    const pattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    result = result.replace(pattern, String(value || ''));
+  }
+  
+  return result;
+}
+
+/**
+ * Save flow specification to file
+ */
+async function saveFlowToFile(flowSpec: any, filePath?: string): Promise<any> {
+  const fs = require('fs').promises;
+  const path = require('path');
+  const { dialog } = require('electron');
+  
+  try {
+    let targetPath = filePath;
+    
+    if (!targetPath) {
+      // Show save dialog
+      const result = await dialog.showSaveDialog({
+        title: 'Save Flow',
+        defaultPath: `${flowSpec.name || 'flow'}.json`,
+        filters: [
+          { name: 'JSON Files', extensions: ['json'] },
+          { name: 'All Files', extensions: ['*'] }
+        ]
+      });
+      
+      if (result.canceled || !result.filePath) {
+        throw new Error('Save operation cancelled');
+      }
+      
+      targetPath = result.filePath;
+    }
+    
+    // Ensure the directory exists
+    const dir = path.dirname(targetPath);
+    await fs.mkdir(dir, { recursive: true });
+    
+    // Add metadata to the flow
+    const flowWithMetadata = {
+      ...flowSpec,
+      savedAt: new Date().toISOString(),
+      version: '1.0',
+      type: 'cua-flow'
+    };
+    
+    // Write the file
+    await fs.writeFile(targetPath, JSON.stringify(flowWithMetadata, null, 2), 'utf8');
+    
+    console.log('Flow saved to:', targetPath);
+    
+    return {
+      filePath: targetPath,
+      size: JSON.stringify(flowWithMetadata).length,
+      savedAt: flowWithMetadata.savedAt
+    };
+    
+  } catch (error) {
+    console.error('Error saving flow:', error);
+    throw error;
+  }
+}
+
+/**
  * Remove all IPC handlers (useful for cleanup)
  */
 export function removeIpcHandlers(): void {
@@ -484,6 +881,19 @@ export function removeIpcHandlers(): void {
   ipcMain.removeAllListeners('tab-back');
   ipcMain.removeAllListeners('tab-forward');
   ipcMain.removeAllListeners('tab-reload');
+  
+  // Recording handlers
+  ipcMain.removeAllListeners('start-recording');
+  ipcMain.removeAllListeners('stop-recording');
+  ipcMain.removeAllListeners('recording-status');
+  ipcMain.removeAllListeners('record-action');
+  ipcMain.removeAllListeners('generate-playwright-code');
+  ipcMain.removeAllListeners('export-recording-session');
+  ipcMain.removeAllListeners('import-recording-session');
+  
+  // Flow execution handlers
+  ipcMain.removeAllListeners('execute-flow');
+  ipcMain.removeAllListeners('save-flow');
   
   console.log('IPC handlers removed');
 }
