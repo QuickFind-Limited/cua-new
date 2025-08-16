@@ -112,17 +112,27 @@ export class WebContentsTabManager extends EventEmitter {
       url = 'https://' + url;
     }
 
-    // Create WebContentsView
+    // Create WebContentsView with ultra-advanced browser mimicry
     const view = new WebContentsView({
       webPreferences: {
         preload: this.preloadPath,
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
-        // Additional settings to avoid automation detection
-        webSecurity: true,
-        allowRunningInsecureContent: false,
-        experimentalFeatures: false
+        // Ultra-advanced settings for Akamai/Reddit bypass
+        webSecurity: false, // Critical for advanced evasion
+        allowRunningInsecureContent: true,
+        experimentalFeatures: true,
+        backgroundThrottling: false,
+        offscreen: false,
+        disableBlinkFeatures: 'AutomationControlled',
+        enableBlinkFeatures: '',
+        // TLS/HTTP2 fingerprinting evasion
+        additionalArguments: [
+          '--disable-blink-features=AutomationControlled',
+          '--disable-ipc-flooding-protection',
+          '--enable-features=NetworkService'
+        ]
       }
     });
 
@@ -139,20 +149,40 @@ export class WebContentsTabManager extends EventEmitter {
 
     // Setup WebContents event handlers
     this.setupWebContentsHandlers(tab);
+    
+    // Setup stealth JavaScript injection to spoof fingerprints
+    this.setupStealthInjection(tab);
 
-    // Set proper user agent to avoid bot detection - use latest Chrome version
-    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    view.webContents.setUserAgent(userAgent);
-    console.log(`Set user agent for tab ${tabId}: ${userAgent}`);
+    // Set proper user agent to avoid bot detection - use latest Chrome 131 for 2025
+    const modernUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    view.webContents.setUserAgent(modernUA);
+    console.log(`Set modern Chrome UA for tab ${tabId}: ${modernUA}`);
 
-    // Set additional headers for better Google compatibility
+    // Set comprehensive headers for 2025 Google compatibility including Chrome client hints
     view.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+      // Core headers
+      details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7';
       details.requestHeaders['Accept-Language'] = 'en-US,en;q=0.9';
-      details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
-      details.requestHeaders['Sec-Fetch-Site'] = 'none';
-      details.requestHeaders['Sec-Fetch-Mode'] = 'navigate';
-      details.requestHeaders['Sec-Fetch-User'] = '?1';
+      details.requestHeaders['Accept-Encoding'] = 'gzip, deflate, br, zstd';
+      details.requestHeaders['Cache-Control'] = 'max-age=0';
+      details.requestHeaders['Upgrade-Insecure-Requests'] = '1';
+      
+      // Sec-Fetch headers
       details.requestHeaders['Sec-Fetch-Dest'] = 'document';
+      details.requestHeaders['Sec-Fetch-Mode'] = 'navigate';
+      details.requestHeaders['Sec-Fetch-Site'] = 'none';
+      details.requestHeaders['Sec-Fetch-User'] = '?1';
+      
+      // Critical Chrome client hints headers for 2025
+      details.requestHeaders['Sec-Ch-Ua'] = '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"';
+      details.requestHeaders['Sec-Ch-Ua-Mobile'] = '?0';
+      details.requestHeaders['Sec-Ch-Ua-Platform'] = '"Windows"';
+      details.requestHeaders['Sec-Ch-Ua-Platform-Version'] = '"15.0.0"';
+      details.requestHeaders['Sec-Ch-Ua-Arch'] = '"x86"';
+      details.requestHeaders['Sec-Ch-Ua-Model'] = '""';
+      details.requestHeaders['Sec-Ch-Ua-Bitness'] = '"64"';
+      details.requestHeaders['Sec-Ch-Ua-Full-Version-List'] = '"Google Chrome";v="131.0.6778.86", "Chromium";v="131.0.6778.86", "Not_A Brand";v="24.0.0.0"';
+      
       callback({ requestHeaders: details.requestHeaders });
     });
 
@@ -258,59 +288,113 @@ export class WebContentsTabManager extends EventEmitter {
   }
 
   /**
-   * Go back in tab history - using webContents methods with proper checks
+   * Go back in tab history - enhanced with debugging and proper error handling
    */
   public async goBack(tabId: string): Promise<boolean> {
     const tab = this.tabs.get(tabId);
-    if (!tab) return false;
+    if (!tab) {
+      console.error(`❌ goBack: Tab ${tabId} not found`);
+      return false;
+    }
 
-    // Try navigationHistory API first, fallback to webContents
     try {
       const webContents = tab.view.webContents;
-      const canGoBack = (webContents as any).navigationHistory?.canGoBack?.() ?? webContents.canGoBack?.();
       
-      if (!canGoBack) return false;
+      // Enhanced debugging for navigation API availability
+      console.log(`🔍 Navigation API check for tab ${tabId}:`);
+      console.log(`  - navigationHistory exists: ${!!(webContents as any).navigationHistory}`);
+      console.log(`  - webContents.goBack exists: ${!!webContents.goBack}`);
+      
+      // Check if we can go back using new API
+      const canGoBackNew = (webContents as any).navigationHistory?.canGoBack?.();
+      const canGoBackOld = webContents.canGoBack?.();
+      
+      console.log(`  - navigationHistory.canGoBack(): ${canGoBackNew}`);
+      console.log(`  - webContents.canGoBack(): ${canGoBackOld}`);
+      
+      const canGoBack = canGoBackNew ?? canGoBackOld ?? false;
+      
+      if (!canGoBack) {
+        console.log(`⚠️ Cannot go back in tab ${tabId} - no history available`);
+        return false;
+      }
 
-      console.log(`Going back in tab ${tabId}`);
+      console.log(`⬅️ Going back in tab ${tabId}`);
       
+      // Try new API first, then fallback
       if ((webContents as any).navigationHistory?.goBack) {
+        console.log('  - Using navigationHistory.goBack()');
         (webContents as any).navigationHistory.goBack();
       } else if (webContents.goBack) {
+        console.log('  - Using webContents.goBack()');
         webContents.goBack();
+      } else {
+        console.error('❌ No navigation method available!');
+        return false;
       }
+      
+      // Update navigation state immediately
+      setTimeout(() => this.updateNavigationState(tab), 100);
       
       return true;
     } catch (error) {
-      console.error('Error in goBack:', error);
+      console.error('❌ Error in goBack:', error);
       return false;
     }
   }
 
   /**
-   * Go forward in tab history - using webContents methods with proper checks
+   * Go forward in tab history - enhanced with debugging and proper error handling
    */
   public async goForward(tabId: string): Promise<boolean> {
     const tab = this.tabs.get(tabId);
-    if (!tab) return false;
+    if (!tab) {
+      console.error(`❌ goForward: Tab ${tabId} not found`);
+      return false;
+    }
 
-    // Try navigationHistory API first, fallback to webContents
     try {
       const webContents = tab.view.webContents;
-      const canGoForward = (webContents as any).navigationHistory?.canGoForward?.() ?? webContents.canGoForward?.();
       
-      if (!canGoForward) return false;
+      // Enhanced debugging for navigation API availability
+      console.log(`🔍 Navigation API check for tab ${tabId}:`);
+      console.log(`  - navigationHistory exists: ${!!(webContents as any).navigationHistory}`);
+      console.log(`  - webContents.goForward exists: ${!!webContents.goForward}`);
+      
+      // Check if we can go forward using new API
+      const canGoForwardNew = (webContents as any).navigationHistory?.canGoForward?.();
+      const canGoForwardOld = webContents.canGoForward?.();
+      
+      console.log(`  - navigationHistory.canGoForward(): ${canGoForwardNew}`);
+      console.log(`  - webContents.canGoForward(): ${canGoForwardOld}`);
+      
+      const canGoForward = canGoForwardNew ?? canGoForwardOld ?? false;
+      
+      if (!canGoForward) {
+        console.log(`⚠️ Cannot go forward in tab ${tabId} - no forward history available`);
+        return false;
+      }
 
-      console.log(`Going forward in tab ${tabId}`);
+      console.log(`➡️ Going forward in tab ${tabId}`);
       
+      // Try new API first, then fallback
       if ((webContents as any).navigationHistory?.goForward) {
+        console.log('  - Using navigationHistory.goForward()');
         (webContents as any).navigationHistory.goForward();
       } else if (webContents.goForward) {
+        console.log('  - Using webContents.goForward()');
         webContents.goForward();
+      } else {
+        console.error('❌ No navigation method available!');
+        return false;
       }
+      
+      // Update navigation state immediately
+      setTimeout(() => this.updateNavigationState(tab), 100);
       
       return true;
     } catch (error) {
-      console.error('Error in goForward:', error);
+      console.error('❌ Error in goForward:', error);
       return false;
     }
   }
@@ -330,6 +414,26 @@ export class WebContentsTabManager extends EventEmitter {
   }
 
   /**
+   * Update navigation state for a tab and send to renderer
+   */
+  private updateNavigationState(tab: WebContentsTab): void {
+    const webContents = tab.view.webContents;
+    
+    // Get current navigation state
+    const canGoBack = (webContents as any).navigationHistory?.canGoBack?.() ?? webContents.canGoBack?.() ?? false;
+    const canGoForward = (webContents as any).navigationHistory?.canGoForward?.() ?? webContents.canGoForward?.() ?? false;
+    
+    // Update tab state
+    tab.canGoBack = canGoBack;
+    tab.canGoForward = canGoForward;
+    
+    console.log(`🔄 Navigation state updated for tab ${tab.id}:`, { canGoBack, canGoForward });
+    
+    // Send updated state to renderer
+    this.sendTabUpdate();
+  }
+
+  /**
    * Get all tabs (for renderer)
    */
   public getTabs(): any[] {
@@ -344,15 +448,358 @@ export class WebContentsTabManager extends EventEmitter {
   }
 
   /**
+   * Setup stealth JavaScript injection to bypass bot detection
+   */
+  private setupStealthInjection(tab: WebContentsTab): void {
+    const webContents = tab.view.webContents;
+    
+    // Inject stealth scripts before page loads - with better logging
+    webContents.on('dom-ready', () => {
+      console.log(`🔧 DOM ready for tab ${tab.id}, injecting stealth scripts...`);
+      
+      webContents.executeJavaScript(`
+        try {
+          console.log('🔧 Advanced stealth injection starting for Akamai/Reddit bypass...');
+          
+          // Remove navigator.webdriver (most important)
+          if (navigator.webdriver !== undefined) {
+            Object.defineProperty(navigator, 'webdriver', {
+              get: () => undefined,
+            });
+            console.log('✅ navigator.webdriver removed');
+          }
+          
+          // Advanced Chrome object with realistic properties for Akamai
+          if (!window.chrome) {
+            window.chrome = {
+              runtime: {
+                onConnect: undefined,
+                onMessage: undefined,
+                PlatformOs: { MAC: 'mac', WIN: 'win', ANDROID: 'android', CROS: 'cros', LINUX: 'linux', OPENBSD: 'openbsd' },
+                PlatformArch: { ARM: 'arm', X86_32: 'x86-32', X86_64: 'x86-64' },
+                PlatformNaclArch: { ARM: 'arm', X86_32: 'x86-32', X86_64: 'x86-64' },
+                RequestUpdateCheckStatus: { THROTTLED: 'throttled', NO_UPDATE: 'no_update', UPDATE_AVAILABLE: 'update_available' },
+                OnInstalledReason: { INSTALL: 'install', UPDATE: 'update', CHROME_UPDATE: 'chrome_update', SHARED_MODULE_UPDATE: 'shared_module_update' },
+                OnRestartRequiredReason: { APP_UPDATE: 'app_update', OS_UPDATE: 'os_update', PERIODIC: 'periodic' }
+              },
+              loadTimes: function() { 
+                return {
+                  requestTime: performance.now() / 1000,
+                  startLoadTime: performance.now() / 1000,
+                  commitLoadTime: performance.now() / 1000,
+                  finishDocumentLoadTime: performance.now() / 1000,
+                  finishLoadTime: performance.now() / 1000,
+                  firstPaintTime: performance.now() / 1000,
+                  firstPaintAfterLoadTime: 0,
+                  navigationType: 'Other'
+                };
+              },
+              csi: function() { 
+                return {
+                  startE: performance.now(),
+                  onloadT: performance.now(),
+                  pageT: performance.now() - performance.timing.navigationStart,
+                  tran: 15
+                };
+              },
+              app: {
+                isInstalled: false,
+                InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+                RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' }
+              }
+            };
+            console.log('✅ Advanced Chrome object added');
+          }
+          
+          // Spoof WebRTC for Reddit detection bypass
+          if (window.RTCPeerConnection) {
+            const originalRTC = window.RTCPeerConnection;
+            window.RTCPeerConnection = function(...args) {
+              const instance = new originalRTC(...args);
+              // Patch methods that could leak real IP
+              const originalCreateDataChannel = instance.createDataChannel;
+              instance.createDataChannel = function() {
+                return originalCreateDataChannel.apply(this, arguments);
+              };
+              return instance;
+            };
+            console.log('✅ WebRTC fingerprinting patched');
+          }
+          
+          // Enhanced hardware fingerprint spoofing for Akamai
+          Object.defineProperty(navigator, 'hardwareConcurrency', {
+            get: () => 8,
+            configurable: true
+          });
+          Object.defineProperty(navigator, 'deviceMemory', {
+            get: () => 8,
+            configurable: true
+          });
+          Object.defineProperty(navigator, 'platform', {
+            get: () => 'Win32',
+            configurable: true
+          });
+          
+          // Ultra-advanced Canvas fingerprinting for Akamai bypass
+          const originalGetContext = HTMLCanvasElement.prototype.getContext;
+          HTMLCanvasElement.prototype.getContext = function(type, attributes) {
+            const context = originalGetContext.call(this, type, attributes);
+            if (type === '2d') {
+              const originalGetImageData = context.getImageData;
+              context.getImageData = function() {
+                const imageData = originalGetImageData.apply(this, arguments);
+                // Add slight noise to defeat canvas fingerprinting
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                  imageData.data[i] += Math.floor(Math.random() * 3) - 1;
+                  imageData.data[i + 1] += Math.floor(Math.random() * 3) - 1;
+                  imageData.data[i + 2] += Math.floor(Math.random() * 3) - 1;
+                }
+                return imageData;
+              };
+            }
+            return context;
+          };
+          console.log('✅ Canvas fingerprinting defeated');
+          
+          // WebGL fingerprinting for Akamai
+          if (window.WebGLRenderingContext) {
+            const originalGetParameter = WebGLRenderingContext.prototype.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function(parameter) {
+              if (parameter === 37445) return 'Intel Inc.'; // VENDOR
+              if (parameter === 37446) return 'Intel(R) UHD Graphics 620'; // RENDERER
+              if (parameter === 35724) return 'WebGL 1.0 (OpenGL ES 2.0 Chromium)'; // VERSION
+              return originalGetParameter.call(this, parameter);
+            };
+            console.log('✅ WebGL fingerprinting defeated');
+          }
+          
+          // Audio context fingerprinting bypass
+          if (window.AudioContext) {
+            const OriginalAudioContext = window.AudioContext;
+            window.AudioContext = function() {
+              const context = new OriginalAudioContext();
+              const originalCreateOscillator = context.createOscillator;
+              context.createOscillator = function() {
+                const oscillator = originalCreateOscillator.call(this);
+                const originalStart = oscillator.start;
+                oscillator.start = function(when) {
+                  // Add slight timing variance
+                  return originalStart.call(this, when + Math.random() * 0.001);
+                };
+                return oscillator;
+              };
+              return context;
+            };
+            console.log('✅ Audio fingerprinting defeated');
+          }
+          
+          // Screen resolution spoofing for consistent fingerprint
+          Object.defineProperty(screen, 'width', { get: () => 1920, configurable: true });
+          Object.defineProperty(screen, 'height', { get: () => 1080, configurable: true });
+          Object.defineProperty(screen, 'availWidth', { get: () => 1920, configurable: true });
+          Object.defineProperty(screen, 'availHeight', { get: () => 1040, configurable: true });
+          Object.defineProperty(screen, 'colorDepth', { get: () => 24, configurable: true });
+          Object.defineProperty(screen, 'pixelDepth', { get: () => 24, configurable: true });
+          console.log('✅ Screen fingerprinting defeated');
+          
+          // Battery API spoofing (Akamai checks this)
+          if (navigator.getBattery) {
+            navigator.getBattery = function() {
+              return Promise.resolve({
+                charging: true,
+                chargingTime: 0,
+                dischargingTime: Infinity,
+                level: 1
+              });
+            };
+            console.log('✅ Battery fingerprinting defeated');
+          }
+          
+          // Timezone spoofing
+          const originalGetTimezoneOffset = Date.prototype.getTimezoneOffset;
+          Date.prototype.getTimezoneOffset = function() {
+            return -300; // EST timezone
+          };
+          console.log('✅ Timezone fingerprinting defeated');
+          
+          // Advanced behavioral timing simulation
+          const originalSetTimeout = window.setTimeout;
+          window.setTimeout = function(callback, delay) {
+            // Add human-like variance to timing
+            const variance = Math.random() * 10 - 5;
+            return originalSetTimeout(callback, delay + variance);
+          };
+          
+          const originalSetInterval = window.setInterval;
+          window.setInterval = function(callback, delay) {
+            const variance = Math.random() * 10 - 5;
+            return originalSetInterval(callback, delay + variance);
+          };
+          console.log('✅ Timing fingerprinting defeated');
+          
+          // BEHAVIORAL SIMULATION - Human-like patterns
+          let mousePosition = { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight };
+          let scrollPosition = 0;
+          let lastActivity = Date.now();
+          let visitStartTime = Date.now();
+          
+          // Simulate natural mouse movements with realistic patterns
+          function simulateMouseMovement() {
+            const maxX = window.innerWidth;
+            const maxY = window.innerHeight;
+            
+            // Natural mouse movement with slight acceleration and deceleration
+            const deltaX = (Math.random() - 0.5) * 15;
+            const deltaY = (Math.random() - 0.5) * 15;
+            
+            mousePosition.x += deltaX;
+            mousePosition.y += deltaY;
+            
+            mousePosition.x = Math.max(0, Math.min(maxX, mousePosition.x));
+            mousePosition.y = Math.max(0, Math.min(maxY, mousePosition.y));
+            
+            // Dispatch synthetic mouse move events periodically
+            if (Math.random() > 0.7) {
+              try {
+                document.dispatchEvent(new MouseEvent('mousemove', {
+                  clientX: mousePosition.x,
+                  clientY: mousePosition.y,
+                  bubbles: true,
+                  cancelable: true
+                }));
+              } catch (e) {}
+            }
+            
+            lastActivity = Date.now();
+          }
+          
+          // Simulate natural scrolling patterns with reading pauses
+          function simulateScrolling() {
+            const scrollIncrement = Math.random() * 100 + 50; // 50-150px
+            const direction = Math.random() > 0.9 ? -1 : 1; // Occasionally scroll up
+            scrollPosition += scrollIncrement * direction;
+            
+            // Keep within bounds
+            const maxScroll = Math.max(0, document.body.scrollHeight - window.innerHeight);
+            scrollPosition = Math.max(0, Math.min(maxScroll, scrollPosition));
+            
+            try {
+              window.scrollTo({
+                top: scrollPosition,
+                behavior: Math.random() > 0.5 ? 'smooth' : 'auto'
+              });
+            } catch (e) {}
+            
+            lastActivity = Date.now();
+          }
+          
+          // Simulate reading pauses with realistic dwell times
+          function simulateReadingPauses() {
+            const pauseDuration = Math.random() * 4000 + 2000; // 2-6 seconds
+            setTimeout(() => {
+              // Sometimes scroll during reading pause
+              if (Math.random() > 0.6) {
+                simulateScrolling();
+              }
+              lastActivity = Date.now();
+            }, pauseDuration);
+          }
+          
+          // Simulate occasional clicks on non-critical elements
+          function simulateOccasionalClicks() {
+            if (Math.random() > 0.95) { // Very rare
+              const elements = document.querySelectorAll('a, button, div[onclick], span[onclick]');
+              if (elements.length > 0 && Math.random() > 0.8) {
+                const randomElement = elements[Math.floor(Math.random() * elements.length)];
+                try {
+                  if (randomElement && !randomElement.href) { // Avoid actual navigation
+                    randomElement.dispatchEvent(new MouseEvent('click', {
+                      bubbles: true,
+                      cancelable: true,
+                      clientX: mousePosition.x,
+                      clientY: mousePosition.y
+                    }));
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+          
+          // Start behavioral simulation with human-like timing variations
+          const mouseInterval = Math.random() * 300 + 200; // 200-500ms
+          const scrollInterval = Math.random() * 3000 + 2000; // 2-5 seconds
+          const readingInterval = Math.random() * 8000 + 5000; // 5-13 seconds
+          
+          setInterval(simulateMouseMovement, mouseInterval);
+          setInterval(() => {
+            if (Math.random() > 0.7) simulateScrolling(); // 30% chance per interval
+          }, scrollInterval);
+          setInterval(simulateReadingPauses, readingInterval);
+          setInterval(simulateOccasionalClicks, Math.random() * 15000 + 10000); // 10-25 seconds
+          
+          // Add realistic network timing variations
+          const originalFetch = window.fetch;
+          if (originalFetch) {
+            window.fetch = function(...args) {
+              return new Promise((resolve) => {
+                // Add human-like delay (50-300ms) with occasional longer delays
+                const baseDelay = Math.random() * 250 + 50;
+                const longDelay = Math.random() > 0.9 ? Math.random() * 500 : 0;
+                setTimeout(() => {
+                  resolve(originalFetch.apply(this, args));
+                }, baseDelay + longDelay);
+              });
+            };
+          }
+          
+          // Simulate realistic session duration
+          const sessionDuration = Math.random() * 300000 + 60000; // 1-6 minutes
+          setTimeout(() => {
+            // Session timeout simulation - reduce activity
+            mousePosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+          }, sessionDuration);
+          
+          console.log('✅ Behavioral simulation activated');
+          
+          // Hide automation indicators
+          if (window.webkitRequestFileSystem) delete window.webkitRequestFileSystem;
+          if (window.webkitResolveLocalFileSystemURL) delete window.webkitResolveLocalFileSystemURL;
+          if (window.webkitRTCPeerConnection) delete window.webkitRTCPeerConnection;
+          if (window.webkitMediaStream) delete window.webkitMediaStream;
+          if (window.webkitSpeechGrammar) delete window.webkitSpeechGrammar;
+          if (window.webkitSpeechGrammarList) delete window.webkitSpeechGrammarList;
+          if (window.webkitSpeechRecognition) delete window.webkitSpeechRecognition;
+          if (window.webkitSpeechRecognitionError) delete window.webkitSpeechRecognitionError;
+          if (window.webkitSpeechRecognitionEvent) delete window.webkitSpeechRecognitionEvent;
+          
+          console.log('🕵️ ULTRA-ADVANCED stealth mode activated on:', window.location.href);
+        } catch (e) {
+          console.error('⚠️ Advanced stealth injection failure:', e);
+        }
+      `).then(() => {
+        console.log(`✅ Stealth injection completed for tab ${tab.id}`);
+      }).catch(error => {
+        console.error(`❌ Failed to inject stealth scripts for tab ${tab.id}:`, error);
+      });
+    });
+  }
+
+  /**
    * Setup WebContents event handlers for a tab
    */
   private setupWebContentsHandlers(tab: WebContentsTab): void {
     const webContents = tab.view.webContents;
+    
+    // Forward renderer console logs to main process for debugging
+    webContents.on('console-message', (event, level, message, line, sourceId) => {
+      console.log(`[RENDERER-${tab.id}] [${level}] ${message}`);
+    });
 
     // Page title updated
     webContents.on('page-title-updated', (event, title) => {
       tab.title = title;
       this.emit('tab-title-updated', tab.id, title);
+      this.window.webContents.send('tab-title-update', tab.id, title);
       this.sendTabUpdate();
     });
 
@@ -378,6 +825,7 @@ export class WebContentsTabManager extends EventEmitter {
       tab.canGoBack = (webContents as any).navigationHistory?.canGoBack?.() ?? webContents.canGoBack?.() ?? false;
       tab.canGoForward = (webContents as any).navigationHistory?.canGoForward?.() ?? webContents.canGoForward?.() ?? false;
       this.emit('tab-url-changed', tab.id, url);
+      this.window.webContents.send('tab-url-update', tab.id, url);
       this.sendTabUpdate();
     });
 
@@ -467,6 +915,18 @@ export class WebContentsTabManager extends EventEmitter {
       tabs: this.getTabsForRenderer(),
       activeTabId: this.activeTabId
     });
+    
+    // Send navigation state update for the active tab
+    if (this.activeTabId) {
+      const activeTab = this.tabs.get(this.activeTabId);
+      if (activeTab) {
+        this.window.webContents.send('navigation-update', {
+          tabId: this.activeTabId,
+          canGoBack: activeTab.canGoBack,
+          canGoForward: activeTab.canGoForward
+        });
+      }
+    }
   }
 
   /**

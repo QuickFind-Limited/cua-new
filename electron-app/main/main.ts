@@ -9,11 +9,57 @@ let tabManager: WebContentsTabManager | null = null;
 // WebContentsView is used for tab management - enable remote debugging for Playwright CDP
 app.commandLine.appendSwitch('remote-debugging-port', '9222');
 
-// Disable automation detection to avoid Google bot detection
+// Enhanced automation detection bypass flags for 2025 + Akamai/Reddit protection
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
-app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor,TranslateUI');
+app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor,TranslateUI,BlockInsecurePrivateNetworkRequests');
 app.commandLine.appendSwitch('exclude-switches', 'enable-automation');
 app.commandLine.appendSwitch('disable-automation');
+app.commandLine.appendSwitch('disable-component-update');
+app.commandLine.appendSwitch('disable-default-apps');
+app.commandLine.appendSwitch('disable-dev-shm-usage');
+app.commandLine.appendSwitch('disable-extensions');
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-hang-monitor');
+app.commandLine.appendSwitch('disable-ipc-flooding-protection');
+
+// Ultra-advanced TLS/HTTP2 fingerprinting evasion for Akamai/Reddit 2025
+app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
+app.commandLine.appendSwitch('disable-web-security');
+app.commandLine.appendSwitch('disable-site-isolation-trials');
+app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess,CrOSBatteryPercentage');
+app.commandLine.appendSwitch('force-device-scale-factor', '1');
+app.commandLine.appendSwitch('disable-accelerated-2d-canvas');
+app.commandLine.appendSwitch('disable-gpu');
+app.commandLine.appendSwitch('no-sandbox');
+
+// Ultra-advanced evasion flags discovered in 2025 research
+app.commandLine.appendSwitch('disable-features', 'MediaRouter,DialMediaRouteProvider,CastMediaRouteProvider');
+app.commandLine.appendSwitch('disable-client-side-phishing-detection');
+app.commandLine.appendSwitch('disable-component-extensions-with-background-pages');
+app.commandLine.appendSwitch('disable-default-apps');
+app.commandLine.appendSwitch('disable-device-discovery-notifications');
+app.commandLine.appendSwitch('disable-domain-reliability');
+app.commandLine.appendSwitch('disable-background-networking');
+app.commandLine.appendSwitch('disable-breakpad');
+app.commandLine.appendSwitch('disable-crash-reporter');
+app.commandLine.appendSwitch('disable-extension-activity-logging');
+app.commandLine.appendSwitch('disable-extensions-file-access-check');
+app.commandLine.appendSwitch('disable-extensions-http-throttling');
+app.commandLine.appendSwitch('disable-location-providers');
+app.commandLine.appendSwitch('disable-logging');
+app.commandLine.appendSwitch('disable-metrics');
+app.commandLine.appendSwitch('disable-metrics-reporting');
+app.commandLine.appendSwitch('disable-suggestions-service');
+app.commandLine.appendSwitch('disable-sync');
+
+// HTTP/2 and TLS specific evasion
+app.commandLine.appendSwitch('enable-features', 'NetworkService,NetworkServiceLogging');
+app.commandLine.appendSwitch('force-fieldtrials', 'HttpsRRRecordsLoading/Enable/');
+app.commandLine.appendSwitch('variations-server-url', '');
+app.commandLine.appendSwitch('disable-field-trial-config');
 
 function createWindow(): void {
   // Create the browser window
@@ -25,7 +71,13 @@ function createWindow(): void {
       preload: path.join(__dirname, '..', '..', 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false // Allows WebContentsView to access necessary features
+      sandbox: false, // Allows WebContentsView to access necessary features
+      // Enhanced browser mimicry for Akamai/Reddit bypass
+      webSecurity: false, // Disable web security for better mimicry
+      allowRunningInsecureContent: true,
+      experimentalFeatures: true,
+      backgroundThrottling: false,
+      offscreen: false
     },
     icon: path.join(__dirname, '..', 'assets', 'icon.ico')
   });
@@ -62,6 +114,11 @@ function createWindow(): void {
     mainWindow = null;
   });
 
+  // Forward main window console logs for debugging
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[MAIN-WINDOW] [${level}] ${message}`);
+  });
+
   // Open DevTools in development
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
@@ -86,6 +143,65 @@ function createWindow(): void {
   });
 }
 
+// Enhanced user agent spoofing with rotation to remove Electron identifiers
+app.whenReady().then(() => {
+  // Pool of realistic user agents for 2025 - varied but all legitimate
+  const userAgentPool = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+  ];
+  
+  // Select a random user agent for this session
+  const sessionUA = userAgentPool[Math.floor(Math.random() * userAgentPool.length)];
+  
+  // Set at app level
+  app.userAgentFallback = sessionUA;
+  
+  // Set at session level with rotation for different requests
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    // For Reddit specifically, ensure we use only mainstream browsers
+    let selectedUA = sessionUA;
+    if (details.url.includes('reddit.com')) {
+      // Reddit blocks alternative browsers - stick to Chrome/Firefox/Safari only
+      const redditSafeUAs = userAgentPool.filter(ua => 
+        ua.includes('Chrome/') || ua.includes('Firefox/') || ua.includes('Safari/')
+      ).filter(ua => !ua.includes('Vivaldi') && !ua.includes('Edge'));
+      selectedUA = redditSafeUAs[Math.floor(Math.random() * redditSafeUAs.length)];
+    }
+    
+    // Tesla/Akamai prefers consistent Chrome signatures
+    if (details.url.includes('tesla.com')) {
+      const chromeUAs = userAgentPool.filter(ua => ua.includes('Chrome/'));
+      selectedUA = chromeUAs[Math.floor(Math.random() * chromeUAs.length)];
+    }
+    
+    details.requestHeaders['User-Agent'] = selectedUA;
+    
+    // Add additional headers that legitimate browsers send
+    details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7';
+    details.requestHeaders['Accept-Language'] = 'en-US,en;q=0.9';
+    details.requestHeaders['Accept-Encoding'] = 'gzip, deflate, br, zstd';
+    details.requestHeaders['Sec-Ch-Ua'] = '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"';
+    details.requestHeaders['Sec-Ch-Ua-Mobile'] = '?0';
+    details.requestHeaders['Sec-Ch-Ua-Platform'] = '"Windows"';
+    details.requestHeaders['Sec-Fetch-Dest'] = 'document';
+    details.requestHeaders['Sec-Fetch-Mode'] = 'navigate';
+    details.requestHeaders['Sec-Fetch-Site'] = 'none';
+    details.requestHeaders['Sec-Fetch-User'] = '?1';
+    details.requestHeaders['Upgrade-Insecure-Requests'] = '1';
+    
+    callback({ requestHeaders: details.requestHeaders });
+  });
+  
+  console.log('Enhanced user agent spoofing with rotation applied. Session UA:', sessionUA);
+});
+
 function setupSecurity(): void {
   // Prevent new window creation outside of our tab system
   app.on('web-contents-created', (event, contents) => {
@@ -106,13 +222,13 @@ function setupSecurity(): void {
     });
   });
 
-  // Content Security Policy
+  // Content Security Policy - relaxed for Google compatibility
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self' https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:;"
+          "default-src 'self' https: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data:;"
         ]
       }
     });
