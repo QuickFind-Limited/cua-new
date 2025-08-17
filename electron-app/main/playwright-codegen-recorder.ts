@@ -85,25 +85,52 @@ export class PlaywrightCodegenRecorder {
       
       this.context = contexts[0]; // Use the first (main) context
       
-      // Get existing pages or create a new one
+      // Get all pages and find the actual webview content page
       const pages = this.context.pages();
-      if (pages.length > 0) {
-        // Use the most recently created page (likely the active tab)
+      console.log(`Found ${pages.length} pages in context`);
+      
+      // Find the page that's NOT the UI (tabbar.html) - look for actual web content
+      let targetPage: any = null;
+      for (const page of pages) {
+        const url = page.url();
+        console.log(`  Page URL: ${url}`);
+        
+        // Skip UI pages and use the actual webview content
+        if (!url.includes('tabbar.html') && !url.includes('file://')) {
+          targetPage = page;
+          break;
+        }
+      }
+      
+      // If no suitable page found, look for Google or any http/https page
+      if (!targetPage) {
+        for (const page of pages) {
+          const url = page.url();
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            targetPage = page;
+            break;
+          }
+        }
+      }
+      
+      if (targetPage) {
+        this.page = targetPage;
+        console.log(`Using existing webview page: ${this.page.url()}`);
+      } else if (pages.length > 0) {
+        // Fallback: use the last page if nothing else works
         this.page = pages[pages.length - 1];
-        console.log(`Using existing page: ${this.page.url()}`);
+        console.log(`Fallback: using last page: ${this.page.url()}`);
       } else {
-        this.page = await this.context.newPage();
-        console.log('Created new page in Electron context');
+        // Should not create new page - recording should use existing webview
+        throw new Error('No webview page found for recording. Please ensure a tab is open.');
       }
       
       // Start code generation tracking
       await this.startCodeGeneration();
 
-      // Navigate to initial URL if provided
-      if (startUrl && startUrl !== 'about:blank') {
-        await this.page.goto(startUrl);
-        this.currentSession.url = startUrl;
-      }
+      // Don't navigate - record from current page position
+      // Update session URL to current page URL
+      this.currentSession.url = this.page.url();
 
       this.isRecording = true;
       console.log(`Codegen recording started for session: ${sessionId}`);
