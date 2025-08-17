@@ -406,8 +406,17 @@ function handleRecordingComplete(session) {
 // Show recording summary in UI
 function showRecordingSummary(session) {
     const statusText = document.getElementById('status-text');
+    
+    // Handle both old format (with actions) and new format (with session/specCode)
+    const actualSession = session.session || session;
+    const hasActions = session.actions && Array.isArray(session.actions);
+    
     if (statusText) {
-        statusText.textContent = `Recording complete: ${session.actions.length} actions captured`;
+        if (hasActions) {
+            statusText.textContent = `Recording complete: ${session.actions.length} actions captured`;
+        } else {
+            statusText.textContent = `Recording complete - ready for analysis`;
+        }
         
         // Reset status after 5 seconds
         setTimeout(() => {
@@ -417,18 +426,32 @@ function showRecordingSummary(session) {
     
     // Log detailed summary to console
     console.group('Recording Summary');
-    console.log('Session ID:', session.id);
-    console.log('Duration:', ((session.endTime - session.startTime) / 1000).toFixed(1) + 's');
-    console.log('Actions:', session.actions.length);
-    console.log('URL:', session.url);
-    console.log('Title:', session.title);
+    console.log('Session ID:', actualSession.id);
     
-    // Group actions by type
-    const actionsByType = {};
-    session.actions.forEach(action => {
-        actionsByType[action.type] = (actionsByType[action.type] || 0) + 1;
-    });
-    console.log('Action breakdown:', actionsByType);
+    if (actualSession.startTime && actualSession.endTime) {
+        console.log('Duration:', ((actualSession.endTime - actualSession.startTime) / 1000).toFixed(1) + 's');
+    }
+    
+    if (hasActions) {
+        console.log('Actions:', session.actions.length);
+        // Group actions by type
+        const actionsByType = {};
+        session.actions.forEach(action => {
+            actionsByType[action.type] = (actionsByType[action.type] || 0) + 1;
+        });
+        console.log('Action breakdown:', actionsByType);
+    } else if (session.specCode) {
+        console.log('Playwright spec generated');
+        console.log('Spec length:', session.specCode.length, 'characters');
+    }
+    
+    console.log('URL:', actualSession.url);
+    console.log('Title:', actualSession.title);
+    
+    if (session.screenshotPath || actualSession.screenshotPath) {
+        console.log('Screenshot:', session.screenshotPath || actualSession.screenshotPath);
+    }
+    
     console.groupEnd();
 }
 
@@ -493,12 +516,16 @@ async function analyzeLastRecording() {
     
     try {
         if (window.electronAPI && window.electronAPI.analyzeRecording) {
-            const result = await window.electronAPI.analyzeRecording({
-                recordingData: window.lastRecordingSession.actions,
-                url: window.lastRecordingSession.url,
-                title: window.lastRecordingSession.title,
-                screenshotPath: window.lastRecordingSession.screenshotPath
-            });
+            // Prepare recording data for analysis
+            const recordingData = {
+                recordingData: window.lastRecordingSession.specCode || window.lastRecordingSession.session?.specCode || '',
+                url: window.lastRecordingSession.session?.url || window.lastRecordingSession.url || '',
+                title: window.lastRecordingSession.session?.title || window.lastRecordingSession.title || 'Recording',
+                screenshotPath: window.lastRecordingSession.screenshotPath || window.lastRecordingSession.session?.screenshotPath
+            };
+            
+            console.log('Sending recording for analysis:', recordingData);
+            const result = await window.electronAPI.analyzeRecording(recordingData);
             
             if (result.success && result.data) {
                 console.log('Analysis successful:', result.data);
