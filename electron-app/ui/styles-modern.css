@@ -417,6 +417,19 @@ html, body {
   color: white;
 }
 
+/* Main UI Adjustment when sidebar is visible */
+body.sidebar-open .tab-bar,
+body.sidebar-open .nav-bar {
+  margin-left: var(--sidebar-width);
+  transition: margin-left var(--duration-moderate) var(--spring-smooth);
+}
+
+body.sidebar-collapsed .tab-bar,
+body.sidebar-collapsed .nav-bar {
+  margin-left: var(--sidebar-collapsed-width);
+  transition: margin-left var(--duration-moderate) var(--spring-smooth);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   :root {

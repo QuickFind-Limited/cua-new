@@ -169,7 +169,11 @@ class ModernSidebar {
   async show() {
     if (!this.isVisible) {
       this.isVisible = true;
+      this.isCollapsed = false;
       this.sidebar.classList.add('active');
+      this.sidebar.classList.remove('collapsed');
+      document.body.classList.add('sidebar-open');
+      document.body.classList.remove('sidebar-collapsed');
       this.floatingToggle.style.opacity = '0';
       this.floatingToggle.style.pointerEvents = 'none';
       
@@ -188,6 +192,7 @@ class ModernSidebar {
     if (this.isVisible) {
       this.isVisible = false;
       this.sidebar.classList.remove('active');
+      document.body.classList.remove('sidebar-open', 'sidebar-collapsed');
       this.floatingToggle.style.opacity = '1';
       this.floatingToggle.style.pointerEvents = 'all';
       
@@ -202,25 +207,11 @@ class ModernSidebar {
   }
   
   async toggleCollapse() {
-    this.isCollapsed = !this.isCollapsed;
+    // Only work if sidebar is visible
+    if (!this.isVisible) return;
     
-    if (this.isCollapsed) {
-      this.sidebar.classList.add('collapsed');
-      this.toggleBtn.querySelector('svg').style.transform = 'rotate(180deg)';
-      
-      // When collapsed, we keep a thin strip visible
-      if (window.electronAPI && window.electronAPI.sidebar) {
-        await window.electronAPI.sidebar.resize(48);
-      }
-    } else {
-      this.sidebar.classList.remove('collapsed');
-      this.toggleBtn.querySelector('svg').style.transform = 'rotate(0)';
-      
-      // When expanded, use full width
-      if (window.electronAPI && window.electronAPI.sidebar) {
-        await window.electronAPI.sidebar.resize(320);
-      }
-    }
+    // Simply hide the sidebar when collapse button is clicked
+    await this.hide();
   }
   
   startTimer() {
