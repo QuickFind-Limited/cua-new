@@ -690,7 +690,9 @@ async function analyzeLastRecording() {
     // Show the modern sidebar
     console.log('Checking for modernSidebar:', !!window.modernSidebar);
     if (window.modernSidebar) {
-        console.log('Calling modernSidebar.show()');
+        // Force reset the sidebar state before showing
+        window.modernSidebar.isVisible = false;
+        console.log('Force reset sidebar visibility, calling show()');
         await window.modernSidebar.show();
         console.log('Calling modernSidebar.updateProgress()');
         window.modernSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');

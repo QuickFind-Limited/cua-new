@@ -21,7 +21,31 @@ class ModernSidebar {
   }
   
   createSidebar() {
-    // Create sidebar HTML structure
+    // Use existing sidebar from HTML instead of creating a new one
+    this.sidebar = document.getElementById('analysis-sidebar');
+    
+    if (this.sidebar) {
+      console.log('Using existing analysis-sidebar element');
+      // Get references to existing elements
+      this.toggleBtn = document.getElementById('sidebar-toggle-btn');
+      this.timerElement = document.getElementById('analysis-timer');
+      this.detailContent = document.getElementById('detail-content');
+      
+      // Initialize visibility state based on actual DOM state
+      this.isVisible = this.sidebar.classList.contains('active');
+      this.isCollapsed = this.sidebar.classList.contains('collapsed');
+      console.log('Initial sidebar state - isVisible:', this.isVisible, 'isCollapsed:', this.isCollapsed);
+      
+      // Setup event listeners
+      this.setupEventListeners();
+      
+      // Create and add floating toggle if needed
+      // this.createFloatingToggle(); // Skip for now since we're using existing HTML
+      return;
+    }
+    
+    console.log('Creating new modern-sidebar element');
+    // Fallback: Create sidebar HTML structure if it doesn't exist
     const sidebarHTML = `
       <div id="modern-sidebar" class="modern-sidebar">
         <div class="sidebar-header">
@@ -280,7 +304,11 @@ class ModernSidebar {
   }
   
   updateProgress(step, status = 'active', details = null) {
-    const element = document.getElementById(`progress-${step}`);
+    console.log(`updateProgress called: step=${step}, status=${status}, details=${details}`);
+    const elementId = `progress-${step}`;
+    const element = document.getElementById(elementId);
+    console.log(`Looking for element: ${elementId}, found:`, !!element);
+    
     if (element) {
       // Remove active from all
       document.querySelectorAll('.progress-item.active').forEach(item => {
