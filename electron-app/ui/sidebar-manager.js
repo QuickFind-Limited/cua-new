@@ -167,15 +167,29 @@ class ModernSidebar {
   }
   
   async show() {
+    console.log('ModernSidebar.show() called, isVisible:', this.isVisible);
+    console.log('Sidebar element exists:', !!this.sidebar);
+    
+    if (!this.sidebar) {
+      console.error('Sidebar element not found!');
+      return;
+    }
+    
     if (!this.isVisible) {
+      console.log('Showing sidebar...');
       this.isVisible = true;
       this.isCollapsed = false;
       this.sidebar.classList.add('active');
       this.sidebar.classList.remove('collapsed');
       document.body.classList.add('sidebar-open');
       document.body.classList.remove('sidebar-collapsed');
-      this.floatingToggle.style.opacity = '0';
-      this.floatingToggle.style.pointerEvents = 'none';
+      
+      if (this.floatingToggle) {
+        this.floatingToggle.style.opacity = '0';
+        this.floatingToggle.style.pointerEvents = 'none';
+      }
+      
+      console.log('Sidebar classes added, should be visible now');
       
       // Notify main process to adjust WebContentsView bounds
       if (window.electronAPI && window.electronAPI.sidebar) {

@@ -77,17 +77,25 @@ const executionEngine = new ExecutionEngine();
 export function registerIpcHandlers(): void {
   // LLM: Analyze recording handler with intelligent strategy selection
   ipcMain.handle('llm:analyzeRecording', async (event: IpcMainInvokeEvent, params: AnalyzeRecordingParams) => {
+    console.log('==========================================');
+    console.log('IPC: llm:analyzeRecording called');
+    console.log('Params received:', JSON.stringify(params).substring(0, 200));
+    console.log('==========================================');
+    
     try {
       // Validate input
       if (!params.recordingData || typeof params.recordingData !== 'string') {
+        console.error('Invalid recording data:', params.recordingData);
         throw new Error('Invalid recording data provided');
       }
 
       // Check API key is configured
       if (!isApiKeyConfigured()) {
+        console.error('API key not configured');
         throw new Error('Anthropic API key not configured. Please set ANTHROPIC_API_KEY environment variable.');
       }
 
+      console.log('Starting analyzeRecordingWithMetadata...');
       // Use the enhanced analysis with metadata that includes intelligent strategy selection
       const result = await analyzeRecordingWithMetadata({
         recordingData: params.recordingData,

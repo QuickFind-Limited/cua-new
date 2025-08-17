@@ -83,7 +83,8 @@ html, body {
 }
 
 /* Modern Analysis Sidebar */
-.modern-sidebar {
+.modern-sidebar,
+.analysis-sidebar {
   position: fixed;
   left: 0;
   top: 0;
@@ -101,12 +102,14 @@ html, body {
   will-change: transform;
 }
 
-.modern-sidebar.active {
+.modern-sidebar.active,
+.analysis-sidebar.active {
   transform: translateX(0);
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
 }
 
-.modern-sidebar.collapsed {
+.modern-sidebar.collapsed,
+.analysis-sidebar.collapsed {
   width: var(--sidebar-collapsed-width);
   transform: translateX(0);
 }
@@ -441,7 +444,8 @@ body.sidebar-collapsed .nav-bar {
     transform: translateX(-100%);
   }
   
-  .modern-sidebar.active {
+  .modern-sidebar.active,
+.analysis-sidebar.active {
     transform: translateX(0);
   }
 }

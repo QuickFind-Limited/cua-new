@@ -1,17 +1,73 @@
-// Dynamic import for ES module - using eval to bypass TypeScript's CommonJS compilation
+// Use child process to handle ES module import
+import { fork } from 'child_process';
+import * as path from 'path';
+
+let workerProcess: any = null;
 let queryFunction: any = null;
 
 async function getQueryFunction() {
+  console.log('getQueryFunction called, queryFunction exists:', !!queryFunction);
   if (!queryFunction) {
-    // Use eval to force a true ES module import that won't be transformed by TypeScript
-    // This is necessary because Claude Code SDK is an ES module and TypeScript compiles to CommonJS
-    const claudeCodeModule = await eval(`import('@anthropic-ai/claude-code')`);
-    
-    if (!claudeCodeModule || !claudeCodeModule.query) {
-      throw new Error('Claude Code SDK query function not found. Please ensure @anthropic-ai/claude-code is properly installed and ANTHROPIC_API_KEY is set.');
-    }
-    
-    queryFunction = claudeCodeModule.query;
+    // Create a query function that uses the worker process
+    queryFunction = async function* (options: any) {
+      console.log('Query function invoked with options:', options.prompt?.substring(0, 100));
+      // Ensure worker is started
+      if (!workerProcess) {
+        const workerPath = path.join(__dirname, 'claude-code-worker.js');
+        console.log('Starting worker process at:', workerPath);
+        workerProcess = fork(workerPath, [], {
+          silent: false,
+          env: { ...process.env }
+        });
+        
+        // Wait for worker to be ready
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            console.error('Worker process timeout');
+            reject(new Error('Worker process failed to start'));
+          }, 5000);
+          
+          workerProcess.once('message', (msg: any) => {
+            console.log('Worker message received:', msg);
+            if (msg.type === 'ready') {
+              clearTimeout(timeout);
+              console.log('Worker process is ready');
+              resolve(true);
+            }
+          });
+        });
+      }
+      
+      // Send request to worker
+      const result = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Claude Code SDK timeout'));
+        }, 60000); // 60 second timeout
+        
+        workerProcess.once('message', (msg: any) => {
+          clearTimeout(timeout);
+          if (msg.type === 'result') {
+            if (msg.success) {
+              resolve(msg.data);
+            } else {
+              reject(new Error(msg.error));
+            }
+          }
+        });
+        
+        workerProcess.send({
+          type: 'analyze',
+          prompt: options.prompt
+        });
+      });
+      
+      // Yield the result in the expected format
+      yield {
+        type: 'result',
+        subtype: 'success',
+        result: result
+      };
+    };
   }
   return queryFunction;
 }

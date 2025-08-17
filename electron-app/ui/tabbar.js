@@ -385,10 +385,19 @@ function handleRecordingComplete(session) {
     // Store the recording session for analysis
     window.lastRecordingSession = session;
     
-    // Show the analyze button
+    // Show the analyze button and ensure it has the click handler
     const analyzeBtn = document.getElementById('analyze-btn');
     if (analyzeBtn) {
         analyzeBtn.style.display = 'inline-block';
+        
+        // Remove any existing listeners and add a fresh one
+        const newAnalyzeBtn = analyzeBtn.cloneNode(true);
+        analyzeBtn.parentNode.replaceChild(newAnalyzeBtn, analyzeBtn);
+        
+        newAnalyzeBtn.addEventListener('click', async () => {
+            console.log('Analyze button clicked (from recording complete)');
+            await analyzeLastRecording();
+        });
     }
     
     // Show recording summary
@@ -656,7 +665,10 @@ const analysisSidebar = window.modernSidebar || new AnalysisSidebar();
 
 // Analyze the last recording
 async function analyzeLastRecording() {
-    console.log('Analyzing last recording...');
+    console.log('==========================================');
+    console.log('analyzeLastRecording function called!');
+    console.log('lastRecordingSession exists:', !!window.lastRecordingSession);
+    console.log('==========================================');
     
     if (!window.lastRecordingSession) {
         showRecordingError('No recording available to analyze');
@@ -676,10 +688,14 @@ async function analyzeLastRecording() {
     }
     
     // Show the modern sidebar
+    console.log('Checking for modernSidebar:', !!window.modernSidebar);
     if (window.modernSidebar) {
+        console.log('Calling modernSidebar.show()');
         await window.modernSidebar.show();
+        console.log('Calling modernSidebar.updateProgress()');
         window.modernSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');
     } else {
+        console.log('Falling back to analysisSidebar');
         // Fallback to old sidebar
         analysisSidebar.show();
         analysisSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');
@@ -688,14 +704,23 @@ async function analyzeLastRecording() {
     try {
         if (window.electronAPI && window.electronAPI.analyzeRecording) {
             // Prepare recording data for analysis
+            // Extract the Playwright spec code from the recording session
+            const specCode = window.lastRecordingSession.specCode || 
+                            window.lastRecordingSession.session?.specCode || 
+                            window.lastRecordingSession.result?.session?.specCode || '';
+            
+            console.log('Recording session object:', window.lastRecordingSession);
+            console.log('Spec code length:', specCode.length);
+            
             const recordingData = {
-                recordingData: window.lastRecordingSession.specCode || window.lastRecordingSession.session?.specCode || '',
+                recordingData: specCode,
                 url: window.lastRecordingSession.session?.url || window.lastRecordingSession.url || '',
                 title: window.lastRecordingSession.session?.title || window.lastRecordingSession.title || 'Recording',
                 screenshotPath: window.lastRecordingSession.screenshotPath || window.lastRecordingSession.session?.screenshotPath
             };
             
             console.log('Sending recording for analysis:', recordingData);
+            console.log('Recording data is valid:', !!recordingData.recordingData);
             
             // Use modern sidebar if available
             const sidebar = window.modernSidebar || analysisSidebar;
@@ -706,7 +731,9 @@ async function analyzeLastRecording() {
                 sidebar.updateProgress('analyzing', 'active', 'AI analyzing recording patterns...');
             }, 500);
             
+            console.log('About to call electronAPI.analyzeRecording...');
             const result = await window.electronAPI.analyzeRecording(recordingData);
+            console.log('IPC call returned:', result);
             
             if (result.success && result.data) {
                 console.log('Analysis successful:', result.data);
@@ -863,3 +890,4 @@ window.closeTab = closeTab;
 window.showVarsPanel = showVarsPanel;
 window.hideVarsPanel = hideVarsPanel;
 window.handleRecordingComplete = handleRecordingComplete;
+window.analyzeLastRecording = analyzeLastRecording;
