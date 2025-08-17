@@ -25,6 +25,7 @@ function initializeUI() {
     const goBtn = document.getElementById('go-btn');
     const addressBar = document.getElementById('address-bar');
     const recordBtn = document.getElementById('record-btn');
+    const analyzeBtn = document.getElementById('analyze-btn');
 
     if (backBtn) {
         console.log('🔙 Back button found, adding event listener');
@@ -48,6 +49,12 @@ function initializeUI() {
     if (reloadBtn) reloadBtn.addEventListener('click', () => reloadPage());
     if (goBtn) goBtn.addEventListener('click', () => navigateToUrl());
     if (recordBtn) recordBtn.addEventListener('click', () => toggleRecording());
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', async () => {
+            console.log('Analyze button clicked');
+            await analyzeLastRecording();
+        });
+    }
 
     // Address bar enter key
     if (addressBar) {
@@ -375,6 +382,15 @@ async function toggleRecording() {
 function handleRecordingComplete(session) {
     console.log('Recording session complete:', session);
     
+    // Store the recording session for analysis
+    window.lastRecordingSession = session;
+    
+    // Show the analyze button
+    const analyzeBtn = document.getElementById('analyze-btn');
+    if (analyzeBtn) {
+        analyzeBtn.style.display = 'inline-block';
+    }
+    
     // Show recording summary
     showRecordingSummary(session);
     
@@ -453,6 +469,67 @@ function onRecordingComplete(callback) {
 
 // Make functions globally available
 window.onRecordingComplete = onRecordingComplete;
+
+// Analyze the last recording
+async function analyzeLastRecording() {
+    console.log('Analyzing last recording...');
+    
+    if (!window.lastRecordingSession) {
+        showRecordingError('No recording available to analyze');
+        return;
+    }
+    
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const statusText = document.getElementById('status-text');
+    
+    if (analyzeBtn) {
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = 'Analyzing...';
+    }
+    
+    if (statusText) {
+        statusText.textContent = 'Analyzing recording...';
+    }
+    
+    try {
+        if (window.electronAPI && window.electronAPI.analyzeRecording) {
+            const result = await window.electronAPI.analyzeRecording({
+                recordingData: window.lastRecordingSession.actions,
+                url: window.lastRecordingSession.url,
+                title: window.lastRecordingSession.title,
+                screenshotPath: window.lastRecordingSession.screenshotPath
+            });
+            
+            if (result.success && result.data) {
+                console.log('Analysis successful:', result.data);
+                
+                // Hide analyze button after successful analysis
+                if (analyzeBtn) {
+                    analyzeBtn.style.display = 'none';
+                }
+                
+                // Show vars panel with the Intent Spec
+                showVarsPanel(result.data);
+                
+                if (statusText) {
+                    statusText.textContent = 'Analysis complete - Intent Spec generated';
+                }
+            } else {
+                throw new Error(result.error || 'Analysis failed');
+            }
+        } else {
+            throw new Error('Analysis API not available');
+        }
+    } catch (error) {
+        console.error('Analysis error:', error);
+        showRecordingError('Analysis failed: ' + error.message);
+    } finally {
+        if (analyzeBtn) {
+            analyzeBtn.disabled = false;
+            analyzeBtn.textContent = 'Analyze';
+        }
+    }
+}
 
 // Legacy function for compatibility (if needed elsewhere)
 function handleRecordingCompleteIntent(intentSpec) {
