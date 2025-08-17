@@ -1336,11 +1336,19 @@ body {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: white;
 }
 
 .sidebar-toggle-btn:hover {
@@ -1386,9 +1394,26 @@ body {
 }
 
 .progress-icon {
-  font-size: 20px;
   margin-right: 12px;
   min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #666;
+  transition: stroke 0.3s;
+}
+
+.progress-item.active .progress-icon svg {
+  stroke: #667eea;
+}
+
+.progress-item.completed .progress-icon svg {
+  stroke: #22c55e;
 }
 
 .progress-label {
@@ -1398,15 +1423,26 @@ body {
 }
 
 .progress-status {
-  font-size: 16px;
-  color: #22c55e;
   min-width: 20px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-status svg {
+  width: 16px;
+  height: 16px;
 }
 
 .progress-item.active .progress-status::after {
-  content: '⏳';
-  animation: spin 2s linear infinite;
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {

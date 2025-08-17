@@ -536,12 +536,18 @@ class AnalysisSidebar {
             if (this.isCollapsed) {
                 this.sidebar.classList.add('collapsed');
                 document.body.classList.remove('sidebar-visible');
-                this.toggleBtn.textContent = '▶';
+                this.toggleBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>`;
                 this.toggleBtn.title = 'Expand';
             } else {
                 this.sidebar.classList.remove('collapsed');
                 document.body.classList.add('sidebar-visible');
-                this.toggleBtn.textContent = '◀';
+                this.toggleBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>`;
                 this.toggleBtn.title = 'Collapse';
             }
         }
@@ -606,7 +612,10 @@ class AnalysisSidebar {
                 element.classList.add('completed');
                 const statusElement = element.querySelector('.progress-status');
                 if (statusElement) {
-                    statusElement.textContent = '✓';
+                    statusElement.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>`;
                 }
             }
         }
