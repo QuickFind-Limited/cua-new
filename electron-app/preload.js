@@ -89,6 +89,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendWebviewNavigationState: (tabId, canGoBack, canGoForward) => ipcRenderer.send('webview:navigationStateChanged', tabId, canGoBack, canGoForward),
   sendWebviewNewWindow: (tabId, url) => ipcRenderer.send('webview:newWindowRequested', tabId, url),
 
+  // Sidebar management
+  sidebar: {
+    toggle: (isVisible) => ipcRenderer.invoke('sidebar:toggle', isVisible),
+    resize: (width) => ipcRenderer.invoke('sidebar:resize', width),
+    onBoundsUpdate: (callback) => ipcRenderer.on('bounds-updated', (event, data) => callback(data))
+  },
+
   // Utility
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),

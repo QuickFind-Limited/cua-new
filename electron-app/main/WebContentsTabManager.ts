@@ -31,6 +31,7 @@ export class WebContentsTabManager extends EventEmitter {
   private window: BrowserWindow;
   private preloadPath: string;
   private readonly chromeHeight = 88; // Height of tab bar + nav bar
+  private sidebarWidth = 0; // Track sidebar state for bounds management
   private recorder: PlaywrightRecorder = new PlaywrightRecorder();
   private codegenRecorder: PlaywrightCodegenRecorder = new PlaywrightCodegenRecorder();
   private recordingTabId: string | null = null;
@@ -858,9 +859,9 @@ export class WebContentsTabManager extends EventEmitter {
     const [width, height] = this.window.getContentSize();
     
     tab.view.setBounds({
-      x: 0,
+      x: this.sidebarWidth, // Offset by sidebar width
       y: this.chromeHeight, // Below tab bar and nav bar
-      width: width,
+      width: width - this.sidebarWidth, // Reduce width by sidebar
       height: height - this.chromeHeight
     });
   }
@@ -872,6 +873,32 @@ export class WebContentsTabManager extends EventEmitter {
     this.tabs.forEach(tab => {
       this.updateTabBounds(tab);
     });
+  }
+
+  /**
+   * Set sidebar width and update all tab bounds
+   */
+  public setSidebarWidth(width: number): void {
+    // Validate width
+    const clampedWidth = Math.max(0, Math.min(width, 500));
+    if (this.sidebarWidth !== clampedWidth) {
+      this.sidebarWidth = clampedWidth;
+      this.updateAllTabBounds();
+      
+      // Notify renderer of bounds change
+      this.window.webContents.send('bounds-updated', {
+        sidebarWidth: this.sidebarWidth,
+        chromeHeight: this.chromeHeight
+      });
+    }
+  }
+
+  /**
+   * Toggle sidebar visibility
+   */
+  public toggleSidebar(isVisible: boolean): void {
+    const width = isVisible ? 320 : 0;
+    this.setSidebarWidth(width);
   }
 
   /**

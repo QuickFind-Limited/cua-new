@@ -794,6 +794,49 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  // Sidebar management handlers
+  ipcMain.handle('sidebar:toggle', async (event: IpcMainInvokeEvent, isVisible: boolean) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+      
+      tabManager.toggleSidebar(isVisible);
+      return { 
+        success: true, 
+        sidebarWidth: isVisible ? 320 : 0 
+      };
+    } catch (error) {
+      console.error('Sidebar toggle error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to toggle sidebar'
+      };
+    }
+  });
+
+  ipcMain.handle('sidebar:resize', async (event: IpcMainInvokeEvent, width: number) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+      
+      tabManager.setSidebarWidth(width);
+      return { 
+        success: true, 
+        sidebarWidth: width 
+      };
+    } catch (error) {
+      console.error('Sidebar resize error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to resize sidebar'
+      };
+    }
+  });
+
   // Screenshot comparison handler
   ipcMain.handle('screenshot:compare', async (event: IpcMainInvokeEvent, params: ScreenshotComparisonParams) => {
     try {

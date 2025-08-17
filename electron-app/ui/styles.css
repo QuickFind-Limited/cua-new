@@ -13,7 +13,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden;
+  overflow: hidden; /* Ensures sidebar animation is not clipped */
   position: relative;
 }
 
@@ -1300,20 +1300,21 @@ body {
 /* Analysis Progress Sidebar */
 .analysis-sidebar {
   position: fixed;
-  left: -320px; /* Hidden by default */
+  left: 0;
   top: 0;
   width: 320px;
   height: 100vh;
   background: #ffffff;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: left 0.3s ease-in-out;
+  transform: translateX(-100%); /* Hidden by default using transform */
+  transition: transform 0.3s ease-in-out;
   z-index: 10000; /* Increased z-index to appear above webview */
   display: flex;
   flex-direction: column;
 }
 
 .analysis-sidebar.active {
-  left: 0; /* Slide in when active */
+  transform: translateX(0); /* Slide in when active */
 }
 
 .sidebar-header {
@@ -1501,22 +1502,45 @@ body {
 
 /* Collapsed state */
 .analysis-sidebar.collapsed {
-  left: -280px;
+  transform: translateX(-100%); /* Completely hide the sidebar */
 }
 
 .analysis-sidebar.collapsed .sidebar-toggle-btn {
-  position: absolute;
-  right: -40px;
+  position: fixed;
+  left: 0; /* Position button at screen edge */
   top: 50%;
   transform: translateY(-50%) rotate(180deg);
   background: #667eea;
   border: none;
   padding: 8px 12px;
   border-radius: 0 4px 4px 0;
+  z-index: 10001; /* Above sidebar */
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.analysis-sidebar.collapsed .sidebar-toggle-btn:hover {
+  transform: translateY(-50%) translateX(2px) rotate(180deg);
+  background: #5a67d8;
 }
 
 .analysis-sidebar.collapsed.active {
-  left: -280px;
+  transform: translateX(-100%); /* Keep completely hidden even when active */
+}
+
+/* Additional safeguards for complete hiding */
+.analysis-sidebar:not(.active):not(.collapsed) {
+  transform: translateX(-100%); /* Ensure default hidden state */
+}
+
+.analysis-sidebar.active:not(.collapsed) {
+  transform: translateX(0); /* Ensure visible state when active and not collapsed */
+}
+
+/* Prevent horizontal scrollbars when sidebar animates */
+html, body {
+  overflow-x: hidden;
 }
 
 /* Adjust main content when sidebar is visible */

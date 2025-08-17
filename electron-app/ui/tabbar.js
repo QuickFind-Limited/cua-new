@@ -651,8 +651,8 @@ class AnalysisSidebar {
     }
 }
 
-// Initialize sidebar
-const analysisSidebar = new AnalysisSidebar();
+// Initialize sidebar (use modern sidebar if available, fallback to old)
+const analysisSidebar = window.modernSidebar || new AnalysisSidebar();
 
 // Analyze the last recording
 async function analyzeLastRecording() {
@@ -675,9 +675,15 @@ async function analyzeLastRecording() {
         statusText.textContent = 'Analyzing recording...';
     }
     
-    // Show the analysis sidebar
-    analysisSidebar.show();
-    analysisSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');
+    // Show the modern sidebar
+    if (window.modernSidebar) {
+        await window.modernSidebar.show();
+        window.modernSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');
+    } else {
+        // Fallback to old sidebar
+        analysisSidebar.show();
+        analysisSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');
+    }
     
     try {
         if (window.electronAPI && window.electronAPI.analyzeRecording) {
@@ -691,10 +697,13 @@ async function analyzeLastRecording() {
             
             console.log('Sending recording for analysis:', recordingData);
             
+            // Use modern sidebar if available
+            const sidebar = window.modernSidebar || analysisSidebar;
+            
             // Simulate progress through analysis steps
             setTimeout(() => {
-                analysisSidebar.updateProgress('parsing', 'completed', 'Actions parsed successfully');
-                analysisSidebar.updateProgress('analyzing', 'active', 'AI analyzing recording patterns...');
+                sidebar.updateProgress('parsing', 'completed', 'Actions parsed successfully');
+                sidebar.updateProgress('analyzing', 'active', 'AI analyzing recording patterns...');
             }, 500);
             
             const result = await window.electronAPI.analyzeRecording(recordingData);
@@ -703,22 +712,22 @@ async function analyzeLastRecording() {
                 console.log('Analysis successful:', result.data);
                 
                 // Update progress for successful analysis
-                analysisSidebar.updateProgress('analyzing', 'completed', 'AI analysis complete');
-                analysisSidebar.updateProgress('variables', 'active', 'Extracting dynamic variables...');
+                sidebar.updateProgress('analyzing', 'completed', 'AI analysis complete');
+                sidebar.updateProgress('variables', 'active', 'Extracting dynamic variables...');
                 
                 setTimeout(() => {
                     const varCount = result.data.params ? result.data.params.length : 0;
-                    analysisSidebar.updateProgress('variables', 'completed', `Found ${varCount} variables`);
-                    analysisSidebar.updateProgress('generating', 'active', 'Generating Intent Spec...');
+                    sidebar.updateProgress('variables', 'completed', `Found ${varCount} variables`);
+                    sidebar.updateProgress('generating', 'active', 'Generating Intent Spec...');
                 }, 300);
                 
                 setTimeout(() => {
-                    analysisSidebar.updateProgress('generating', 'completed', 'Intent Spec generated');
-                    analysisSidebar.updateProgress('validating', 'active', 'Validating output...');
+                    sidebar.updateProgress('generating', 'completed', 'Intent Spec generated');
+                    sidebar.updateProgress('validating', 'active', 'Validating output...');
                 }, 600);
                 
                 setTimeout(() => {
-                    analysisSidebar.completeAnalysis(true);
+                    sidebar.completeAnalysis(true);
                 }, 900);
                 
                 // Hide analyze button after successful analysis
@@ -743,7 +752,8 @@ async function analyzeLastRecording() {
         showRecordingError('Analysis failed: ' + error.message);
         
         // Update sidebar to show failure
-        analysisSidebar.completeAnalysis(false);
+        const sidebar = window.modernSidebar || analysisSidebar;
+        sidebar.completeAnalysis(false);
     } finally {
         if (analyzeBtn) {
             analyzeBtn.disabled = false;
