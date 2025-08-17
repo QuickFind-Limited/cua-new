@@ -3,7 +3,10 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // Load environment variables from .env file
+// Use multiple potential paths to ensure .env is found
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 import './main';
 

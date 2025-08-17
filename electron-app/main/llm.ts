@@ -1,34 +1,17 @@
-// Dynamic import for ES module - using direct dynamic import
+// Dynamic import for ES module - using eval to bypass TypeScript's CommonJS compilation
 let queryFunction: any = null;
 
 async function getQueryFunction() {
   if (!queryFunction) {
-    try {
-      // Try dynamic import first
-      const claudeCode = await import('@anthropic-ai/claude-code');
-      queryFunction = claudeCode.query;
-    } catch (error) {
-      console.error('Failed to import Claude Code SDK:', error);
-      // Fallback to a mock function for development
-      queryFunction = async function* mockQuery(options: any) {
-        console.warn('Using mock Claude Code SDK - please check module installation');
-        yield {
-          type: 'result',
-          subtype: 'success',
-          result: JSON.stringify({
-            name: "Mock Analysis",
-            description: "This is a mock response - Claude Code SDK not loaded",
-            url: "https://example.com",
-            params: [],
-            steps: [],
-            preferences: {
-              dynamic_elements: "ai",
-              simple_steps: "snippet"
-            }
-          })
-        };
-      };
+    // Use eval to force a true ES module import that won't be transformed by TypeScript
+    // This is necessary because Claude Code SDK is an ES module and TypeScript compiles to CommonJS
+    const claudeCodeModule = await eval(`import('@anthropic-ai/claude-code')`);
+    
+    if (!claudeCodeModule || !claudeCodeModule.query) {
+      throw new Error('Claude Code SDK query function not found. Please ensure @anthropic-ai/claude-code is properly installed and ANTHROPIC_API_KEY is set.');
     }
+    
+    queryFunction = claudeCodeModule.query;
   }
   return queryFunction;
 }

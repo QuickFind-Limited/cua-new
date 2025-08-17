@@ -1,7 +1,19 @@
 import { app, BrowserWindow, session, protocol } from 'electron';
 import * as path from 'path';
+import * as dotenv from 'dotenv';
 import { WebContentsTabManager } from './WebContentsTabManager';
 import { registerIpcHandlers } from './ipc';
+
+// Load environment variables early
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+dotenv.config({ path: path.join(process.cwd(), '.env') });
+
+// Verify API key is loaded
+if (!process.env.ANTHROPIC_API_KEY) {
+  console.warn('WARNING: ANTHROPIC_API_KEY not found in environment variables');
+} else {
+  console.log('ANTHROPIC_API_KEY loaded successfully');
+}
 
 let mainWindow: BrowserWindow | null = null;
 let tabManager: WebContentsTabManager | null = null;
