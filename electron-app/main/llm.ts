@@ -1,9 +1,10 @@
-// Dynamic import for ES module
+// Dynamic import for ES module using eval to bypass TypeScript compilation
 let queryFunction: any = null;
 
 async function getQueryFunction() {
   if (!queryFunction) {
-    const claudeCode = await import('@anthropic-ai/claude-code');
+    // Use eval to force a true dynamic import that won't be transformed by TypeScript
+    const claudeCode = await eval('import("@anthropic-ai/claude-code")');
     queryFunction = claudeCode.query;
   }
   return queryFunction;

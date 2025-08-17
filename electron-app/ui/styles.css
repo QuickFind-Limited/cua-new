@@ -1307,7 +1307,7 @@ body {
   background: #ffffff;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   transition: left 0.3s ease-in-out;
-  z-index: 1000;
+  z-index: 10000; /* Increased z-index to appear above webview */
   display: flex;
   flex-direction: column;
 }
