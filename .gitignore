@@ -47,3 +47,8 @@ issue*.png
 # Cache
 .cache/
 *.cache
+
+# Backup files
+backup-*.tar.gz
+backup-*.zip
+*.backup
