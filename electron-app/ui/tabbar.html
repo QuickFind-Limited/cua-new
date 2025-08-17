@@ -36,6 +36,58 @@
 
     <!-- Main content area managed by WebContentsView in main process -->
 
+    <!-- Analysis Progress Sidebar (initially hidden) -->
+    <div id="analysis-sidebar" class="analysis-sidebar">
+        <div class="sidebar-header">
+            <h3>Analysis Progress</h3>
+            <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Collapse">◀</button>
+        </div>
+        <div class="sidebar-content">
+            <div class="progress-section">
+                <div class="progress-item" id="progress-recording">
+                    <span class="progress-icon">⏺️</span>
+                    <span class="progress-label">Recording captured</span>
+                    <span class="progress-status">✓</span>
+                </div>
+                <div class="progress-item" id="progress-parsing">
+                    <span class="progress-icon">📝</span>
+                    <span class="progress-label">Parsing actions</span>
+                    <span class="progress-status"></span>
+                </div>
+                <div class="progress-item" id="progress-analyzing">
+                    <span class="progress-icon">🤖</span>
+                    <span class="progress-label">AI analysis</span>
+                    <span class="progress-status"></span>
+                </div>
+                <div class="progress-item" id="progress-variables">
+                    <span class="progress-icon">📊</span>
+                    <span class="progress-label">Extracting variables</span>
+                    <span class="progress-status"></span>
+                </div>
+                <div class="progress-item" id="progress-generating">
+                    <span class="progress-icon">⚙️</span>
+                    <span class="progress-label">Generating Intent Spec</span>
+                    <span class="progress-status"></span>
+                </div>
+                <div class="progress-item" id="progress-validating">
+                    <span class="progress-icon">✅</span>
+                    <span class="progress-label">Validating output</span>
+                    <span class="progress-status"></span>
+                </div>
+            </div>
+            <div class="analysis-details" id="analysis-details">
+                <h4>Details</h4>
+                <div class="detail-content" id="detail-content">
+                    <!-- Dynamic content will be added here -->
+                </div>
+            </div>
+            <div class="analysis-timer">
+                <span>Time elapsed: </span>
+                <span id="analysis-timer">0s</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Variables Panel (initially hidden) -->
     <div id="vars-panel" class="vars-panel hidden">
         <div class="vars-panel-header">

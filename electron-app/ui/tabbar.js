@@ -493,6 +493,158 @@ function onRecordingComplete(callback) {
 // Make functions globally available
 window.onRecordingComplete = onRecordingComplete;
 
+// Analysis Progress Sidebar Management
+class AnalysisSidebar {
+    constructor() {
+        this.sidebar = document.getElementById('analysis-sidebar');
+        this.toggleBtn = document.getElementById('sidebar-toggle-btn');
+        this.timerElement = document.getElementById('analysis-timer');
+        this.detailContent = document.getElementById('detail-content');
+        this.startTime = null;
+        this.timerInterval = null;
+        this.isCollapsed = false;
+        
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        if (this.toggleBtn) {
+            this.toggleBtn.addEventListener('click', () => this.toggle());
+        }
+    }
+    
+    show() {
+        if (this.sidebar) {
+            this.sidebar.classList.add('active');
+            document.body.classList.add('sidebar-visible');
+            this.startTimer();
+            this.resetProgress();
+        }
+    }
+    
+    hide() {
+        if (this.sidebar) {
+            this.sidebar.classList.remove('active');
+            document.body.classList.remove('sidebar-visible');
+            this.stopTimer();
+        }
+    }
+    
+    toggle() {
+        this.isCollapsed = !this.isCollapsed;
+        if (this.sidebar) {
+            if (this.isCollapsed) {
+                this.sidebar.classList.add('collapsed');
+                document.body.classList.remove('sidebar-visible');
+                this.toggleBtn.textContent = '▶';
+                this.toggleBtn.title = 'Expand';
+            } else {
+                this.sidebar.classList.remove('collapsed');
+                document.body.classList.add('sidebar-visible');
+                this.toggleBtn.textContent = '◀';
+                this.toggleBtn.title = 'Collapse';
+            }
+        }
+    }
+    
+    startTimer() {
+        this.startTime = Date.now();
+        this.timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+            if (this.timerElement) {
+                this.timerElement.textContent = `${elapsed}s`;
+            }
+        }, 1000);
+    }
+    
+    stopTimer() {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+    }
+    
+    resetProgress() {
+        // Reset all progress items
+        const items = ['recording', 'parsing', 'analyzing', 'variables', 'generating', 'validating'];
+        items.forEach(item => {
+            const element = document.getElementById(`progress-${item}`);
+            if (element) {
+                element.classList.remove('active', 'completed');
+                const statusElement = element.querySelector('.progress-status');
+                if (statusElement && item !== 'recording') {
+                    statusElement.textContent = '';
+                }
+            }
+        });
+        
+        // Mark recording as completed since we're analyzing
+        const recordingItem = document.getElementById('progress-recording');
+        if (recordingItem) {
+            recordingItem.classList.add('completed');
+        }
+        
+        // Clear details
+        if (this.detailContent) {
+            this.detailContent.innerHTML = '<div class="detail-item">Analysis starting...</div>';
+        }
+    }
+    
+    updateProgress(step, status = 'active', details = null) {
+        const element = document.getElementById(`progress-${step}`);
+        if (element) {
+            // Remove active from all
+            document.querySelectorAll('.progress-item.active').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            if (status === 'active') {
+                element.classList.add('active');
+                element.classList.remove('completed');
+            } else if (status === 'completed') {
+                element.classList.remove('active');
+                element.classList.add('completed');
+                const statusElement = element.querySelector('.progress-status');
+                if (statusElement) {
+                    statusElement.textContent = '✓';
+                }
+            }
+        }
+        
+        // Update details if provided
+        if (details && this.detailContent) {
+            const detailItem = document.createElement('div');
+            detailItem.className = 'detail-item';
+            detailItem.textContent = details;
+            this.detailContent.appendChild(detailItem);
+            // Keep only last 10 items
+            while (this.detailContent.children.length > 10) {
+                this.detailContent.removeChild(this.detailContent.firstChild);
+            }
+            // Scroll to bottom
+            this.detailContent.scrollTop = this.detailContent.scrollHeight;
+        }
+    }
+    
+    completeAnalysis(success = true) {
+        this.stopTimer();
+        if (success) {
+            this.updateProgress('validating', 'completed', 'Analysis completed successfully!');
+        } else {
+            if (this.detailContent) {
+                const detailItem = document.createElement('div');
+                detailItem.className = 'detail-item';
+                detailItem.style.color = '#ef4444';
+                detailItem.textContent = 'Analysis failed. Please check the console for details.';
+                this.detailContent.appendChild(detailItem);
+            }
+        }
+    }
+}
+
+// Initialize sidebar
+const analysisSidebar = new AnalysisSidebar();
+
 // Analyze the last recording
 async function analyzeLastRecording() {
     console.log('Analyzing last recording...');
@@ -514,6 +666,10 @@ async function analyzeLastRecording() {
         statusText.textContent = 'Analyzing recording...';
     }
     
+    // Show the analysis sidebar
+    analysisSidebar.show();
+    analysisSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');
+    
     try {
         if (window.electronAPI && window.electronAPI.analyzeRecording) {
             // Prepare recording data for analysis
@@ -525,10 +681,36 @@ async function analyzeLastRecording() {
             };
             
             console.log('Sending recording for analysis:', recordingData);
+            
+            // Simulate progress through analysis steps
+            setTimeout(() => {
+                analysisSidebar.updateProgress('parsing', 'completed', 'Actions parsed successfully');
+                analysisSidebar.updateProgress('analyzing', 'active', 'AI analyzing recording patterns...');
+            }, 500);
+            
             const result = await window.electronAPI.analyzeRecording(recordingData);
             
             if (result.success && result.data) {
                 console.log('Analysis successful:', result.data);
+                
+                // Update progress for successful analysis
+                analysisSidebar.updateProgress('analyzing', 'completed', 'AI analysis complete');
+                analysisSidebar.updateProgress('variables', 'active', 'Extracting dynamic variables...');
+                
+                setTimeout(() => {
+                    const varCount = result.data.params ? result.data.params.length : 0;
+                    analysisSidebar.updateProgress('variables', 'completed', `Found ${varCount} variables`);
+                    analysisSidebar.updateProgress('generating', 'active', 'Generating Intent Spec...');
+                }, 300);
+                
+                setTimeout(() => {
+                    analysisSidebar.updateProgress('generating', 'completed', 'Intent Spec generated');
+                    analysisSidebar.updateProgress('validating', 'active', 'Validating output...');
+                }, 600);
+                
+                setTimeout(() => {
+                    analysisSidebar.completeAnalysis(true);
+                }, 900);
                 
                 // Hide analyze button after successful analysis
                 if (analyzeBtn) {
@@ -550,6 +732,9 @@ async function analyzeLastRecording() {
     } catch (error) {
         console.error('Analysis error:', error);
         showRecordingError('Analysis failed: ' + error.message);
+        
+        // Update sidebar to show failure
+        analysisSidebar.completeAnalysis(false);
     } finally {
         if (analyzeBtn) {
             analyzeBtn.disabled = false;
