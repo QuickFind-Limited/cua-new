@@ -17,6 +17,12 @@ export * from './llm';
 export { ExecutionEngine } from './execution-engine';
 export { FallbackHandler } from './fallback-handler';
 
+// Export Screenshot Comparison system
+export { ScreenshotComparator } from './screenshot-comparator';
+
+// Export IPC handlers with enhanced functionality
+export { registerIpcHandlers, removeIpcHandlers } from './ipc';
+
 // Check if API key is set
 if (!process.env.ANTHROPIC_API_KEY) {
   console.warn('ANTHROPIC_API_KEY not set. Please add it to the .env file or set as environment variable.');

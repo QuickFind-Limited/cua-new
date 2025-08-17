@@ -7,8 +7,13 @@ import {
   testConnection,
   makeDecision,
   buildPromptFromSpec,
-  extractDataForMagnitudeQuery
+  extractDataForMagnitudeQuery,
+  analyzeRecordingWithMetadata,
+  executeMagnitudeDecision,
+  executeMagnitudeQuery
 } from './llm';
+import { ScreenshotComparator } from './screenshot-comparator';
+import { ExecutionEngine } from './execution-engine';
 import { getTabManager } from './main';
 
 // Type definitions for IPC events
@@ -50,11 +55,27 @@ interface TabOperationParams {
   url?: string;
 }
 
+interface ScreenshotComparisonParams {
+  actualPath: string;
+  expectedPath: string;
+}
+
+interface ExecuteWithValidationParams {
+  flowSpec: any;
+  variables?: Record<string, any>;
+  successStatePath?: string;
+  validateAgainstState?: boolean;
+}
+
+// Initialize screenshot comparator and execution engine
+const screenshotComparator = new ScreenshotComparator();
+const executionEngine = new ExecutionEngine();
+
 /**
  * Register all IPC handlers for secure communication between main and renderer processes
  */
 export function registerIpcHandlers(): void {
-  // LLM: Analyze recording handler
+  // LLM: Analyze recording handler with intelligent strategy selection
   ipcMain.handle('llm:analyzeRecording', async (event: IpcMainInvokeEvent, params: AnalyzeRecordingParams) => {
     try {
       // Validate input
@@ -67,14 +88,38 @@ export function registerIpcHandlers(): void {
         throw new Error('Anthropic API key not configured. Please set ANTHROPIC_API_KEY environment variable.');
       }
 
-      const result = await analyzeRecording({
+      // Use the enhanced analysis with metadata that includes intelligent strategy selection
+      const result = await analyzeRecordingWithMetadata({
         recordingData: params.recordingData,
         context: params.context
       });
 
       return {
         success: true,
-        data: result
+        data: {
+          // Return the Intent Spec with intelligent strategy selection
+          intentSpec: {
+            name: result.analysis.name,
+            description: `Automated workflow: ${result.analysis.name}`,
+            url: result.analysis.startUrl,
+            params: result.analysis.params,
+            steps: result.analysis.steps.map(step => ({
+              name: step.action,
+              ai_instruction: `Perform ${step.action} on ${step.target}${step.value ? ` with value: ${step.value}` : ''}`,
+              snippet: generateSnippetForAction(step),
+              prefer: determineIntelligentStrategy(step),
+              fallback: determineFallbackStrategy(step),
+              selector: step.target,
+              value: step.value
+            })),
+            preferences: {
+              dynamic_elements: "ai",
+              simple_steps: "snippet"
+            }
+          },
+          metadata: result.metadata,
+          serializedRecording: result.serializedRecording
+        }
       };
     } catch (error) {
       console.error('LLM analyze recording error:', error);
@@ -749,6 +794,88 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  // Screenshot comparison handler
+  ipcMain.handle('screenshot:compare', async (event: IpcMainInvokeEvent, params: ScreenshotComparisonParams) => {
+    try {
+      if (!params.actualPath || !params.expectedPath) {
+        throw new Error('Both actualPath and expectedPath are required');
+      }
+
+      if (typeof params.actualPath !== 'string' || typeof params.expectedPath !== 'string') {
+        throw new Error('Screenshot paths must be strings');
+      }
+
+      const comparisonResult = await screenshotComparator.compareScreenshots(
+        params.actualPath,
+        params.expectedPath
+      );
+
+      return {
+        success: true,
+        data: comparisonResult
+      };
+    } catch (error) {
+      console.error('Screenshot comparison error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Execute flow with validation against success state
+  ipcMain.handle('execute-flow-with-validation', async (event: IpcMainInvokeEvent, params: ExecuteWithValidationParams) => {
+    try {
+      // Validate input
+      if (!params.flowSpec) {
+        throw new Error('Flow specification is required');
+      }
+
+      // Check API key is configured
+      if (!isApiKeyConfigured()) {
+        throw new Error('Anthropic API key not configured. Please set ANTHROPIC_API_KEY environment variable.');
+      }
+
+      // Execute the flow using the execution engine
+      const executionResult = await executeFlowWithValidation(params);
+
+      return {
+        success: true,
+        data: executionResult
+      };
+    } catch (error) {
+      console.error('Execute flow with validation error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
+  // Enhanced decision making with context
+  ipcMain.handle('llm:decideWithContext', async (event: IpcMainInvokeEvent, params: { context: string; options: any }) => {
+    try {
+      // Check API key is configured
+      if (!isApiKeyConfigured()) {
+        throw new Error('Anthropic API key not configured. Please set ANTHROPIC_API_KEY environment variable.');
+      }
+
+      // Use enhanced decision making with Magnitude
+      const result = await executeMagnitudeDecision(params.context, params.options);
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Enhanced decision making error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  });
+
   console.log('IPC handlers registered successfully');
 }
 
@@ -769,6 +896,193 @@ async function executeFlow(params: RunFlowParams): Promise<any> {
     executionTime: Date.now(),
     parameters: params.parameters
   };
+}
+
+/**
+ * Helper function to determine intelligent strategy for action
+ */
+function determineIntelligentStrategy(step: any): 'ai' | 'snippet' {
+  const action = step.action?.toLowerCase() || '';
+  const target = step.target?.toLowerCase() || '';
+  const value = step.value?.toLowerCase() || '';
+
+  // Use snippet for sensitive data and stable elements
+  if (
+    value.includes('password') ||
+    value.includes('credit') ||
+    value.includes('ssn') ||
+    value.includes('api') ||
+    target.includes('#') || // ID selectors
+    target.includes('data-testid') ||
+    action === 'wait' ||
+    action === 'navigate'
+  ) {
+    return 'snippet';
+  }
+
+  // Use AI for dynamic content and complex interactions
+  if (
+    target.includes('search') ||
+    target.includes('result') ||
+    target.includes('popup') ||
+    target.includes('modal') ||
+    target.includes('dynamic') ||
+    action === 'click' && target.includes('button')
+  ) {
+    return 'ai';
+  }
+
+  // Default to snippet for simple, deterministic actions
+  return 'snippet';
+}
+
+/**
+ * Helper function to determine fallback strategy
+ */
+function determineFallbackStrategy(step: any): 'ai' | 'snippet' | 'none' {
+  const prefer = determineIntelligentStrategy(step);
+  
+  // If we prefer snippet, fallback to AI
+  if (prefer === 'snippet') {
+    return 'ai';
+  }
+  
+  // If we prefer AI, fallback to snippet
+  if (prefer === 'ai') {
+    return 'snippet';
+  }
+  
+  return 'none';
+}
+
+/**
+ * Helper function to generate Playwright snippet for action
+ */
+function generateSnippetForAction(step: any): string {
+  const action = step.action?.toLowerCase() || '';
+  const target = step.target || '';
+  const value = step.value || '';
+
+  switch (action) {
+    case 'click':
+      return `await page.click('${target}');`;
+    case 'type':
+    case 'fill':
+      return `await page.fill('${target}', '${value}');`;
+    case 'navigate':
+      return `await page.goto('${target || value}');`;
+    case 'wait':
+      return `await page.waitForSelector('${target}', { timeout: 5000 });`;
+    case 'select':
+      return `await page.selectOption('${target}', '${value}');`;
+    case 'hover':
+      return `await page.hover('${target}');`;
+    case 'scroll':
+      return `await page.mouse.wheel(0, 300);`;
+    default:
+      return `await page.locator('${target}').click();`;
+  }
+}
+
+/**
+ * Execute flow with validation against success state
+ */
+async function executeFlowWithValidation(params: ExecuteWithValidationParams): Promise<any> {
+  try {
+    console.log('Executing flow with validation:', params.flowSpec.name || 'Unnamed Flow');
+    
+    // First execute the flow normally
+    const executionResult = await executeFlowSteps(params.flowSpec, params.variables);
+    
+    // If validation is requested and we have a success state path
+    if (params.validateAgainstState && params.successStatePath) {
+      console.log('Validating execution against success state...');
+      
+      // Take a screenshot of current state
+      const currentScreenshotPath = await takeCurrentScreenshot();
+      
+      if (currentScreenshotPath) {
+        // Compare with expected success state
+        const comparisonResult = await screenshotComparator.compareScreenshots(
+          currentScreenshotPath,
+          params.successStatePath
+        );
+        
+        return {
+          ...executionResult,
+          validation: {
+            performed: true,
+            screenshotComparison: comparisonResult,
+            currentScreenshotPath,
+            expectedScreenshotPath: params.successStatePath,
+            validationSuccess: comparisonResult.match && comparisonResult.similarity > 80
+          }
+        };
+      } else {
+        console.warn('Could not take screenshot for validation');
+        return {
+          ...executionResult,
+          validation: {
+            performed: false,
+            error: 'Failed to capture current state for validation'
+          }
+        };
+      }
+    }
+    
+    // Return execution result without validation
+    return {
+      ...executionResult,
+      validation: {
+        performed: false,
+        reason: 'Validation not requested'
+      }
+    };
+  } catch (error) {
+    console.error('Flow execution with validation error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Take screenshot of current browser state
+ */
+async function takeCurrentScreenshot(): Promise<string | null> {
+  try {
+    const tabManager = getTabManager();
+    if (!tabManager) {
+      throw new Error('TabManager not available');
+    }
+
+    const activeTab = tabManager.getActiveTab();
+    if (!activeTab) {
+      throw new Error('No active tab available');
+    }
+
+    // Generate unique filename for current screenshot
+    const timestamp = Date.now();
+    const screenshotPath = `./recordings/execution-current-state-${timestamp}.png`;
+    
+    // Take screenshot using WebContents captureScreen method
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    // Ensure the recordings directory exists
+    await fs.mkdir('./recordings', { recursive: true });
+    
+    // Take screenshot using WebContents
+    const image = await activeTab.view.webContents.capturePage();
+    const buffer = image.toPNG();
+    
+    // Write to file
+    await fs.writeFile(screenshotPath, buffer);
+    
+    console.log('Screenshot saved to:', screenshotPath);
+    return screenshotPath;
+  } catch (error) {
+    console.error('Error taking current screenshot:', error);
+    return null;
+  }
 }
 
 /**
@@ -963,6 +1277,11 @@ export function removeIpcHandlers(): void {
   ipcMain.removeAllListeners('generate-playwright-code');
   ipcMain.removeAllListeners('export-recording-session');
   ipcMain.removeAllListeners('import-recording-session');
+  
+  // Screenshot and validation handlers
+  ipcMain.removeAllListeners('screenshot:compare');
+  ipcMain.removeAllListeners('execute-flow-with-validation');
+  ipcMain.removeAllListeners('llm:decideWithContext');
   
   // Codegen recording handlers
   ipcMain.removeAllListeners('start-codegen-recording');

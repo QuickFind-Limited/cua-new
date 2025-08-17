@@ -1,8 +1,11 @@
-import { IntentSpec, IntentStep, FlowResult, FlowMetrics, ActionContext, LogEntry, ExtractionResult } from '../flows/types';
+import { IntentSpec, IntentStep, FlowResult, FlowMetrics, ActionContext, LogEntry, ExtractionResult, StepExecutionResult, ScreenshotComparison } from '../flows/types';
 import { PlaywrightExecutor } from './playwright-executor';
 import { FlowStorage } from './flow-storage';
+import { FallbackHandler } from './fallback-handler';
+import { ScreenshotComparator } from './screenshot-comparator';
 import { EventEmitter } from 'events';
 import Anthropic from '@anthropic-ai/sdk';
+import * as fs from 'fs';
 
 export interface MagnitudeExecutionOptions {
   headless?: boolean;
@@ -10,13 +13,17 @@ export interface MagnitudeExecutionOptions {
   retries?: number;
   saveScreenshots?: boolean;
   saveFlow?: boolean;
+  enableFallback?: boolean;
+  screenshotComparison?: boolean;
 }
 
 export interface ExecutionProgress {
   stepIndex: number;
   totalSteps: number;
   currentStep: IntentStep;
-  status: 'executing' | 'completed' | 'failed' | 'extracting';
+  status: 'executing' | 'completed' | 'failed' | 'extracting' | 'fallback';
+  pathUsed?: 'ai' | 'snippet';
+  fallbackOccurred?: boolean;
   screenshot?: string;
   extractedData?: any;
   error?: string;
@@ -207,19 +214,32 @@ Return JSON: {"answer": "detailed answer", "sources": ["source1"], "confidence":
 export class MagnitudeExecutor extends EventEmitter {
   private playwrightExecutor: PlaywrightExecutor;
   private flowStorage: FlowStorage;
+  private fallbackHandler: FallbackHandler;
+  private screenshotComparator: ScreenshotComparator;
   private metrics: FlowMetrics;
   private logs: LogEntry[] = [];
   private currentContext: ActionContext | null = null;
   private magnitudeAgent: MagnitudeAgent;
+  private options: MagnitudeExecutionOptions;
 
   constructor(options: MagnitudeExecutionOptions = {}) {
     super();
+    this.options = {
+      headless: false,
+      timeout: 30000,
+      saveScreenshots: true,
+      enableFallback: true,
+      screenshotComparison: true,
+      ...options
+    };
+    
     this.playwrightExecutor = new PlaywrightExecutor({
-      headless: options.headless ?? false,
-      timeout: options.timeout ?? 30000,
-      saveScreenshots: options.saveScreenshots ?? true
+      headless: this.options.headless,
+      timeout: this.options.timeout,
+      saveScreenshots: this.options.saveScreenshots
     });
     this.flowStorage = new FlowStorage();
+    this.screenshotComparator = new ScreenshotComparator();
     
     // Initialize Magnitude agent with specified models
     this.magnitudeAgent = new MagnitudeAgent({
@@ -227,6 +247,10 @@ export class MagnitudeExecutor extends EventEmitter {
       extract: 'claude-opus-4-1-20250805',  // Opus 4.1 for data extraction
       query: 'claude-opus-4-1-20250805'     // Opus 4.1 for planning
     });
+    
+    // Initialize fallback handler with executors
+    this.fallbackHandler = new FallbackHandler();
+    // this.setupFallbackExecutors(); // TODO: Implement this method if needed
     
     this.metrics = {
       startTime: new Date(),
@@ -300,11 +324,8 @@ export class MagnitudeExecutor extends EventEmitter {
         }
       }
 
-      // Verify success condition
-      const successResult = await this.verifySuccess(spec.successCheck, variables);
-      if (!successResult.success) {
-        throw new Error(`Success verification failed: ${successResult.error}`);
-      }
+      // Verify success condition or screenshot comparison
+      await this.verifyExecutionSuccess(spec, variables, screenshots);
 
       this.metrics.endTime = new Date();
       this.metrics.duration = this.metrics.endTime.getTime() - this.metrics.startTime.getTime();
@@ -344,9 +365,113 @@ export class MagnitudeExecutor extends EventEmitter {
   }
 
   /**
-   * Execute a single step with hybrid model approach
+   * Execute a single step with intelligent prefer/fallback strategy
    */
   private async executeStep(
+    step: IntentStep,
+    variables: Record<string, string>,
+    stepIndex: number,
+    extractedData: Record<string, any>,
+    screenshots: string[]
+  ): Promise<void> {
+    // Check if this is a new-format step with prefer/fallback
+    if (this.isNewFormatStep(step)) {
+      return await this.executeStepWithPreferFallback(step, variables, stepIndex, extractedData, screenshots);
+    } else {
+      // Legacy format - use original execution logic
+      return await this.executeStepLegacy(step, variables, stepIndex, extractedData, screenshots);
+    }
+  }
+
+  /**
+   * Check if step uses new Intent Spec format with prefer/fallback
+   */
+  private isNewFormatStep(step: IntentStep): boolean {
+    return !!(step.name && step.prefer && (step.ai_instruction || step.snippet));
+  }
+
+  /**
+   * Execute step using new prefer/fallback strategy
+   */
+  private async executeStepWithPreferFallback(
+    step: IntentStep,
+    variables: Record<string, string>,
+    stepIndex: number,
+    extractedData: Record<string, any>,
+    screenshots: string[]
+  ): Promise<void> {
+    this.log('info', `Executing step ${stepIndex + 1}: ${step.name} (prefer: ${step.prefer})`);
+
+    // Emit progress
+    this.emit('progress', {
+      stepIndex,
+      totalSteps: this.metrics.stepsTotal,
+      currentStep: step,
+      status: 'executing',
+      timestamp: new Date()
+    } as ExecutionProgress);
+
+    try {
+      // Use fallback handler for intelligent execution
+      const result = await this.fallbackHandler.executeWithFallback(step, variables);
+      
+      // Emit progress with execution details
+      this.emit('progress', {
+        stepIndex,
+        totalSteps: this.metrics.stepsTotal,
+        currentStep: step,
+        status: result.fallbackOccurred ? 'fallback' : 'completed',
+        pathUsed: result.pathUsed,
+        fallbackOccurred: result.fallbackOccurred,
+        timestamp: new Date()
+      } as ExecutionProgress);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Step execution failed');
+      }
+
+      this.log('info', `Step ${stepIndex + 1} completed using ${result.pathUsed}${result.fallbackOccurred ? ' (fallback)' : ''}`);
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.log('error', `Step ${stepIndex + 1} failed: ${errorMessage}`);
+      
+      this.emit('progress', {
+        stepIndex,
+        totalSteps: this.metrics.stepsTotal,
+        currentStep: step,
+        status: 'failed',
+        error: errorMessage,
+        timestamp: new Date()
+      } as ExecutionProgress);
+      
+      throw error;
+    }
+
+    // Take screenshot after action if enabled
+    if (this.options.saveScreenshots) {
+      const screenshot = await this.playwrightExecutor.takeScreenshot(`step-${stepIndex + 1}-${step.name || 'unnamed'}`);
+      if (screenshot) {
+        screenshots.push(screenshot);
+      }
+    }
+
+    // Handle data extraction if specified
+    if ((step as any).extract) {
+      await this.handleDataExtraction(step, stepIndex, extractedData);
+    }
+
+    // Update context and handle step timeout
+    this.updateContext();
+    if (step.timeout) {
+      await this.playwrightExecutor.wait(step.timeout);
+    }
+  }
+
+  /**
+   * Execute step using legacy format (backward compatibility)
+   */
+  private async executeStepLegacy(
     step: IntentStep,
     variables: Record<string, string>,
     stepIndex: number,
@@ -393,31 +518,7 @@ export class MagnitudeExecutor extends EventEmitter {
 
     // 5. Handle data extraction if specified
     if ((step as any).extract) {
-      this.log('debug', 'Using Opus 4.1 for data extraction...');
-      
-      this.emit('progress', {
-        stepIndex,
-        totalSteps: this.metrics.stepsTotal,
-        currentStep: step,
-        status: 'extracting',
-        timestamp: new Date()
-      } as ExecutionProgress);
-
-      const pageContent = await this.playwrightExecutor.getPageContent();
-      const extractedResult = await this.magnitudeAgent.extract(pageContent.html, (step as any).extract);
-      this.metrics.llmCalls.query++;
-
-      extractedData[`step_${stepIndex + 1}`] = extractedResult;
-      this.log('info', `Data extracted from step ${stepIndex + 1}`);
-
-      this.emit('progress', {
-        stepIndex,
-        totalSteps: this.metrics.stepsTotal,
-        currentStep: step,
-        status: 'completed',
-        extractedData: extractedResult,
-        timestamp: new Date()
-      } as ExecutionProgress);
+      await this.handleDataExtraction(step, stepIndex, extractedData);
     } else {
       this.emit('progress', {
         stepIndex,
@@ -566,11 +667,136 @@ Timestamp: ${context.timestamp}`;
   }
 
   /**
-   * Cleanup resources
+   * Handle data extraction for a step
+   */
+  private async handleDataExtraction(
+    step: IntentStep,
+    stepIndex: number,
+    extractedData: Record<string, any>
+  ): Promise<void> {
+    this.log('debug', 'Using Opus 4.1 for data extraction...');
+    
+    this.emit('progress', {
+      stepIndex,
+      totalSteps: this.metrics.stepsTotal,
+      currentStep: step,
+      status: 'extracting',
+      timestamp: new Date()
+    } as ExecutionProgress);
+
+    const pageContent = await this.playwrightExecutor.getPageContent();
+    const extractedResult = await this.magnitudeAgent.extract(pageContent.html, (step as any).extract);
+    this.metrics.llmCalls.query++;
+
+    extractedData[`step_${stepIndex + 1}`] = extractedResult;
+    this.log('info', `Data extracted from step ${stepIndex + 1}`);
+
+    this.emit('progress', {
+      stepIndex,
+      totalSteps: this.metrics.stepsTotal,
+      currentStep: step,
+      status: 'completed',
+      extractedData: extractedResult,
+      timestamp: new Date()
+    } as ExecutionProgress);
+  }
+
+  /**
+   * Verify execution success using success condition or screenshot comparison
+   */
+  private async verifyExecutionSuccess(
+    spec: IntentSpec,
+    variables: Record<string, string>,
+    screenshots: string[]
+  ): Promise<void> {
+    // Legacy success check
+    if (spec.successCheck || (spec as any).success_check) {
+      const successCheck = spec.successCheck || (spec as any).success_check;
+      const successResult = await this.verifySuccess(successCheck, variables);
+      if (!successResult.success) {
+        throw new Error(`Success verification failed: ${successResult.error}`);
+      }
+    }
+
+    // Screenshot comparison if enabled and available
+    if (this.options.screenshotComparison && (spec as any).success_screenshot && screenshots.length > 0) {
+      const finalScreenshot = screenshots[screenshots.length - 1];
+      try {
+        const comparison = await this.screenshotComparator.compareScreenshots(
+          finalScreenshot,
+          (spec as any).success_screenshot
+        );
+
+        this.log('info', `Screenshot comparison: ${comparison.match ? 'MATCH' : 'NO MATCH'} (${comparison.similarity}% similarity)`);
+        
+        if (!comparison.match && comparison.similarity < 80) {
+          this.log('warn', 'Screenshot comparison indicates potential execution failure');
+          
+          // Add suggestions to logs
+          comparison.suggestions.forEach(suggestion => {
+            this.log('info', `Suggestion: ${suggestion}`);
+          });
+          
+          // Don't fail execution for screenshot mismatch, but log concerns
+          this.log('warn', 'Consider reviewing the execution flow - visual state differs from expected');
+        }
+      } catch (error) {
+        this.log('warn', `Screenshot comparison failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+  }
+
+  /**
+   * Check if a step involves password or sensitive data
+   */
+  private isPasswordField(step: IntentStep): boolean {
+    const sensitiveFields = [
+      'password', 'pass', 'pwd', 'secret', 'key', 'token',
+      'credential', 'auth', 'pin', 'ssn', 'social',
+      'credit', 'card', 'cvv', 'ccv', 'security'
+    ];
+    
+    const checkField = (field: string | undefined): boolean => {
+      if (!field) return false;
+      const lowerField = field.toLowerCase();
+      return sensitiveFields.some(sensitive => lowerField.includes(sensitive));
+    };
+
+    return checkField(step.target) || 
+           checkField(step.selector) || 
+           checkField(step.name) ||
+           checkField(step.description) ||
+           (step.action === 'type' && checkField(step.value));
+  }
+
+  /**
+   * Get execution report for this flow
+   */
+  getExecutionReport(): {
+    aiUsageCount: number;
+    snippetUsageCount: number;
+    fallbackCount: number;
+    totalSteps: number;
+    successRate: number;
+  } {
+    return {
+      aiUsageCount: this.metrics.llmCalls.act,
+      snippetUsageCount: this.metrics.browserInteractions,
+      fallbackCount: this.metrics.retryCount,
+      totalSteps: this.metrics.stepsTotal,
+      successRate: this.metrics.stepsExecuted / this.metrics.stepsTotal
+    };
+  }
+
+  /**
+   * Enhanced cleanup with fallback handler cleanup
    */
   private async cleanup(): Promise<void> {
     try {
-      await this.playwrightExecutor.cleanup();
+      await Promise.all([
+        this.playwrightExecutor?.cleanup(),
+        // Add any fallback handler cleanup if needed
+      ]);
     } catch (error) {
       this.log('error', `Cleanup error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

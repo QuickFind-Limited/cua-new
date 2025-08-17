@@ -221,6 +221,12 @@ function createAnalysisPrompt(recordingData: any): string {
 
 Your task: Analyze the provided recording and output a STRICT JSON Intent Spec. NO prose, comments, or markdown - only valid JSON.
 
+CRITICAL: Choose execution strategy intelligently:
+- SNIPPET PREFERRED for: passwords, credit cards, SSNs, API keys, any sensitive data, stable form fields with IDs
+- SNIPPET PREFERRED for: simple navigation, waiting, screenshots, elements with stable IDs/data-testid
+- AI PREFERRED for: dynamic content, search results, marketing pages, elements that may move/change
+- AI PREFERRED for: popups, modals, complex interactions needing context
+
 REQUIRED OUTPUT FORMAT:
 {
   "name": "Clear descriptive name for this automation",
@@ -246,15 +252,24 @@ REQUIRED OUTPUT FORMAT:
 
 IMPORTANT RULES:
 1. Each step MUST have: name, ai_instruction, snippet, prefer, fallback
-2. ALWAYS set prefer to "ai" for all steps - AI should be tried first
-3. ALWAYS set fallback to "snippet" for all steps - use snippet if AI fails
+2. INTELLIGENTLY set "prefer" based on the action type:
+   - Use "snippet" for: password fields, sensitive data entry, precise form fills, API keys, credit cards, SSNs
+   - Use "snippet" for: simple navigation (page.goto), waiting for elements, taking screenshots
+   - Use "snippet" for: actions with stable selectors (IDs, data-testid attributes)
+   - Use "ai" for: dynamic content (search results, popups, modals)
+   - Use "ai" for: elements that may vary (marketing pages, A/B tests)
+   - Use "ai" for: complex interactions requiring context understanding
+3. Set appropriate fallback:
+   - If prefer="snippet", set fallback="ai" (AI can often figure it out if snippet fails)
+   - If prefer="ai", set fallback="snippet" (deterministic backup)
+   - Use fallback="none" only if the other approach would definitely not work
 4. snippet should be valid Playwright code
 5. Replace dynamic values with {{PARAM_NAME}} and list in params array
 6. Common dynamic values: usernames, passwords, email addresses, dates, IDs
 7. Use descriptive parameter names: {{USERNAME}}, {{PASSWORD}}, {{EMAIL}}, {{SEARCH_TERM}}
 8. ai_instruction should be clear natural language instructions
 9. Make selectors robust (prefer IDs, then data attributes, then classes)
-10. preferences MUST have dynamic_elements and simple_steps (set both to "ai")
+10. preferences: Set based on overall pattern - if mostly forms/data entry use "snippet", if mostly dynamic use "ai"
 
 EXAMPLE OUTPUT:
 {
@@ -264,70 +279,69 @@ EXAMPLE OUTPUT:
   "params": ["EMAIL", "PASSWORD"],
   "steps": [
     {
-      "name": "Navigate to Google",
-      "ai_instruction": "Navigate to Google search page",
-      "snippet": "await page.goto('https://www.google.com/');",
-      "prefer": "ai",
-      "fallback": "snippet"
-    },
-    {
-      "name": "Search for Zoho Inventory",
-      "ai_instruction": "Search for 'zoho inventory' in the search box",
-      "snippet": "await page.fill('textarea[name=\"q\"]', 'zoho inventory'); await page.press('textarea[name=\"q\"]', 'Enter');",
-      "prefer": "ai",
-      "fallback": "snippet",
-      "value": "zoho inventory"
-    },
-    {
-      "name": "Click Zoho Inventory link",
-      "ai_instruction": "Click on the Zoho Inventory official website link",
-      "snippet": "await page.click('a[href*=\"zoho.com/inventory\"]');",
-      "prefer": "ai",
-      "fallback": "snippet"
+      "name": "Navigate to login page",
+      "ai_instruction": "Navigate to Zoho Inventory login page",
+      "snippet": "await page.goto('https://inventory.zoho.com/');",
+      "prefer": "snippet",
+      "fallback": "none",
+      "comment": "Simple navigation - snippet is reliable"
     },
     {
       "name": "Click Sign In",
-      "ai_instruction": "Click the Sign In button",
+      "ai_instruction": "Click the Sign In button on the homepage",
       "snippet": "await page.click('a:has-text(\"Sign In\")');",
       "prefer": "ai",
-      "fallback": "snippet"
+      "fallback": "snippet",
+      "comment": "Marketing page button - position may vary"
     },
     {
       "name": "Enter email",
       "ai_instruction": "Enter email address in the email field",
       "snippet": "await page.fill('input[id=\"login_id\"]', '{{EMAIL}}');",
-      "prefer": "ai",
-      "fallback": "snippet",
+      "prefer": "snippet",
+      "fallback": "ai",
       "selector": "input[id=\"login_id\"]",
-      "value": "{{EMAIL}}"
+      "value": "{{EMAIL}}",
+      "comment": "Form field with stable ID - snippet preferred"
     },
     {
       "name": "Click Next",
       "ai_instruction": "Click the Next button",
       "snippet": "await page.click('button[id=\"nextbtn\"]');",
-      "prefer": "ai",
-      "fallback": "snippet"
+      "prefer": "snippet",
+      "fallback": "ai",
+      "comment": "Button with stable ID"
+    },
+    {
+      "name": "Wait for password field",
+      "ai_instruction": "Wait for password field to appear",
+      "snippet": "await page.waitForSelector('input[type=\"password\"]', { timeout: 5000 });",
+      "prefer": "snippet",
+      "fallback": "none",
+      "comment": "Waiting is deterministic"
     },
     {
       "name": "Enter password",
       "ai_instruction": "Enter password in the password field",
       "snippet": "await page.fill('input[id=\"password\"]', '{{PASSWORD}}');",
-      "prefer": "ai",
-      "fallback": "snippet",
+      "prefer": "snippet",
+      "fallback": "ai",
       "selector": "input[id=\"password\"]",
-      "value": "{{PASSWORD}}"
+      "value": "{{PASSWORD}}",
+      "comment": "SENSITIVE DATA - always prefer snippet for passwords"
     },
     {
-      "name": "Click Sign In to complete login",
+      "name": "Complete login",
       "ai_instruction": "Click the Sign In button to complete login",
       "snippet": "await page.click('button[id=\"nextbtn\"]');",
-      "prefer": "ai",
-      "fallback": "snippet"
+      "prefer": "snippet",
+      "fallback": "ai",
+      "comment": "Form submission with stable selector"
     }
   ],
   "preferences": {
     "dynamic_elements": "ai",
-    "simple_steps": "ai"
+    "simple_steps": "snippet"
   }
 }
 

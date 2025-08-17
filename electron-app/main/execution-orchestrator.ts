@@ -9,6 +9,8 @@ import {
 import { MagnitudeExecutor } from './magnitude-executor';
 import { PlaywrightExecutor } from './playwright-executor';
 import { ScreenshotComparator } from './screenshot-comparator';
+import * as path from 'path';
+import * as fs from 'fs';
 import { EventEmitter } from 'events';
 
 /**
@@ -122,16 +124,16 @@ export class ExecutionOrchestrator extends EventEmitter {
         }
 
         // Compare with success state if available
-        if (this.options.screenshotComparison && (intentSpec as any).success_screenshot) {
-          const comparison = await this.screenshotComparator.compareScreenshots(
+        if (this.options.screenshotComparison) {
+          const comparisonResult = await this.performScreenshotComparison(
             finalScreenshot,
-            (intentSpec as any).success_screenshot
+            intentSpec,
+            report
           );
-
-          report.successStateMatch = comparison.match;
-          report.suggestions = comparison.suggestions;
-
-          this.emit('screenshot-comparison', comparison);
+          
+          if (comparisonResult) {
+            this.emit('screenshot-comparison', comparisonResult);
+          }
         }
       }
 
@@ -343,6 +345,161 @@ export class ExecutionOrchestrator extends EventEmitter {
    */
   private generateExecutionId(): string {
     return `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Perform screenshot comparison with proper threshold handling
+   */
+  private async performScreenshotComparison(
+    finalScreenshot: string,
+    intentSpec: IntentSpec,
+    report: ExecutionReport
+  ): Promise<any | null> {
+    try {
+      // Find success state screenshot from recordings
+      const successScreenshotPath = this.findSuccessScreenshot(intentSpec);
+      
+      if (!successScreenshotPath) {
+        console.warn('No success state screenshot found for comparison');
+        report.suggestions = report.suggestions || [];
+        report.suggestions.push('No success state screenshot available for comparison');
+        return null;
+      }
+
+      // Perform the comparison
+      const comparison = await this.screenshotComparator.compareScreenshots(
+        finalScreenshot,
+        successScreenshotPath
+      );
+
+      // Apply threshold logic
+      const thresholdResult = this.evaluateComparisonThresholds(comparison);
+      
+      // Update report with comparison results
+      report.successStateMatch = thresholdResult.match;
+      report.comparisonSimilarity = comparison.similarity;
+      report.comparisonStatus = thresholdResult.status;
+      report.suggestions = [...(report.suggestions || []), ...comparison.suggestions, ...thresholdResult.suggestions];
+      
+      console.log(`Screenshot comparison completed: ${thresholdResult.status} (${comparison.similarity}% similarity)`);
+      
+      return {
+        ...comparison,
+        thresholdResult,
+        successScreenshotPath
+      };
+      
+    } catch (error) {
+      console.error('Screenshot comparison failed:', error);
+      report.suggestions = report.suggestions || [];
+      report.suggestions.push(`Screenshot comparison failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  }
+
+  /**
+   * Find success state screenshot from recordings
+   */
+  private findSuccessScreenshot(intentSpec: IntentSpec): string | null {
+    try {
+      // Check if success_screenshot is explicitly defined
+      if (intentSpec.success_screenshot && fs.existsSync(intentSpec.success_screenshot)) {
+        return intentSpec.success_screenshot;
+      }
+
+      // Look for success state screenshot in recordings directory
+      const recordingsDir = path.join(__dirname, '..', 'recordings');
+      
+      if (!fs.existsSync(recordingsDir)) {
+        console.warn('Recordings directory not found');
+        return null;
+      }
+
+      // Try different naming patterns
+      const possibleNames = [
+        `${intentSpec.name}-success-state.png`,
+        `${intentSpec.name.replace(/\s+/g, '-').toLowerCase()}-success-state.png`,
+        `${intentSpec.name.replace(/\s+/g, '_').toLowerCase()}-success-state.png`
+      ];
+
+      // Look for files with success-state pattern
+      const files = fs.readdirSync(recordingsDir);
+      const successFiles = files.filter(file => file.includes('success-state.png'));
+      
+      // Try exact matches first
+      for (const name of possibleNames) {
+        const filePath = path.join(recordingsDir, name);
+        if (fs.existsSync(filePath)) {
+          return filePath;
+        }
+      }
+      
+      // If no exact match, use the most recent success state screenshot
+      if (successFiles.length > 0) {
+        const mostRecent = successFiles
+          .map(file => ({ 
+            file, 
+            path: path.join(recordingsDir, file), 
+            mtime: fs.statSync(path.join(recordingsDir, file)).mtime 
+          }))
+          .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0];
+        
+        console.log(`Using most recent success screenshot: ${mostRecent.file}`);
+        return mostRecent.path;
+      }
+      
+      return null;
+      
+    } catch (error) {
+      console.error('Error finding success screenshot:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Evaluate comparison results against thresholds
+   */
+  private evaluateComparisonThresholds(comparison: any): {
+    match: boolean;
+    status: 'success' | 'partial' | 'mismatch';
+    suggestions: string[];
+  } {
+    const similarity = comparison.similarity;
+    const suggestions: string[] = [];
+    
+    if (similarity > 80) {
+      return {
+        match: true,
+        status: 'success',
+        suggestions: ['Screenshot comparison successful - execution matches expected state']
+      };
+    } else if (similarity >= 60) {
+      suggestions.push('Partial match detected - execution may be mostly correct with minor differences');
+      suggestions.push('Review the differences to determine if they are acceptable');
+      
+      if (comparison.differences && comparison.differences.length > 0) {
+        const highSeverityDiffs = comparison.differences.filter((d: any) => d.severity === 'high');
+        if (highSeverityDiffs.length > 0) {
+          suggestions.push('High-severity differences found - manual review recommended');
+        }
+      }
+      
+      return {
+        match: false,
+        status: 'partial',
+        suggestions
+      };
+    } else {
+      suggestions.push('Significant mismatch detected - execution state differs substantially from expected');
+      suggestions.push('Verify that the automation completed successfully');
+      suggestions.push('Check for navigation errors or timing issues');
+      
+      return {
+        match: false,
+        status: 'mismatch',
+        suggestions
+      };
+    }
   }
 
   /**

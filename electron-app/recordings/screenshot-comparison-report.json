@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-08-17T11:59:08.846Z",
+  "originalScreenshot": "C:\\client\\cua-new\\electron-app\\recordings\\codegen-1755375046963-success-state.png",
+  "executionScreenshot": "C:\\client\\cua-new\\electron-app\\recordings\\execution-final-state.png",
+  "comparison": {
+    "match": false,
+    "similarity": 75,
+    "suggestions": [
+      "Expand the left sidebar navigation to match the first image layout",
+      "Scroll up or adjust viewport to hide the additional bottom content sections if trying to match the first state",
+      "Ensure the chat widget is visible and positioned in the bottom right corner",
+      "Adjust page zoom or viewport height to match the content density of the first image"
+    ],
+    "differences": [
+      {
+        "type": "layout",
+        "description": "Left sidebar navigation is collapsed/condensed in the second image compared to expanded in the first",
+        "severity": "medium",
+        "location": "Left sidebar navigation panel"
+      },
+      {
+        "type": "content",
+        "description": "Additional content section 'Explore useful features and set up Zoho Inventory' appears at the bottom of the second image",
+        "severity": "medium",
+        "location": "Bottom section of main content area"
+      },
+      {
+        "type": "content",
+        "description": "Sales Channels and Shipping Channel Integrations sections with icons are visible in the second image but not in the first",
+        "severity": "medium",
+        "location": "Lower portion of the main content area"
+      },
+      {
+        "type": "element",
+        "description": "Chat support widget is missing from the bottom right corner in the second image",
+        "severity": "low",
+        "location": "Bottom right corner"
+      },
+      {
+        "type": "layout",
+        "description": "Overall page layout appears more compressed vertically in the second image, showing more content",
+        "severity": "low",
+        "location": "Overall page layout"
+      }
+    ]
+  },
+  "duration": "8334ms",
+  "interpretation": "PARTIAL_MATCH"
+}

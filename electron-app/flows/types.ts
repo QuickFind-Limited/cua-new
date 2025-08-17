@@ -102,6 +102,8 @@ export interface ExecutionReport {
   suggestions?: string[];
   totalDuration?: number;
   successStateMatch?: boolean;
+  comparisonSimilarity?: number;
+  comparisonStatus?: 'success' | 'partial' | 'mismatch';
   
   // Legacy field for backward compatibility
   results?: Array<{

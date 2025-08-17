@@ -43,9 +43,9 @@ export interface PageInfo {
  */
 export class PlaywrightExecutor {
   public config: PlaywrightConfig;
+  public page: Page | null = null;  // Made public for snippet execution
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
-  private page: Page | null = null;
   private screenshotCounter = 0;
 
   constructor(config: PlaywrightConfig = {}) {
