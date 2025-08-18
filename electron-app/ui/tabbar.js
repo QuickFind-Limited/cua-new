@@ -385,20 +385,20 @@ function handleRecordingComplete(session) {
     // Store the recording session for analysis
     window.lastRecordingSession = session;
     
-    // Show the analyze button and ensure it has the click handler
-    const analyzeBtn = document.getElementById('analyze-btn');
-    if (analyzeBtn) {
-        analyzeBtn.style.display = 'inline-block';
-        
-        // Remove any existing listeners and add a fresh one
-        const newAnalyzeBtn = analyzeBtn.cloneNode(true);
-        analyzeBtn.parentNode.replaceChild(newAnalyzeBtn, analyzeBtn);
-        
-        newAnalyzeBtn.addEventListener('click', async () => {
-            console.log('Analyze button clicked (from recording complete)');
-            await analyzeLastRecording();
-        });
-    }
+    // Keep analyze button always visible for testing
+    // const analyzeBtn = document.getElementById('analyze-btn');
+    // if (analyzeBtn) {
+    //     analyzeBtn.style.display = 'inline-block';
+    //     
+    //     // Remove any existing listeners and add a fresh one
+    //     const newAnalyzeBtn = analyzeBtn.cloneNode(true);
+    //     analyzeBtn.parentNode.replaceChild(newAnalyzeBtn, analyzeBtn);
+    //     
+    //     newAnalyzeBtn.addEventListener('click', async () => {
+    //         console.log('Analyze button clicked (from recording complete)');
+    //         await analyzeLastRecording();
+    //     });
+    // }
     
     // Show recording summary
     showRecordingSummary(session);
@@ -694,13 +694,12 @@ async function analyzeLastRecording() {
         window.modernSidebar.isVisible = false;
         console.log('Force reset sidebar visibility, calling show()');
         await window.modernSidebar.show();
-        console.log('Calling modernSidebar.updateProgress()');
-        window.modernSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');
+        console.log('Starting analysis flow...');
+        // Don't immediately update parsing - wait for actual parsing to begin
     } else {
         console.log('Falling back to analysisSidebar');
         // Fallback to old sidebar
         analysisSidebar.show();
-        analysisSidebar.updateProgress('parsing', 'active', 'Parsing recorded actions...');
     }
     
     try {
@@ -727,42 +726,32 @@ async function analyzeLastRecording() {
             // Use modern sidebar if available
             const sidebar = window.modernSidebar || analysisSidebar;
             
-            // Simulate progress through analysis steps
-            setTimeout(() => {
-                sidebar.updateProgress('parsing', 'completed', 'Actions parsed successfully');
-                sidebar.updateProgress('analyzing', 'active', 'AI analyzing recording patterns...');
-            }, 500);
+            // Listen for progress updates from backend
+            if (window.electronAPI && window.electronAPI.onAnalysisProgress) {
+                window.electronAPI.onAnalysisProgress((progress) => {
+                    console.log('Analysis progress update:', progress);
+                    sidebar.updateProgress(progress.step, progress.status, progress.message);
+                    
+                    // If validation is completed, complete the analysis
+                    if (progress.step === 'validating' && progress.status === 'completed') {
+                        sidebar.completeAnalysis(true);
+                    }
+                });
+            }
             
             console.log('About to call electronAPI.analyzeRecording...');
+            
+            // The actual analysis call - backend will send progress events
             const result = await window.electronAPI.analyzeRecording(recordingData);
             console.log('IPC call returned:', result);
             
             if (result.success && result.data) {
                 console.log('Analysis successful:', result.data);
                 
-                // Update progress for successful analysis
-                sidebar.updateProgress('analyzing', 'completed', 'AI analysis complete');
-                sidebar.updateProgress('variables', 'active', 'Extracting dynamic variables...');
-                
-                setTimeout(() => {
-                    const varCount = result.data.params ? result.data.params.length : 0;
-                    sidebar.updateProgress('variables', 'completed', `Found ${varCount} variables`);
-                    sidebar.updateProgress('generating', 'active', 'Generating Intent Spec...');
-                }, 300);
-                
-                setTimeout(() => {
-                    sidebar.updateProgress('generating', 'completed', 'Intent Spec generated');
-                    sidebar.updateProgress('validating', 'active', 'Validating output...');
-                }, 600);
-                
-                setTimeout(() => {
-                    sidebar.completeAnalysis(true);
-                }, 900);
-                
-                // Hide analyze button after successful analysis
-                if (analyzeBtn) {
-                    analyzeBtn.style.display = 'none';
-                }
+                // Keep analyze button visible for testing
+                // if (analyzeBtn) {
+                //     analyzeBtn.style.display = 'none';
+                // }
                 
                 // Show vars panel with the Intent Spec
                 showVarsPanel(result.data);

@@ -29,7 +29,7 @@
                 <span class="record-icon">⬤</span>
                 <span class="record-text">Record</span>
             </button>
-            <button class="analyze-btn" id="analyze-btn" title="Analyze Recording" style="display: none;" onclick="console.log('Button clicked inline!'); analyzeLastRecording();">
+            <button class="analyze-btn" id="analyze-btn" title="Analyze Recording" onclick="console.log('Button clicked inline!'); analyzeLastRecording();">
                 Analyze
             </button>
         </div>
@@ -40,7 +40,7 @@
     <!-- Analysis Progress Sidebar (initially hidden) -->
     <div id="analysis-sidebar" class="analysis-sidebar">
         <div class="sidebar-header">
-            <h3>Analysis Progress</h3>
+            <h3>Recording Analysis</h3>
             <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Expand">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <!-- Right arrow for collapsed state (to expand) -->
@@ -58,11 +58,7 @@
                         </svg>
                     </span>
                     <span class="progress-label">Recording captured</span>
-                    <span class="progress-status">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </span>
+                    <span class="progress-status"></span>
                 </div>
                 <div class="progress-item" id="progress-parsing">
                     <span class="progress-icon">

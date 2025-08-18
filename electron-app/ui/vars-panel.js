@@ -15,17 +15,40 @@ class VarsPanelManager {
 
     initializeElements() {
         this.panel = document.querySelector('.vars-panel');
-        this.flowInfoContainer = document.getElementById('flowInfoContainer');
-        this.variablesContainer = document.getElementById('variablesContainer');
+        this.flowInfoContainer = document.getElementById('flow-info');
+        this.variablesContainer = document.getElementById('variables-form');
         this.actionsContainer = document.getElementById('actionsContainer');
         this.statusContainer = document.getElementById('statusContainer');
-        this.runFlowBtn = document.getElementById('runFlowBtn');
+        this.runFlowBtn = document.getElementById('run-flow-btn');
+        this.saveFlowBtn = document.getElementById('save-flow-btn');
+        this.closePanelBtn = document.getElementById('close-panel-btn');
         this.flowFileInput = document.getElementById('flowFileInput');
         this.flowDetailsModal = document.getElementById('flowDetailsModal');
         this.flowDetailsBody = document.getElementById('flowDetailsBody');
     }
 
     setupEventListeners() {
+        // Close panel button
+        if (this.closePanelBtn) {
+            this.closePanelBtn.addEventListener('click', () => {
+                this.hideVarsPanel();
+            });
+        }
+        
+        // Run flow button
+        if (this.runFlowBtn) {
+            this.runFlowBtn.addEventListener('click', () => {
+                this.executeFlow();
+            });
+        }
+        
+        // Save flow button
+        if (this.saveFlowBtn) {
+            this.saveFlowBtn.addEventListener('click', () => {
+                this.saveFlow();
+            });
+        }
+        
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey) {
@@ -35,7 +58,7 @@ class VarsPanelManager {
                         this.loadFlowFile();
                         break;
                     case 'Enter':
-                        if (e.ctrlKey && !this.runFlowBtn.disabled) {
+                        if (e.ctrlKey && this.runFlowBtn && !this.runFlowBtn.disabled) {
                             e.preventDefault();
                             this.executeFlow();
                         }
@@ -49,9 +72,11 @@ class VarsPanelManager {
         });
 
         // Form validation on input change
-        this.variablesContainer.addEventListener('input', () => {
-            this.validateForm();
-        });
+        if (this.variablesContainer) {
+            this.variablesContainer.addEventListener('input', () => {
+                this.validateForm();
+            });
+        }
     }
 
     setupIPCListeners() {
@@ -503,6 +528,7 @@ class VarsPanelManager {
     }
 
     showVarsPanel(intentSpec) {
+        console.log('showVarsPanel called with:', intentSpec);
         this.currentIntentSpec = intentSpec;
         
         // Convert Intent Spec to flow format for compatibility
@@ -510,15 +536,24 @@ class VarsPanelManager {
         this.loadFlow(flowData);
         
         // Show panel with animation
-        this.panel.classList.add('visible');
-        this.isVisible = true;
+        if (this.panel) {
+            this.panel.classList.remove('hidden');
+            this.panel.classList.add('visible');
+            this.isVisible = true;
+            console.log('Vars panel shown');
+        } else {
+            console.error('Vars panel element not found!');
+        }
         
         this.showStatus('Intent Spec loaded successfully - ready to configure and execute', 'success');
     }
 
     hideVarsPanel() {
-        this.panel.classList.remove('visible');
-        this.isVisible = false;
+        if (this.panel) {
+            this.panel.classList.remove('visible');
+            this.panel.classList.add('hidden');
+            this.isVisible = false;
+        }
         this.currentIntentSpec = null;
         this.currentFlow = null;
         this.variables = {};
@@ -578,6 +613,9 @@ let varsPanelManager;
 document.addEventListener('DOMContentLoaded', () => {
     varsPanelManager = new VarsPanelManager();
     
+    // Set global reference after initialization
+    window.varsPanelManager = varsPanelManager;
+    
     // Auto-load example flow for demonstration
     setTimeout(() => {
         if (window.location.search.includes('demo=true')) {
@@ -599,6 +637,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 500);
 });
-
-// Global reference for IPC
-window.varsPanelManager = varsPanelManager;

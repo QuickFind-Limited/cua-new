@@ -14,7 +14,7 @@ import {
 } from './llm';
 import { ScreenshotComparator } from './screenshot-comparator';
 import { ExecutionEngine } from './execution-engine';
-import { getTabManager } from './main';
+import { getTabManager, getMainWindow } from './main';
 
 // Type definitions for IPC events
 interface AnalyzeRecordingParams {
@@ -96,13 +96,55 @@ export function registerIpcHandlers(): void {
       }
 
       console.log('Starting analyzeRecordingWithMetadata...');
+      
+      // Send progress updates to the renderer
+      const mainWindow = getMainWindow();
+      if (mainWindow) {
+        // Notify that parsing is starting
+        mainWindow.webContents.send('analysis-progress', { 
+          step: 'parsing', 
+          status: 'active', 
+          message: 'Parsing recorded actions...' 
+        });
+      }
+      
       // Use the enhanced analysis with metadata that includes intelligent strategy selection
       const result = await analyzeRecordingWithMetadata({
         recordingData: params.recordingData,
         context: params.context
       });
+      
+      if (mainWindow) {
+        // Notify that parsing is complete and AI analysis is starting
+        mainWindow.webContents.send('analysis-progress', { 
+          step: 'parsing', 
+          status: 'completed', 
+          message: 'Actions parsed successfully' 
+        });
+        mainWindow.webContents.send('analysis-progress', { 
+          step: 'analyzing', 
+          status: 'active', 
+          message: 'AI analyzing recording patterns...' 
+        });
+      }
 
-      return {
+      // Send progress for remaining steps
+      if (mainWindow) {
+        mainWindow.webContents.send('analysis-progress', { 
+          step: 'analyzing', 
+          status: 'completed', 
+          message: 'AI analysis complete' 
+        });
+        
+        mainWindow.webContents.send('analysis-progress', { 
+          step: 'variables', 
+          status: 'active', 
+          message: 'Extracting dynamic variables...' 
+        });
+      }
+      
+      // Process the result
+      const processedResult = {
         success: true,
         data: {
           // Return the Intent Spec with intelligent strategy selection
@@ -129,6 +171,47 @@ export function registerIpcHandlers(): void {
           serializedRecording: result.serializedRecording
         }
       };
+      
+      // Send final progress updates
+      if (mainWindow) {
+        const varCount = result.analysis.params ? result.analysis.params.length : 0;
+        mainWindow.webContents.send('analysis-progress', { 
+          step: 'variables', 
+          status: 'completed', 
+          message: `Found ${varCount} variables` 
+        });
+        
+        mainWindow.webContents.send('analysis-progress', { 
+          step: 'generating', 
+          status: 'active', 
+          message: 'Generating Intent Spec...' 
+        });
+        
+        // Small delay for visual feedback
+        setTimeout(() => {
+          mainWindow.webContents.send('analysis-progress', { 
+            step: 'generating', 
+            status: 'completed', 
+            message: 'Intent Spec generated' 
+          });
+          
+          mainWindow.webContents.send('analysis-progress', { 
+            step: 'validating', 
+            status: 'active', 
+            message: 'Validating output...' 
+          });
+          
+          setTimeout(() => {
+            mainWindow.webContents.send('analysis-progress', { 
+              step: 'validating', 
+              status: 'completed', 
+              message: 'Output validated' 
+            });
+          }, 100);
+        }, 100);
+      }
+      
+      return processedResult;
     } catch (error) {
       console.error('LLM analyze recording error:', error);
       return {

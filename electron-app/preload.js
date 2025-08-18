@@ -37,6 +37,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onFlowProgress: (callback) => ipcRenderer.on('flow-progress', (event, progress) => callback(progress)),
   onFlowComplete: (callback) => ipcRenderer.on('flow-complete', (event, result) => callback(result)),
   onRecordingComplete: (callback) => ipcRenderer.on('recording-complete', (event, intentSpec) => callback(intentSpec)),
+  
+  // Analysis progress events
+  onAnalysisProgress: (callback) => ipcRenderer.on('analysis-progress', (event, progress) => callback(progress)),
 
   // Recording operations
   startRecording: () => ipcRenderer.invoke('start-recording'),

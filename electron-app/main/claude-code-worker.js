@@ -12,8 +12,9 @@ require('dotenv').config({ path: path.join(process.cwd(), '.env') });
 process.on('message', async (message) => {
   if (message.type === 'analyze') {
     try {
-      // Dynamic import of ES module
-      const { query } = await import('@anthropic-ai/claude-code');
+      // Dynamic import of ES module using eval to prevent TypeScript compilation issues
+      const claudeCode = await eval('import("@anthropic-ai/claude-code")');
+      const { query } = claudeCode;
       
       let result = '';
       // Use Claude Code SDK with Opus 4.1 (default)

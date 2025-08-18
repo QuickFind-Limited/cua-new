@@ -72,7 +72,7 @@ class ModernSidebar {
     const sidebarHTML = `
       <div id="modern-sidebar" class="modern-sidebar">
         <div class="sidebar-header">
-          <h3>Analysis Progress</h3>
+          <h3>Recording Analysis</h3>
           <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Collapse">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6"></polyline>
@@ -359,23 +359,12 @@ class ModernSidebar {
       }
     });
     
-    // Mark recording as completed since we're analyzing
-    const recordingItem = document.getElementById('progress-recording');
-    if (recordingItem) {
-      recordingItem.classList.add('completed');
-      const statusElement = recordingItem.querySelector('.progress-status');
-      if (statusElement) {
-        statusElement.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-        `;
-      }
-    }
+    // Don't mark recording as completed here - wait for actual recording completion
+    // Recording will be marked complete when files are actually saved
     
     // Clear details
     if (this.detailContent) {
-      this.detailContent.innerHTML = '<div class="detail-item">Analysis starting...</div>';
+      this.detailContent.innerHTML = '<div class="detail-item">Waiting for analysis to start...</div>';
     }
   }
   
@@ -450,3 +439,10 @@ window.ModernSidebar = ModernSidebar;
 // Auto-initialize when script loads
 const modernSidebar = new ModernSidebar();
 window.modernSidebar = modernSidebar;
+
+// Listen for recording completion event to mark Recording step as complete
+window.addEventListener('recordingComplete', (event) => {
+  console.log('Recording complete event received in sidebar-manager');
+  // Mark recording step as completed when recording files are saved
+  modernSidebar.updateProgress('recording', 'completed', 'Recording saved successfully');
+});
