@@ -936,6 +936,118 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  // Store launcher recorder instance
+  let launcherRecorderInstance: any = null;
+  
+  // Launch Recorder handler
+  ipcMain.handle('launch-recorder', async (event: IpcMainInvokeEvent, startUrl: string) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+      
+      // Import the launcher recorder
+      const { PlaywrightLauncherRecorder } = await import('./playwright-launcher-recorder');
+      const mainWindow = getMainWindow();
+      if (!mainWindow) {
+        throw new Error('Main window not initialized');
+      }
+      
+      // Create or reuse launcher recorder instance
+      if (!launcherRecorderInstance) {
+        launcherRecorderInstance = new PlaywrightLauncherRecorder(mainWindow);
+      }
+      
+      const result = await launcherRecorderInstance.launchRecorder(startUrl);
+      
+      return result;
+    } catch (error) {
+      console.error('Launch recorder error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to launch recorder'
+      };
+    }
+  });
+  
+  // Get recorder status
+  ipcMain.handle('get-recorder-status', async (event: IpcMainInvokeEvent) => {
+    try {
+      if (!launcherRecorderInstance) {
+        return { isRecording: false };
+      }
+      
+      return {
+        isRecording: launcherRecorderInstance.isRecording()
+      };
+    } catch (error) {
+      console.error('Get recorder status error:', error);
+      return { isRecording: false };
+    }
+  });
+  
+  // Get last recording
+  ipcMain.handle('get-last-recording', async (event: IpcMainInvokeEvent) => {
+    try {
+      if (!launcherRecorderInstance) {
+        return null;
+      }
+      
+      return launcherRecorderInstance.getLastRecording();
+    } catch (error) {
+      console.error('Get last recording error:', error);
+      return null;
+    }
+  });
+
+  // Run Magnitude with WebView handler
+  ipcMain.handle('run-magnitude-webview', async (event: IpcMainInvokeEvent, params: { flowSpec: any; variables: Record<string, any> }) => {
+    try {
+      const tabManager = getTabManager();
+      if (!tabManager) {
+        throw new Error('TabManager not initialized');
+      }
+      
+      // Import the WebView controller
+      const { MagnitudeWebViewController } = await import('./magnitude-webview-controller');
+      const controller = new MagnitudeWebViewController();
+      
+      // Get the current WebContentsView from tab manager
+      const activeTabId = tabManager.getActiveTabId();
+      if (!activeTabId) {
+        throw new Error('No active tab found');
+      }
+      
+      const activeTab = tabManager.getTab(activeTabId);
+      if (!activeTab || !activeTab.view) {
+        throw new Error('Active tab has no WebContentsView');
+      }
+      
+      // Connect Magnitude to the WebView
+      const connected = await controller.connectToWebView(activeTab.view);
+      if (!connected) {
+        throw new Error('Failed to connect Magnitude to WebView');
+      }
+      
+      // Execute the flow
+      const result = await controller.executeFlow(params.flowSpec, params.variables);
+      
+      // Disconnect when done
+      await controller.disconnect();
+      
+      return result;
+    } catch (error) {
+      console.error('Magnitude WebView execution error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to execute with Magnitude WebView',
+        results: [],
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      };
+    }
+  });
+
   // Screenshot comparison handler
   ipcMain.handle('screenshot:compare', async (event: IpcMainInvokeEvent, params: ScreenshotComparisonParams) => {
     try {

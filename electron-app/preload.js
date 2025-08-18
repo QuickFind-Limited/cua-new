@@ -32,11 +32,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   runFlow: (params) => ipcRenderer.invoke('flows:runOne', params),
   executeFlow: (flowSpec, variables) => ipcRenderer.invoke('execute-flow', { flowSpec, variables }),
   saveFlow: (flowSpec, filePath) => ipcRenderer.invoke('save-flow', { flowSpec, filePath }),
+  launchRecorder: (startUrl) => ipcRenderer.invoke('launch-recorder', startUrl),
+  getRecorderStatus: () => ipcRenderer.invoke('get-recorder-status'),
+  getLastRecording: () => ipcRenderer.invoke('get-last-recording'),
+  runMagnitudeWithWebView: (flowSpec, variables) => ipcRenderer.invoke('run-magnitude-webview', { flowSpec, variables }),
 
   // Flow events
   onFlowProgress: (callback) => ipcRenderer.on('flow-progress', (event, progress) => callback(progress)),
   onFlowComplete: (callback) => ipcRenderer.on('flow-complete', (event, result) => callback(result)),
   onRecordingComplete: (callback) => ipcRenderer.on('recording-complete', (event, intentSpec) => callback(intentSpec)),
+  
+  // Recorder events
+  onRecordingLaunched: (callback) => ipcRenderer.on('recorder-launched', (event, data) => callback(data)),
+  onRecordingSaved: (callback) => ipcRenderer.on('recording-saved', (event, data) => callback(data)),
+  onRecordingCancelled: (callback) => ipcRenderer.on('recording-cancelled', (event, data) => callback(data)),
+  onRecorderExit: (callback) => ipcRenderer.on('recorder-exit', (event, data) => callback(data)),
   
   // Analysis progress events
   onAnalysisProgress: (callback) => ipcRenderer.on('analysis-progress', (event, progress) => callback(progress)),

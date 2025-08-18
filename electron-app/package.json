@@ -47,6 +47,8 @@
     "@anthropic-ai/claude-code": "^1.0.83",
     "@anthropic-ai/sdk": "^0.24.0",
     "@playwright/test": "^1.54.2",
+    "@types/chokidar": "^1.7.5",
+    "chokidar": "^4.0.3",
     "chrome-remote-interface": "^0.33.3",
     "commander": "^9.5.0",
     "dotenv": "^17.2.1",

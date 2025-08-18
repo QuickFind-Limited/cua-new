@@ -1189,6 +1189,20 @@ export class WebContentsTabManager extends EventEmitter {
   }
 
   /**
+   * Get the ID of the active tab
+   */
+  public getActiveTabId(): string | null {
+    return this.activeTabId;
+  }
+
+  /**
+   * Get a tab by ID
+   */
+  public getTab(tabId: string): WebContentsTab | undefined {
+    return this.tabs.get(tabId);
+  }
+
+  /**
    * Clean up resources
    */
   public dispose(): void {

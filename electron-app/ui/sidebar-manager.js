@@ -4,8 +4,6 @@ class ModernSidebar {
     this.sidebar = null;
     this.isVisible = false;
     this.isCollapsed = false;
-    this.startTime = null;
-    this.timerInterval = null;
     this.floatingToggle = null;
     
     this.initialize();
@@ -29,7 +27,7 @@ class ModernSidebar {
       // Get references to existing elements
       this.toggleBtn = document.getElementById('sidebar-toggle-btn');
       this.floatingToggle = document.getElementById('floating-toggle');
-      this.timerElement = document.getElementById('analysis-timer');
+      // Timer element removed
       this.detailContent = document.getElementById('detail-content');
       
       // Initialize sidebar as always expanded and visible
@@ -154,11 +152,6 @@ class ModernSidebar {
             <div class="detail-item">Ready to analyze...</div>
           </div>
         </div>
-        
-        <div class="analysis-timer">
-          <span>Time elapsed:</span>
-          <span id="analysis-timer">0s</span>
-        </div>
       </div>
       
       <button class="floating-toggle" id="floating-toggle" title="Show Analysis Panel">
@@ -251,7 +244,7 @@ class ModernSidebar {
         console.log('Sidebar shown, WebContentsView adjusted:', result);
       }
       
-      this.startTimer();
+      // Timer removed
       this.resetProgress();
     }
   }
@@ -278,7 +271,7 @@ class ModernSidebar {
         console.log('Sidebar hidden, WebContentsView restored:', result);
       }
       
-      this.stopTimer();
+      // Timer removed
     }
   }
   
@@ -328,22 +321,7 @@ class ModernSidebar {
     }
   }
   
-  startTimer() {
-    this.startTime = Date.now();
-    this.timerInterval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-      if (this.timerElement) {
-        this.timerElement.textContent = `${elapsed}s`;
-      }
-    }, 1000);
-  }
-  
-  stopTimer() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
-  }
+  // Timer methods removed
   
   resetProgress() {
     console.log('resetProgress called');
@@ -420,7 +398,7 @@ class ModernSidebar {
   }
   
   completeAnalysis(success = true) {
-    this.stopTimer();
+    // Timer removed
     if (success) {
       this.updateProgress('validating', 'completed', 'Analysis completed successfully!');
       

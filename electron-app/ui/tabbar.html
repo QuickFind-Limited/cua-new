@@ -25,12 +25,9 @@
         <input type="text" class="address-bar" id="address-bar" placeholder="Enter URL or search...">
         <button class="nav-btn" id="go-btn" title="Go">Go</button>
         <div class="recording-controls">
-            <button class="record-btn" id="record-btn" title="Start Recording">
-                <span class="record-icon">⬤</span>
-                <span class="record-text">Record</span>
-            </button>
-            <button class="analyze-btn" id="analyze-btn" title="Analyze Recording">
-                Analyze
+            <button class="launcher-btn" id="launcher-btn" title="Launch Playwright Recorder">
+                <span class="launcher-icon">🎬</span>
+                <span class="launcher-text">Launch Recorder</span>
             </button>
         </div>
     </div>
@@ -52,9 +49,9 @@
                     <div class="progress-section">
                         <div class="progress-item" id="progress-recording">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10" fill="#888" opacity="0.3"/>
-                                    <circle cx="12" cy="12" r="3" fill="#888"/>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.3"/>
+                                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
                                 </svg>
                             </span>
                             <span class="progress-label">Recording captured</span>
@@ -62,7 +59,7 @@
                         </div>
                         <div class="progress-item" id="progress-parsing">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                     <polyline points="14 2 14 8 20 8"></polyline>
                                 </svg>
@@ -72,7 +69,7 @@
                         </div>
                         <div class="progress-item" id="progress-analyzing">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"></path>
                                 </svg>
                             </span>
@@ -81,7 +78,7 @@
                         </div>
                         <div class="progress-item" id="progress-variables">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="18" y1="20" x2="18" y2="10"></line>
                                     <line x1="12" y1="20" x2="12" y2="4"></line>
                                     <line x1="6" y1="20" x2="6" y2="14"></line>
@@ -92,7 +89,7 @@
                         </div>
                         <div class="progress-item" id="progress-generating">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="3"></circle>
                                     <path d="M12 1v6"></path>
                                     <path d="M12 17v6"></path>
@@ -103,7 +100,7 @@
                         </div>
                         <div class="progress-item" id="progress-validating">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M9 11l3 3L22 4"></path>
                                     <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
                                 </svg>
@@ -111,10 +108,6 @@
                             <span class="progress-label">Validating output</span>
                             <span class="progress-status"></span>
                         </div>
-                    </div>
-                    <div class="analysis-timer">
-                        <span>Time elapsed: </span>
-                        <span id="analysis-timer">0s</span>
                     </div>
                 </div>
             </div>
@@ -130,8 +123,7 @@
                     <div id="flow-info"></div>
                     <div id="variables-form"></div>
                     <div class="flow-actions">
-                        <button class="run-flow-btn" id="run-flow-btn">Run Flow</button>
-                        <button class="save-flow-btn" id="save-flow-btn">Save Flow</button>
+                        <button class="run-magnitude-btn" id="run-magnitude-btn">Run</button>
                     </div>
                 </div>
             </div>

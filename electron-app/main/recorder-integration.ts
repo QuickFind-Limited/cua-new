@@ -282,5 +282,5 @@ export class RecorderIntegration {
 export interface ExtendedWebContentsTabManager extends WebContentsTabManager {
   getAllTabs(): any[];
   getActiveTabSync(): any;
-  getActiveTabId(): Promise<string | null>;
+  getActiveTabId(): string | null;
 }

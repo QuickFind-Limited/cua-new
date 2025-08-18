@@ -22,6 +22,8 @@ class VarsPanelManager {
         this.statusContainer = document.getElementById('statusContainer');
         this.runFlowBtn = document.getElementById('run-flow-btn');
         this.saveFlowBtn = document.getElementById('save-flow-btn');
+        this.launchRecorderBtn = document.getElementById('launch-recorder-btn');
+        this.runMagnitudeBtn = document.getElementById('run-magnitude-btn');
         this.closePanelBtn = document.getElementById('close-panel-btn');
         this.flowFileInput = document.getElementById('flowFileInput');
         this.flowDetailsModal = document.getElementById('flowDetailsModal');
@@ -33,6 +35,20 @@ class VarsPanelManager {
         if (this.closePanelBtn) {
             this.closePanelBtn.addEventListener('click', () => {
                 this.hideVarsPanel();
+            });
+        }
+        
+        // Launch Recorder button
+        if (this.launchRecorderBtn) {
+            this.launchRecorderBtn.addEventListener('click', () => {
+                this.launchRecorder();
+            });
+        }
+        
+        // Run with Magnitude button
+        if (this.runMagnitudeBtn) {
+            this.runMagnitudeBtn.addEventListener('click', () => {
+                this.runWithMagnitude();
             });
         }
         
@@ -403,6 +419,94 @@ class VarsPanelManager {
         } else {
             // Fallback for standalone usage
             this.showStatus('Save Flow (demo mode - not actually saved)', 'info');
+        }
+    }
+
+    launchRecorder() {
+        console.log('Launching Playwright recorder...');
+        
+        // Get current URL from address bar or use default
+        const addressBar = document.getElementById('address-bar');
+        const startUrl = addressBar ? addressBar.value : 'https://www.google.com';
+        
+        if (window.electronAPI && window.electronAPI.launchRecorder) {
+            this.showStatus('Launching Playwright recorder...', 'info');
+            
+            window.electronAPI.launchRecorder(startUrl)
+                .then((result) => {
+                    if (result.success) {
+                        this.showStatus('Recorder launched. Use Playwright Inspector to record your actions.', 'success');
+                    } else {
+                        this.showStatus(result.error || 'Failed to launch recorder', 'error');
+                    }
+                })
+                .catch((error) => {
+                    this.showStatus('Error launching recorder: ' + error.message, 'error');
+                });
+        } else {
+            this.showStatus('Recorder API not available', 'error');
+        }
+    }
+
+    runWithMagnitude() {
+        if (!this.currentFlow || this.isExecuting) return;
+        
+        // Collect all variable values
+        const variables = {};
+        if (this.currentFlow.params) {
+            this.currentFlow.params.forEach(param => {
+                const input = document.getElementById(`var-${param}`);
+                if (input) {
+                    variables[param] = input.value.trim();
+                }
+            });
+        }
+        
+        // Validate required fields
+        const missingVars = this.currentFlow.params?.filter(param => 
+            this.isRequiredParam(param) && !variables[param]
+        ) || [];
+        
+        if (missingVars.length > 0) {
+            this.showStatus(`Please fill in required fields: ${missingVars.join(', ')}`, 'error');
+            
+            // Focus first missing field
+            const firstMissingInput = document.getElementById(`var-${missingVars[0]}`);
+            if (firstMissingInput) {
+                firstMissingInput.focus();
+            }
+            return;
+        }
+        
+        this.isExecuting = true;
+        this.validateForm();
+        this.clearStatus();
+        
+        // Show execution start status
+        this.showStatus('Starting Magnitude execution with WebView control...', 'info');
+        
+        // Execute the Intent Spec with Magnitude using WebView
+        if (window.electronAPI && window.electronAPI.runMagnitudeWithWebView) {
+            console.log('Executing Intent Spec with Magnitude WebView:', this.currentFlow.name);
+            console.log('Variables:', variables);
+            
+            // Send the Intent Spec for execution
+            window.electronAPI.runMagnitudeWithWebView(this.currentFlow, variables)
+                .then(result => {
+                    console.log('Magnitude WebView execution result:', result);
+                    this.handleFlowExecutionResult(result);
+                })
+                .catch(error => {
+                    console.error('Magnitude WebView execution error:', error);
+                    this.handleFlowExecutionResult({
+                        success: false,
+                        error: error.message || 'Magnitude WebView execution failed'
+                    });
+                });
+        } else {
+            this.showStatus('Magnitude WebView API not available', 'error');
+            this.isExecuting = false;
+            this.validateForm();
         }
     }
 

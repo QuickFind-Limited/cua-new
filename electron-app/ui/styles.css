@@ -160,51 +160,56 @@ body {
   gap: 8px;
 }
 
-.record-btn {
+.launcher-btn, .begin-analysis-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 8px 16px;
   height: 32px;
-  background: #ffffff;
-  border: 1px solid #d0d0d0;
+  border: none;
   border-radius: 4px;
-  color: #333333;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
 }
 
-.record-btn:hover {
-  background: #f0f0f0;
+.launcher-btn {
+  background: #2196F3;
+  color: white;
 }
 
-.record-btn.recording {
-  background: #cc0000;
-  border-color: #ff0000;
+.launcher-btn:hover {
+  background: #1976D2;
+}
+
+.launcher-btn.monitoring {
+  background: #FF9800;
   animation: pulse 1.5s infinite;
 }
 
-.record-icon {
-  font-size: 10px;
+.launcher-btn.monitoring .launcher-text::after {
+  content: ' (Monitoring...)';
+  font-size: 12px;
+  opacity: 0.9;
 }
 
-.record-btn.recording .record-icon {
-  color: #ffffff;
+.launcher-icon {
+  font-size: 16px;
 }
 
-.analyze-btn {
-  padding: 6px 12px;
-  height: 32px;
-  background: #007acc;
-  border: none;
-  border-radius: 4px;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 13px;
+.begin-analysis-btn {
+  background: #4caf50;
+  color: white;
 }
 
-.analyze-btn:hover {
-  background: #005a9e;
+.begin-analysis-btn:hover {
+  background: #45a049;
+}
+
+.begin-analysis-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
 }
 
 @keyframes pulse {
@@ -286,7 +291,7 @@ body {
   gap: 8px;
 }
 
-.run-flow-btn, .save-flow-btn {
+.run-flow-btn, .save-flow-btn, .launch-recorder-btn, .run-magnitude-btn {
   flex: 1;
   padding: 10px;
   border: none;
@@ -294,6 +299,24 @@ body {
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
+}
+
+.launch-recorder-btn {
+  background: #2196F3;
+  color: white;
+}
+
+.launch-recorder-btn:hover {
+  background: #1976D2;
+}
+
+.run-magnitude-btn {
+  background: #9C27B0;
+  color: white;
+}
+
+.run-magnitude-btn:hover {
+  background: #7B1FA2;
 }
 
 .run-flow-btn {

@@ -210,79 +210,113 @@ html, body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Progress Items */
+/* Progress Items - Clean, no boxes */
 .progress-item {
   display: flex;
   align-items: center;
-  padding: var(--space-md);
-  margin-bottom: var(--space-sm);
-  background: var(--bg-primary);
-  border: 2px solid transparent;
-  border-radius: 4px;
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-xs);
+  background: transparent;
+  border: none;
+  border-radius: 0;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   transition: all var(--duration-quick) ease;
 }
 
-/* Flashing blue border animation for active items */
-@keyframes pulse-border {
+/* Flashing blue animation for active items */
+@keyframes pulse-blue {
   0% {
-    border-color: rgba(74, 144, 226, 0.3);
-    box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.4);
+    opacity: 0.4;
+    color: rgba(74, 144, 226, 0.6);
   }
   50% {
-    border-color: rgba(74, 144, 226, 1);
-    box-shadow: 0 0 10px 2px rgba(74, 144, 226, 0.3);
+    opacity: 1;
+    color: rgba(74, 144, 226, 1);
   }
   100% {
-    border-color: rgba(74, 144, 226, 0.3);
-    box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.4);
+    opacity: 0.4;
+    color: rgba(74, 144, 226, 0.6);
+  }
+}
+
+@keyframes pulse-icon {
+  0% {
+    opacity: 0.4;
+    color: rgba(74, 144, 226, 0.6);
+  }
+  50% {
+    opacity: 1;
+    color: rgba(74, 144, 226, 1);
+  }
+  100% {
+    opacity: 0.4;
+    color: rgba(74, 144, 226, 0.6);
   }
 }
 
 .progress-item.active {
-  animation: pulse-border 1.5s ease-in-out infinite;
-  background: rgba(74, 144, 226, 0.05);
+  animation: none;
+  background: transparent;
+}
+
+.progress-item.active .progress-icon {
+  animation: pulse-icon 1.5s ease-in-out infinite;
+}
+
+.progress-item.active .progress-label {
+  animation: pulse-blue 1.5s ease-in-out infinite;
 }
 
 .progress-item.completed {
-  border-color: var(--accent-primary);
-  background: rgba(74, 144, 226, 0.02);
+  border: none;
+  background: transparent;
 }
 
-/* Progress Icon - Always greyscale */
+/* Progress Icon - Default grey, blue when active/completed */
 .progress-icon {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: var(--space-md);
-  filter: grayscale(100%);
-  opacity: 0.7;
-  transition: opacity var(--duration-quick) ease;
+  color: #888;
+  opacity: 0.5;
+  transition: all var(--duration-quick) ease;
+}
+
+.progress-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .progress-item.active .progress-icon {
-  opacity: 1;
+  /* Animation handles the coloring */
 }
 
 .progress-item.completed .progress-icon {
-  opacity: 0.8;
+  color: var(--accent-primary);
+  opacity: 1;
 }
 
 
 /* Progress Label */
 .progress-label {
   flex: 1;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   transition: color var(--duration-quick) ease;
 }
 
 .progress-item.active .progress-label {
-  color: var(--text-primary);
+  /* Animation handles the coloring */
+}
+
+.progress-item.completed .progress-label {
+  color: var(--accent-primary);
+  font-weight: 600;
 }
 
 .modern-sidebar.collapsed .progress-label {

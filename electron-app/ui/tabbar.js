@@ -24,8 +24,7 @@ function initializeUI() {
     const reloadBtn = document.getElementById('reload-btn');
     const goBtn = document.getElementById('go-btn');
     const addressBar = document.getElementById('address-bar');
-    const recordBtn = document.getElementById('record-btn');
-    const analyzeBtn = document.getElementById('analyze-btn');
+    const launcherBtn = document.getElementById('launcher-btn');
 
     if (backBtn) {
         console.log('🔙 Back button found, adding event listener');
@@ -48,13 +47,7 @@ function initializeUI() {
     }
     if (reloadBtn) reloadBtn.addEventListener('click', () => reloadPage());
     if (goBtn) goBtn.addEventListener('click', () => navigateToUrl());
-    if (recordBtn) recordBtn.addEventListener('click', () => toggleRecording());
-    if (analyzeBtn) {
-        analyzeBtn.addEventListener('click', async () => {
-            console.log('Analyze button clicked');
-            await analyzeLastRecording();
-        });
-    }
+    if (launcherBtn) launcherBtn.addEventListener('click', () => launchPlaywrightRecorder());
 
     // Address bar enter key
     if (addressBar) {
@@ -320,76 +313,224 @@ function updateNavigationState(data) {
     }
 }
 
-async function toggleRecording() {
-    const recordBtn = document.getElementById('record-btn');
-    if (!recordBtn) return;
+// Global variables for recorder state
+let recorderMonitorInterval = null;
+let currentRecordingPath = null;
+let isMonitoringRecorder = false;
+let lastRecordingData = null;
+
+async function launchPlaywrightRecorder() {
+    const launcherBtn = document.getElementById('launcher-btn');
+    if (!launcherBtn) return;
     
-    if (recordBtn.classList.contains('recording')) {
-        // Stop recording
-        recordBtn.classList.remove('recording');
-        recordBtn.querySelector('.record-text').textContent = 'Record';
-        console.log('Stopping recording...');
+    if (isMonitoringRecorder) {
+        console.log('Recorder already monitoring...');
+        return;
+    }
+    
+    console.log('Launching Playwright recorder...');
+    
+    try {
+        // Get current URL from address bar or use default
+        const addressBar = document.getElementById('address-bar');
+        const startUrl = addressBar ? addressBar.value : 'https://www.google.com';
         
-        try {
-            // Send IPC message to stop codegen recording
-            if (window.electronAPI) {
-                const result = await window.electronAPI.stopCodegenRecording();
+        // Launch the recorder
+        if (window.electronAPI && window.electronAPI.launchRecorder) {
+            const result = await window.electronAPI.launchRecorder(startUrl);
+            
+            if (result.success) {
+                console.log('Playwright recorder launched successfully');
                 
-                if (result.success && result.data && result.data.result) {
-                    const codegenResult = result.data.result;
-                    console.log('Codegen recording stopped successfully:', codegenResult);
-                    
-                    // Create a recording session object with the spec code
-                    const recordingSession = {
-                        id: codegenResult.session.id,
-                        url: codegenResult.session.url,
-                        title: codegenResult.session.title,
-                        specCode: codegenResult.specCode,
-                        screenshotPath: codegenResult.screenshotPath,
-                        metadataPath: codegenResult.metadataPath,
-                        specFilePath: codegenResult.session.specFilePath
-                    };
-                    
-                    console.log('Generated Playwright spec code');
-                    
-                    // Handle the recording data
-                    handleRecordingComplete(recordingSession);
-                } else {
-                    console.error('Failed to stop recording:', result.error);
-                    showRecordingError('Failed to stop recording: ' + (result.error || 'Unknown error'));
+                // Update button to show monitoring state
+                launcherBtn.classList.add('monitoring');
+                launcherBtn.querySelector('.launcher-text').textContent = 'Recording';
+                
+                // Start monitoring for recording completion
+                startRecorderMonitoring();
+                isMonitoringRecorder = true;
+            } else {
+                console.error('Failed to launch recorder:', result.error);
+                showRecordingError('Failed to launch recorder: ' + (result.error || 'Unknown error'));
+            }
+        } else {
+            console.error('Launch recorder API not available');
+        }
+    } catch (error) {
+        console.error('Error launching recorder:', error);
+        showRecordingError('Error launching recorder: ' + error.message);
+    }
+}
+
+// Start monitoring the recorder process and file
+function startRecorderMonitoring() {
+    console.log('Starting recorder monitoring...');
+    
+    // Listen for recorder events from main process
+    if (window.electronAPI) {
+        // Listen for when recording is launched
+        if (window.electronAPI.onRecordingLaunched) {
+            window.electronAPI.onRecordingLaunched((data) => {
+                console.log('Recording launched:', data);
+            });
+        }
+        
+        // Listen for when recording is saved
+        if (window.electronAPI.onRecordingSaved) {
+            window.electronAPI.onRecordingSaved((data) => {
+                console.log('Recording saved:', data);
+                lastRecordingData = data;
+            });
+        }
+        
+        // Listen for when recording is complete
+        if (window.electronAPI.onRecordingComplete) {
+            window.electronAPI.onRecordingComplete((data) => {
+                console.log('Recording complete:', data);
+                lastRecordingData = data;
+            });
+        }
+        
+        // Listen for when recording is cancelled
+        if (window.electronAPI.onRecordingCancelled) {
+            window.electronAPI.onRecordingCancelled((data) => {
+                console.log('Recording cancelled:', data);
+            });
+        }
+        
+        // Listen for when recorder process exits
+        if (window.electronAPI.onRecorderExit) {
+            window.electronAPI.onRecorderExit((data) => {
+                console.log('Recorder exited:', data);
+                handleRecorderExit(data);
+            });
+        }
+    }
+    
+    // Also poll periodically to check recorder status
+    recorderMonitorInterval = setInterval(async () => {
+        try {
+            if (window.electronAPI && window.electronAPI.getRecorderStatus) {
+                const status = await window.electronAPI.getRecorderStatus();
+                
+                if (!status.isRecording && lastRecordingData) {
+                    // Recorder has stopped and we have recording data
+                    handleRecorderExit({ hasRecording: true });
                 }
             }
         } catch (error) {
-            console.error('Error stopping recording:', error);
-            showRecordingError('Error stopping recording: ' + error.message);
+            console.error('Error checking recorder status:', error);
+        }
+    }, 2000); // Check every 2 seconds
+}
+
+// Handle when recorder process exits
+function handleRecorderExit(data) {
+    console.log('Handling recorder exit:', data);
+    
+    // Stop monitoring
+    if (recorderMonitorInterval) {
+        clearInterval(recorderMonitorInterval);
+        recorderMonitorInterval = null;
+    }
+    isMonitoringRecorder = false;
+    
+    const launcherBtn = document.getElementById('launcher-btn');
+    const recordingControls = document.querySelector('.recording-controls');
+    
+    if (data.hasRecording || lastRecordingData) {
+        // Recording was saved, show Begin Analysis button
+        console.log('Recording available, showing Begin Analysis button');
+        
+        if (recordingControls) {
+            recordingControls.innerHTML = `
+                <button class="begin-analysis-btn" id="begin-analysis-btn" title="Analyze Recording">
+                    <span class="analysis-icon">🔍</span>
+                    <span class="analysis-text">Begin Analysis</span>
+                </button>
+            `;
+            
+            // Add event listener to begin analysis button
+            const beginAnalysisBtn = document.getElementById('begin-analysis-btn');
+            if (beginAnalysisBtn) {
+                beginAnalysisBtn.addEventListener('click', async () => {
+                    console.log('Begin analysis clicked');
+                    await analyzeRecording();
+                });
+            }
         }
     } else {
-        // Start recording
-        console.log('Starting recording...');
+        // No recording, restore Launch Recorder button
+        console.log('No recording saved, restoring Launch Recorder button');
         
-        try {
-            // Send IPC message to start codegen recording (generates Playwright spec)
-            if (window.electronAPI) {
-                const result = await window.electronAPI.startCodegenRecording();
-                
-                if (result.success && result.data && result.data.sessionId) {
-                    recordBtn.classList.add('recording');
-                    recordBtn.querySelector('.record-text').textContent = 'Stop';
-                    console.log('Codegen recording started successfully:', result.data.sessionId);
-                    showRecordingStatus('Recording started');
-                } else {
-                    console.error('Failed to start recording:', result.error);
-                    showRecordingError('Failed to start recording: ' + (result.error || 'Unknown error'));
-                }
-            }
-        } catch (error) {
-            console.error('Error starting recording:', error);
-            showRecordingError('Error starting recording: ' + error.message);
+        if (launcherBtn) {
+            launcherBtn.classList.remove('monitoring');
+            launcherBtn.querySelector('.launcher-text').textContent = 'Launch Recorder';
         }
     }
 }
 
-// Handle completed recording data
+// Analyze the recorded Playwright spec
+async function analyzeRecording() {
+    console.log('Starting analysis of recording...');
+    
+    const beginAnalysisBtn = document.getElementById('begin-analysis-btn');
+    if (beginAnalysisBtn) {
+        beginAnalysisBtn.disabled = true;
+        beginAnalysisBtn.querySelector('.analysis-text').textContent = 'Analyzing...';
+    }
+    
+    // Get the recording data (either from lastRecordingData or from the saved file)
+    let recordingData = lastRecordingData;
+    
+    if (!recordingData && window.electronAPI && window.electronAPI.getLastRecording) {
+        recordingData = await window.electronAPI.getLastRecording();
+    }
+    
+    if (recordingData && recordingData.specCode) {
+        // Create a session object for compatibility
+        const session = {
+            id: recordingData.sessionId || Date.now().toString(),
+            url: recordingData.url || 'https://www.google.com',
+            title: 'Recorded Flow',
+            specCode: recordingData.specCode,
+            path: recordingData.path
+        };
+        
+        // Store for analysis
+        window.lastRecordingSession = session;
+        
+        // Trigger analysis
+        await analyzeLastRecording();
+        
+        // After analysis, restore the Launch Recorder button
+        const recordingControls = document.querySelector('.recording-controls');
+        if (recordingControls) {
+            recordingControls.innerHTML = `
+                <button class="launcher-btn" id="launcher-btn" title="Launch Playwright Recorder">
+                    <span class="launcher-icon">🎬</span>
+                    <span class="launcher-text">Launch Recorder</span>
+                </button>
+            `;
+            
+            // Re-add event listener
+            const newLauncherBtn = document.getElementById('launcher-btn');
+            if (newLauncherBtn) {
+                newLauncherBtn.addEventListener('click', () => launchPlaywrightRecorder());
+            }
+        }
+    } else {
+        console.error('No recording data available for analysis');
+        showRecordingError('No recording data available');
+        
+        if (beginAnalysisBtn) {
+            beginAnalysisBtn.disabled = false;
+            beginAnalysisBtn.querySelector('.analysis-text').textContent = 'Begin Analysis';
+        }
+    }
+}
+
+// Handle completed recording data (kept for IPC listener compatibility)
 function handleRecordingComplete(session) {
     console.log('Recording session complete:', session);
     
@@ -518,10 +659,8 @@ class AnalysisSidebar {
     constructor() {
         this.sidebar = document.getElementById('analysis-sidebar');
         this.toggleBtn = document.getElementById('sidebar-toggle-btn');
-        this.timerElement = document.getElementById('analysis-timer');
+        // Timer element removed
         this.detailContent = document.getElementById('detail-content');
-        this.startTime = null;
-        this.timerInterval = null;
         this.isCollapsed = false;
         
         this.setupEventListeners();
@@ -537,7 +676,7 @@ class AnalysisSidebar {
         if (this.sidebar) {
             this.sidebar.classList.add('active');
             document.body.classList.add('sidebar-visible');
-            this.startTimer();
+            // Timer removed
             this.resetProgress();
         }
     }
@@ -546,7 +685,7 @@ class AnalysisSidebar {
         if (this.sidebar) {
             this.sidebar.classList.remove('active');
             document.body.classList.remove('sidebar-visible');
-            this.stopTimer();
+            // Timer removed
         }
     }
     
@@ -573,22 +712,7 @@ class AnalysisSidebar {
         }
     }
     
-    startTimer() {
-        this.startTime = Date.now();
-        this.timerInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-            if (this.timerElement) {
-                this.timerElement.textContent = `${elapsed}s`;
-            }
-        }, 1000);
-    }
-    
-    stopTimer() {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
-    }
+    // Timer methods removed
     
     resetProgress() {
         // Reset all progress items
