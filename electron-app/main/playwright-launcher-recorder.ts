@@ -98,14 +98,13 @@ export class PlaywrightLauncherRecorder {
       const sessionId = `recording-${Date.now()}`;
       this.currentOutputPath = path.join(this.recordingsDir, `${sessionId}.spec.ts`);
       
-      // Build codegen command with browser arguments
+      // Build codegen command
       const args = [
         'codegen',
         '--target=playwright-test',
         `--output=${this.currentOutputPath}`,
-        '--viewport-size=null',  // Set to null to allow browser maximization
-        '--browser=chromium',
-        '--browser-arg=--start-maximized'  // Maximize Chromium window
+        '--viewport-size=1920,1080',  // Use full HD viewport
+        '--browser=chromium'
       ];
       
       // Add URL if provided
