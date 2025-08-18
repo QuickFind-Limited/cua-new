@@ -98,11 +98,12 @@ export class PlaywrightLauncherRecorder {
       const sessionId = `recording-${Date.now()}`;
       this.currentOutputPath = path.join(this.recordingsDir, `${sessionId}.spec.ts`);
       
-      // Build codegen command - use standard codegen which handles recording properly
+      // Build codegen command
       const args = [
         'codegen',
         '--target=playwright-test',
         `--output=${this.currentOutputPath}`,
+        '--viewport-size=1920,1080',  // Large viewport
         '--browser=chromium'
       ];
       
@@ -113,21 +114,37 @@ export class PlaywrightLauncherRecorder {
 
       console.log('Launching Playwright recorder...');
       console.log('Output will be saved to:', this.currentOutputPath);
-      console.log('Note: Maximize the browser window manually for best recording experience');
       
-      // Launch playwright codegen - it will handle its own UI
+      // Create environment with inspector disabled
+      const env = { ...process.env };
+      env.PW_CODEGEN_NO_INSPECTOR = 'true';  // This hides the inspector window
+      
+      // Launch playwright codegen with environment variable
       if (playwrightPath === 'playwright' || playwrightPath.includes('npx')) {
         const [cmd, ...cmdArgs] = playwrightPath.split(' ');
         this.codegenProcess = spawn(cmd, [...cmdArgs, ...args], {
-          stdio: 'inherit',
-          shell: true
+          stdio: 'pipe',  // Use pipe to avoid showing console output
+          shell: true,
+          env
         });
       } else {
         this.codegenProcess = spawn(playwrightPath, args, {
-          stdio: 'inherit',
-          shell: process.platform === 'win32'
+          stdio: 'pipe',  // Use pipe to avoid showing console output
+          shell: process.platform === 'win32',
+          env
         });
       }
+      
+      // Handle process output silently
+      this.codegenProcess.stdout?.on('data', (data) => {
+        // Log silently
+        console.log('Codegen:', data.toString());
+      });
+      
+      this.codegenProcess.stderr?.on('data', (data) => {
+        // Log errors
+        console.error('Codegen error:', data.toString());
+      });
 
       // Watch for file changes
       this.startFileWatcher();
