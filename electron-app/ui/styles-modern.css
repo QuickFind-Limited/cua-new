@@ -187,7 +187,7 @@ html, body {
 /* Progress Section */
 .progress-section {
   flex: 1;
-  padding: var(--space-lg);
+  padding: var(--space-sm) var(--space-lg) var(--space-lg);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--border-secondary) transparent;
@@ -626,6 +626,11 @@ html, body {
 
 .section-content.collapsed {
   max-height: 0;
+}
+
+/* Analysis Progress Content - reduce top spacing */
+#analysis-progress-content {
+  padding-top: var(--space-xs);
 }
 
 /* Flow Variables Section Specific */
