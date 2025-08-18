@@ -858,10 +858,14 @@ export class WebContentsTabManager extends EventEmitter {
     const bounds = this.window.getBounds();
     const [width, height] = this.window.getContentSize();
     
+    // Always reserve 40px on the left for floating toggle when sidebar is hidden
+    const toggleWidth = this.sidebarWidth === 0 ? 40 : 0;
+    const leftMargin = Math.max(this.sidebarWidth, toggleWidth);
+    
     tab.view.setBounds({
-      x: this.sidebarWidth, // Offset by sidebar width
+      x: leftMargin, // Offset by sidebar width or toggle width
       y: this.chromeHeight, // Below tab bar and nav bar
-      width: width - this.sidebarWidth, // Reduce width by sidebar
+      width: width - leftMargin, // Reduce width by sidebar or toggle width
       height: height - this.chromeHeight
     });
   }

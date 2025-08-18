@@ -179,6 +179,7 @@ html, body {
   width: 16px;
   height: 16px;
   transition: transform var(--duration-quick) ease;
+  color: var(--text-secondary);
 }
 
 .modern-sidebar.collapsed .sidebar-toggle-btn svg {
@@ -401,6 +402,8 @@ html, body {
   z-index: 1001;
   opacity: 0;
   pointer-events: none;
+  /* Ensure it's in the reserved 40px space */
+  margin: 0;
 }
 
 /* Show floating toggle when sidebar is hidden */
@@ -439,6 +442,26 @@ body.sidebar-collapsed .tab-bar,
 body.sidebar-collapsed .nav-bar {
   margin-left: var(--sidebar-collapsed-width);
   transition: margin-left var(--duration-moderate) var(--spring-smooth);
+}
+
+/* When sidebar is completely hidden, reserve space for floating toggle */
+body:not(.sidebar-open):not(.sidebar-collapsed) .tab-bar,
+body:not(.sidebar-open):not(.sidebar-collapsed) .nav-bar {
+  margin-left: 40px;
+  transition: margin-left var(--duration-moderate) ease;
+}
+
+/* Solid grey background for toggle space */
+body:not(.sidebar-open):not(.sidebar-collapsed)::before {
+  content: '';
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 100vh;
+  background: var(--bg-secondary);
+  z-index: 1000;
+  pointer-events: none;
 }
 
 /* Responsive Design */

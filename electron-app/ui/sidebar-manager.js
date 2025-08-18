@@ -39,6 +39,15 @@ class ModernSidebar {
       this.sidebar.classList.remove('active');
       document.body.classList.remove('sidebar-open', 'sidebar-collapsed');
       
+      // Set initial toggle button state for collapsed sidebar
+      if (this.toggleBtn) {
+        const svg = this.toggleBtn.querySelector('svg polyline');
+        if (svg) {
+          svg.setAttribute('points', '9 18 15 12 9 6'); // Right arrow for expand
+        }
+        this.toggleBtn.setAttribute('title', 'Expand');
+      }
+      
       // Show floating toggle when sidebar is hidden
       console.log('Floating toggle element found:', !!this.floatingToggle);
       if (this.floatingToggle) {
@@ -228,6 +237,15 @@ class ModernSidebar {
       
       if (this.floatingToggle) {
         this.floatingToggle.classList.remove('visible');
+      }
+      
+      // Set toggle button to collapse state (left arrow)
+      if (this.toggleBtn) {
+        const svg = this.toggleBtn.querySelector('svg polyline');
+        if (svg) {
+          svg.setAttribute('points', '15 18 9 12 15 6'); // Left arrow for collapse
+        }
+        this.toggleBtn.setAttribute('title', 'Collapse');
       }
       
       console.log('Sidebar classes added, should be visible now');
