@@ -38,6 +38,16 @@ class ModernSidebar {
       this.sidebar.classList.add('collapsed');
       this.sidebar.classList.remove('active');
       document.body.classList.remove('sidebar-open', 'sidebar-collapsed');
+      
+      // Show floating toggle when sidebar is hidden
+      console.log('Floating toggle element found:', !!this.floatingToggle);
+      if (this.floatingToggle) {
+        console.log('Adding visible class to floating toggle');
+        this.floatingToggle.classList.add('visible');
+      } else {
+        console.log('Floating toggle element not found!');
+      }
+      
       console.log('Initial sidebar state - isVisible:', this.isVisible, 'isCollapsed:', this.isCollapsed);
       
       // Setup event listeners
@@ -182,7 +192,10 @@ class ModernSidebar {
     
     // Floating toggle button
     if (this.floatingToggle) {
-      this.floatingToggle.addEventListener('click', () => this.show());
+      this.floatingToggle.addEventListener('click', () => {
+        console.log('Floating toggle clicked, calling show()');
+        this.show();
+      });
     }
     
     // Listen for bounds updates from main process
@@ -214,8 +227,7 @@ class ModernSidebar {
       document.body.classList.remove('sidebar-collapsed');
       
       if (this.floatingToggle) {
-        this.floatingToggle.style.opacity = '0';
-        this.floatingToggle.style.pointerEvents = 'none';
+        this.floatingToggle.classList.remove('visible');
       }
       
       console.log('Sidebar classes added, should be visible now');
@@ -236,8 +248,10 @@ class ModernSidebar {
       this.isVisible = false;
       this.sidebar.classList.remove('active');
       document.body.classList.remove('sidebar-open', 'sidebar-collapsed');
-      this.floatingToggle.style.opacity = '1';
-      this.floatingToggle.style.pointerEvents = 'all';
+      
+      if (this.floatingToggle) {
+        this.floatingToggle.classList.add('visible');
+      }
       
       // Notify main process to restore WebContentsView bounds
       if (window.electronAPI && window.electronAPI.sidebar) {
