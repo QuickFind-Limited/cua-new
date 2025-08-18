@@ -37,8 +37,8 @@
 
     <!-- Main content area managed by WebContentsView in main process -->
 
-    <!-- Analysis Progress Sidebar (initially collapsed) -->
-    <div id="analysis-sidebar" class="analysis-sidebar collapsed">
+    <!-- Analysis Progress Sidebar (initially hidden) -->
+    <div id="analysis-sidebar" class="analysis-sidebar">
         <div class="sidebar-header">
             <h3>Analysis Progress</h3>
             <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Collapse">
@@ -132,6 +132,13 @@
             </div>
         </div>
     </div>
+
+    <!-- Floating toggle for when sidebar is hidden -->
+    <button class="floating-toggle" id="floating-toggle" title="Show Analysis Panel">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </button>
 
     <!-- Variables Panel (initially hidden) -->
     <div id="vars-panel" class="vars-panel hidden">

@@ -28,14 +28,16 @@ class ModernSidebar {
       console.log('Using existing analysis-sidebar element');
       // Get references to existing elements
       this.toggleBtn = document.getElementById('sidebar-toggle-btn');
+      this.floatingToggle = document.getElementById('floating-toggle');
       this.timerElement = document.getElementById('analysis-timer');
       this.detailContent = document.getElementById('detail-content');
       
-      // Initialize sidebar as collapsed but visible from the start
-      this.isVisible = true;
+      // Initialize sidebar as collapsed and hidden initially
+      this.isVisible = false;
       this.isCollapsed = true;
-      this.sidebar.classList.add('active', 'collapsed');
-      document.body.classList.add('sidebar-collapsed');
+      this.sidebar.classList.add('collapsed');
+      this.sidebar.classList.remove('active');
+      document.body.classList.remove('sidebar-open', 'sidebar-collapsed');
       console.log('Initial sidebar state - isVisible:', this.isVisible, 'isCollapsed:', this.isCollapsed);
       
       // Setup event listeners
@@ -204,7 +206,7 @@ class ModernSidebar {
     if (!this.isVisible) {
       console.log('Showing sidebar...');
       this.isVisible = true;
-      // Start collapsed during analysis, then expand when showing progress
+      // Show as expanded when analysis starts
       this.isCollapsed = false;
       this.sidebar.classList.add('active');
       this.sidebar.classList.remove('collapsed');
