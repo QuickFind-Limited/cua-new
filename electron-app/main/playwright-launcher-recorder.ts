@@ -98,12 +98,14 @@ export class PlaywrightLauncherRecorder {
       const sessionId = `recording-${Date.now()}`;
       this.currentOutputPath = path.join(this.recordingsDir, `${sessionId}.spec.ts`);
       
-      // Build codegen command
+      // Build codegen command with browser arguments
       const args = [
         'codegen',
         '--target=playwright-test',
         `--output=${this.currentOutputPath}`,
-        '--viewport-size=1280,800'
+        '--viewport-size=null',  // Set to null to allow browser maximization
+        '--browser=chromium',
+        '--browser-arg=--start-maximized'  // Maximize Chromium window
       ];
       
       // Add URL if provided
@@ -114,17 +116,24 @@ export class PlaywrightLauncherRecorder {
       console.log('Launching Playwright recorder...');
       console.log('Output will be saved to:', this.currentOutputPath);
       
+      // Set environment variables to control Playwright behavior
+      const env = { ...process.env };
+      // Disable the inspector panel - this is the correct environment variable
+      env.PW_CODEGEN_NO_INSPECTOR = 'true';
+      
       // Launch playwright codegen
       if (playwrightPath === 'playwright' || playwrightPath.includes('npx')) {
         const [cmd, ...cmdArgs] = playwrightPath.split(' ');
         this.codegenProcess = spawn(cmd, [...cmdArgs, ...args], {
           stdio: 'inherit',
-          shell: true
+          shell: true,
+          env
         });
       } else {
         this.codegenProcess = spawn(playwrightPath, args, {
           stdio: 'inherit',
-          shell: process.platform === 'win32'
+          shell: process.platform === 'win32',
+          env
         });
       }
 
