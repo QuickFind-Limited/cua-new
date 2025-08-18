@@ -3,6 +3,9 @@ import { BrowserWindow, WebContentsView, ipcMain } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
 import { PlaywrightRecorder, RecordingSession } from './playwright-recorder';
 import { PlaywrightCodegenRecorder, CodegenRecordingSession, CodegenRecordingResult } from './playwright-codegen-recorder';
+import { PlaywrightWindowsHideUIRecorder } from './playwright-windows-hideui-recorder';
+import { PlaywrightExternalRecorder } from './playwright-external-recorder';
+import { PlaywrightCodegenExternalRecorder } from './playwright-codegen-external';
 
 // WebContentsView-based tab interface
 interface WebContentsTab {
@@ -35,8 +38,13 @@ export class WebContentsTabManager extends EventEmitter {
   private varsPanelWidth = 0; // Track vars panel width on the right
   private recorder: PlaywrightRecorder = new PlaywrightRecorder();
   private codegenRecorder: PlaywrightCodegenRecorder = new PlaywrightCodegenRecorder();
+  private windowsRecorder: PlaywrightWindowsHideUIRecorder | null = null;
+  private externalRecorder: PlaywrightExternalRecorder | null = null;
+  private codegenExternalRecorder: PlaywrightCodegenExternalRecorder | null = null;
   private recordingTabId: string | null = null;
   private codegenRecordingActive = false;
+  private useExternalRecorder = true; // Use external Chromium launch for reliable PID
+  private useCodegenExternal = true; // Use real Playwright codegen for better recording
 
   constructor(options: WebContentsTabManagerOptions) {
     super();
@@ -44,6 +52,9 @@ export class WebContentsTabManager extends EventEmitter {
     this.preloadPath = options.preloadPath || '';
     this.setupIpcHandlers();
     this.setupWindowListeners();
+    
+    // Initialize only codegen external recorder for all platforms
+    this.codegenExternalRecorder = new PlaywrightCodegenExternalRecorder(this.window);
   }
 
   /**
@@ -998,10 +1009,16 @@ export class WebContentsTabManager extends EventEmitter {
 
       const activeTab = this.tabs.get(this.activeTabId || '');
       const startUrl = activeTab?.url || 'https://www.google.com';
-      
       const sessionId = `codegen-${Date.now()}`;
-      const started = await this.codegenRecorder.startRecording(sessionId, startUrl);
-
+      
+      // Use only codegen external recorder
+      if (!this.codegenExternalRecorder) {
+        return { success: false, error: 'Codegen recorder not initialized' };
+      }
+      
+      console.log('Starting Playwright codegen recording...');
+      const started = await this.codegenExternalRecorder.startRecording(sessionId, startUrl);
+      
       if (started) {
         this.codegenRecordingActive = true;
         this.recordingTabId = this.activeTabId;
@@ -1025,7 +1042,12 @@ export class WebContentsTabManager extends EventEmitter {
         return { success: false, error: 'No codegen recording in progress' };
       }
 
-      const result = await this.codegenRecorder.stopRecording();
+      // Use only codegen external recorder
+      if (!this.codegenExternalRecorder) {
+        return { success: false, error: 'Codegen recorder not initialized' };
+      }
+      
+      const result = await this.codegenExternalRecorder.stopRecording();
       if (result) {
         this.emit('codegen-recording-stopped', { result, tabId: this.recordingTabId });
         this.codegenRecordingActive = false;
@@ -1050,7 +1072,9 @@ export class WebContentsTabManager extends EventEmitter {
     url?: string;
     tabId?: string; 
   } {
-    const status = this.codegenRecorder.getRecordingStatus();
+    const status = this.externalRecorder 
+      ? this.externalRecorder.getRecordingStatus()
+      : { isRecording: false };
     return {
       ...status,
       tabId: this.recordingTabId || undefined
