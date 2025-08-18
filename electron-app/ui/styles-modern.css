@@ -179,7 +179,7 @@ html, body {
   width: 16px;
   height: 16px;
   transition: transform var(--duration-quick) ease;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .modern-sidebar.collapsed .sidebar-toggle-btn svg {
@@ -452,7 +452,8 @@ body:not(.sidebar-open):not(.sidebar-collapsed) .nav-bar {
 }
 
 /* Solid grey background for toggle space */
-body:not(.sidebar-open):not(.sidebar-collapsed)::before {
+body:not(.sidebar-open):not(.sidebar-collapsed)::before,
+body.sidebar-collapsed::before {
   content: '';
   position: fixed;
   left: 0;
@@ -462,6 +463,11 @@ body:not(.sidebar-open):not(.sidebar-collapsed)::before {
   background: var(--bg-secondary);
   z-index: 1000;
   pointer-events: none;
+}
+
+/* Adjust width for collapsed sidebar */
+body.sidebar-collapsed::before {
+  width: var(--sidebar-collapsed-width);
 }
 
 /* Responsive Design */

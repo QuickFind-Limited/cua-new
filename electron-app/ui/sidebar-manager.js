@@ -53,6 +53,12 @@ class ModernSidebar {
       if (this.floatingToggle) {
         console.log('Adding visible class to floating toggle');
         this.floatingToggle.classList.add('visible');
+        
+        // Ensure floating toggle always shows right arrow (to expand)
+        const floatingSvg = this.floatingToggle.querySelector('svg polyline');
+        if (floatingSvg) {
+          floatingSvg.setAttribute('points', '9 18 15 12 9 6'); // Right arrow
+        }
       } else {
         console.log('Floating toggle element not found!');
       }
@@ -269,6 +275,12 @@ class ModernSidebar {
       
       if (this.floatingToggle) {
         this.floatingToggle.classList.add('visible');
+        
+        // Ensure floating toggle shows right arrow (to expand)
+        const floatingSvg = this.floatingToggle.querySelector('svg polyline');
+        if (floatingSvg) {
+          floatingSvg.setAttribute('points', '9 18 15 12 9 6'); // Right arrow
+        }
       }
       
       // Notify main process to restore WebContentsView bounds
