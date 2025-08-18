@@ -407,18 +407,13 @@ function createAnalysisPrompt(recordingData: any): string {
   console.log('Recording data type:', typeof recordingData);
   console.log('Recording data preview:', typeof recordingData === 'string' ? recordingData.substring(0, 500) : JSON.stringify(recordingData).substring(0, 500));
   
-  // Check if this is a Playwright spec string, structured recording session, or raw actions
-  if (typeof recordingData === 'string') {
-    const isPlaywrightSpec = recordingData.includes('test(') || recordingData.includes('await page.');
-    if (isPlaywrightSpec) {
-      return createPlaywrightSpecAnalysisPrompt(recordingData);
-    }
-  }
-  
   // Check if it's a recording session with actions array
   if (recordingData && recordingData.actions && Array.isArray(recordingData.actions)) {
     return createSessionAnalysisPrompt(recordingData);
   }
+  
+  // For Playwright specs and all other cases, use the general prompt that allows inference
+  // This enables Claude to intelligently infer steps from start/end URLs
   
   return `You are an expert at analyzing browser automation recordings and converting them to Intent Specifications.
 
