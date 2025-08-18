@@ -12,6 +12,7 @@ import {
   executeMagnitudeDecision,
   executeMagnitudeQuery
 } from './llm';
+import { serializeRecording } from './recording-serializer';
 import { ScreenshotComparator } from './screenshot-comparator';
 import { ExecutionEngine } from './execution-engine';
 import { getTabManager, getMainWindow } from './main';
@@ -108,11 +109,31 @@ export function registerIpcHandlers(): void {
         });
       }
       
-      // Use the enhanced analysis with metadata that includes intelligent strategy selection
-      const result = await analyzeRecordingWithMetadata({
-        recordingData: params.recordingData,
-        context: params.context
-      });
+      // Parse recording data to get metadata
+      let recordingData: any[];
+      if (typeof params.recordingData === 'string') {
+        try {
+          recordingData = JSON.parse(params.recordingData);
+        } catch {
+          recordingData = [{ type: 'raw', data: params.recordingData }];
+        }
+      } else {
+        recordingData = params.recordingData || [];
+      }
+      
+      // Serialize recording for display
+      const serializedRecording = serializeRecording(recordingData);
+      
+      // Extract metadata
+      const metadata = {
+        stepCount: recordingData.length,
+        complexity: recordingData.length > 10 ? 'complex' : recordingData.length > 5 ? 'moderate' : 'simple',
+        hasNavigation: recordingData.some((action: any) => action.type === 'navigate'),
+        hasFormInput: recordingData.some((action: any) => action.type === 'type' || action.type === 'fill'),
+        hasClickActions: recordingData.some((action: any) => action.type === 'click'),
+        estimatedDuration: recordingData.length * 2,
+        variableCount: 0 // Will be updated after analysis
+      };
       
       if (mainWindow) {
         // Notify that parsing is complete and AI analysis is starting
@@ -127,6 +148,12 @@ export function registerIpcHandlers(): void {
           message: 'AI analyzing recording patterns...' 
         });
       }
+      
+      // Get the full Intent Spec directly from analyzeRecording
+      const fullIntentSpec = await analyzeRecording(params.recordingData);
+      
+      // Update metadata with variable count
+      metadata.variableCount = fullIntentSpec.params?.length || 0;
 
       // Send progress for remaining steps
       if (mainWindow) {
@@ -143,38 +170,19 @@ export function registerIpcHandlers(): void {
         });
       }
       
-      // Process the result
       const processedResult = {
         success: true,
         data: {
-          // Return the Intent Spec with intelligent strategy selection
-          intentSpec: {
-            name: result.analysis.name,
-            description: `Automated workflow: ${result.analysis.name}`,
-            url: result.analysis.startUrl,
-            params: result.analysis.params,
-            steps: result.analysis.steps.map(step => ({
-              name: step.action,
-              ai_instruction: `Perform ${step.action} on ${step.target}${step.value ? ` with value: ${step.value}` : ''}`,
-              snippet: generateSnippetForAction(step),
-              prefer: determineIntelligentStrategy(step),
-              fallback: determineFallbackStrategy(step),
-              selector: step.target,
-              value: step.value
-            })),
-            preferences: {
-              dynamic_elements: "ai",
-              simple_steps: "snippet"
-            }
-          },
-          metadata: result.metadata,
-          serializedRecording: result.serializedRecording
+          // Return the full Intent Spec with all step details
+          intentSpec: fullIntentSpec,
+          metadata: metadata,
+          serializedRecording: serializedRecording
         }
       };
       
       // Send final progress updates
       if (mainWindow) {
-        const varCount = result.analysis.params ? result.analysis.params.length : 0;
+        const varCount = fullIntentSpec.params ? fullIntentSpec.params.length : 0;
         mainWindow.webContents.send('analysis-progress', { 
           step: 'variables', 
           status: 'completed', 

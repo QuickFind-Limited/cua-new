@@ -72,7 +72,7 @@ class ModernSidebar {
     const sidebarHTML = `
       <div id="modern-sidebar" class="modern-sidebar">
         <div class="sidebar-header">
-          <h3>Recording Analysis</h3>
+          <h3>Workflow Analysis</h3>
           <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Collapse">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6"></polyline>
@@ -448,8 +448,34 @@ class ModernSidebar {
     if (success) {
       this.updateProgress('validating', 'completed', 'Analysis completed successfully!');
       
-      // Keep sidebar expanded after analysis completes - no auto-hide
-      // User can manually close it using the collapse button
+      // Auto-collapse analysis section and show flow variables section
+      setTimeout(() => {
+        // Collapse analysis progress section
+        const analysisContent = document.getElementById('analysis-progress-content');
+        const analysisChevron = document.getElementById('analysis-progress-chevron');
+        if (analysisContent && !analysisContent.classList.contains('collapsed')) {
+          analysisContent.classList.add('collapsed');
+          if (analysisChevron) {
+            analysisChevron.classList.add('collapsed');
+            analysisChevron.textContent = '▶';
+          }
+        }
+        
+        // Show and expand flow variables section
+        const flowVarsSection = document.getElementById('flow-variables-section');
+        const flowVarsContent = document.getElementById('flow-variables-content');
+        const flowVarsChevron = document.getElementById('flow-variables-chevron');
+        if (flowVarsSection) {
+          flowVarsSection.style.display = 'block';
+          if (flowVarsContent && flowVarsContent.classList.contains('collapsed')) {
+            flowVarsContent.classList.remove('collapsed');
+          }
+          if (flowVarsChevron) {
+            flowVarsChevron.classList.remove('collapsed');
+            flowVarsChevron.textContent = '▼';
+          }
+        }
+      }, 1000); // Wait 1 second after completion before collapsing
     } else {
       if (this.detailContent) {
         const detailItem = document.createElement('div');
@@ -475,3 +501,27 @@ window.addEventListener('recordingComplete', (event) => {
   // Mark recording step as completed when recording files are saved
   modernSidebar.updateProgress('recording', 'completed', 'Recording saved successfully');
 });
+
+// Function to toggle collapsible sections
+function toggleSection(sectionName) {
+  console.log('Toggling section:', sectionName);
+  const chevron = document.getElementById(`${sectionName}-chevron`);
+  const content = document.getElementById(`${sectionName}-content`);
+  
+  if (chevron && content) {
+    if (content.classList.contains('collapsed')) {
+      // Expand
+      content.classList.remove('collapsed');
+      chevron.classList.remove('collapsed');
+      chevron.textContent = '▼';
+    } else {
+      // Collapse
+      content.classList.add('collapsed');
+      chevron.classList.add('collapsed');
+      chevron.textContent = '▶';
+    }
+  }
+}
+
+// Make toggleSection globally available
+window.toggleSection = toggleSection;

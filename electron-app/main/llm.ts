@@ -217,10 +217,11 @@ export async function analyzeRecording(recordingData: any): Promise<IntentSpec> 
       let result = '';
       
       // Use Claude Code SDK with Opus 4.1 (default)
+      // Note: maxTurns of 2 allows for system message + assistant response
       for await (const message of query({
         prompt: promptText,
         options: {
-          maxTurns: 1
+          maxTurns: 2
         }
       })) {
         if (message.type === 'result' && message.subtype === 'success') {
@@ -277,9 +278,67 @@ export async function analyzeRecordingLegacy(request: AnalysisRequest): Promise<
 }
 
 /**
+ * Creates a prompt for analyzing Playwright spec code
+ */
+function createPlaywrightSpecAnalysisPrompt(playwrightCode: string): string {
+  return `You are an expert at analyzing Playwright test code and converting it to Intent Specifications.
+
+Analyze this Playwright test recording and extract ONLY the actual user actions performed. 
+IMPORTANT: Output ONLY valid JSON. No markdown, no explanations, no comments.
+
+Playwright Test Code:
+${playwrightCode}
+
+CRITICAL RULES:
+1. Extract ONLY the actual actions from the Playwright code
+2. Ignore test setup/teardown code
+3. The first goto() is the starting URL
+4. Convert each await page.* action to an Intent Spec step
+5. Detect variables (values that should be parameterized like usernames, passwords, search terms)
+6. DO NOT invent or hallucinate steps that aren't in the code
+
+Output this EXACT JSON structure:
+{
+  "name": "Descriptive name based on the actions",
+  "description": "Brief description of what this automation does",
+  "url": "The first page.goto() URL",
+  "params": ["VARIABLE_NAMES_HERE"],
+  "steps": [
+    {
+      "name": "Step description",
+      "ai_instruction": "Natural language instruction",
+      "snippet": "The actual Playwright code line",
+      "prefer": "snippet",
+      "fallback": "ai",
+      "selector": "The selector used",
+      "value": "The value or {{VARIABLE}}"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}
+
+Analyze the Playwright code and output ONLY the JSON:`;
+}
+
+/**
  * Creates a comprehensive analysis prompt with examples and explicit format requirements
  */
 function createAnalysisPrompt(recordingData: any): string {
+  // Log the recording data for debugging
+  console.log('Recording data type:', typeof recordingData);
+  console.log('Recording data preview:', typeof recordingData === 'string' ? recordingData.substring(0, 500) : JSON.stringify(recordingData).substring(0, 500));
+  
+  // Check if this is a Playwright spec string or structured data
+  const isPlaywrightSpec = typeof recordingData === 'string' && 
+    (recordingData.includes('test(') || recordingData.includes('await page.'));
+  
+  if (isPlaywrightSpec) {
+    return createPlaywrightSpecAnalysisPrompt(recordingData);
+  }
+  
   return `You are an expert at analyzing browser automation recordings and converting them to Intent Specifications.
 
 Your task: Analyze the provided recording and output a STRICT JSON Intent Spec. NO prose, comments, or markdown - only valid JSON.

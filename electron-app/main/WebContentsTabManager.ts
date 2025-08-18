@@ -32,6 +32,7 @@ export class WebContentsTabManager extends EventEmitter {
   private preloadPath: string;
   private readonly chromeHeight = 88; // Height of tab bar + nav bar
   private sidebarWidth = 0; // Track sidebar state for bounds management
+  private varsPanelWidth = 0; // Track vars panel width on the right
   private recorder: PlaywrightRecorder = new PlaywrightRecorder();
   private codegenRecorder: PlaywrightCodegenRecorder = new PlaywrightCodegenRecorder();
   private recordingTabId: string | null = null;

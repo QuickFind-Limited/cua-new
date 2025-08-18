@@ -747,14 +747,20 @@ async function analyzeLastRecording() {
             
             if (result.success && result.data) {
                 console.log('Analysis successful:', result.data);
+                console.log('Intent Spec:', JSON.stringify(result.data.intentSpec, null, 2));
                 
                 // Keep analyze button visible for testing
                 // if (analyzeBtn) {
                 //     analyzeBtn.style.display = 'none';
                 // }
                 
-                // Show vars panel with the Intent Spec
-                showVarsPanel(result.data);
+                // Show vars panel with the Intent Spec (not the entire data object)
+                if (result.data.intentSpec) {
+                    showVarsPanel(result.data.intentSpec);
+                } else {
+                    console.error('No intentSpec found in result.data');
+                    showVarsPanel(result.data); // Fallback to old behavior
+                }
                 
                 if (statusText) {
                     statusText.textContent = 'Analysis complete - Intent Spec generated';

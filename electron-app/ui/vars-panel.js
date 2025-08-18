@@ -14,7 +14,8 @@ class VarsPanelManager {
     }
 
     initializeElements() {
-        this.panel = document.querySelector('.vars-panel');
+        // Update to use the new sidebar integrated flow variables section
+        this.panel = document.getElementById('flow-variables-section');
         this.flowInfoContainer = document.getElementById('flow-info');
         this.variablesContainer = document.getElementById('variables-form');
         this.actionsContainer = document.getElementById('actionsContainer');
@@ -134,17 +135,40 @@ class VarsPanelManager {
     renderFlowInfo(flowData) {
         const flowInfo = document.createElement('div');
         flowInfo.className = 'flow-info fade-in';
+        
+        // Build steps summary
+        let stepsSummary = '';
+        if (flowData.steps && flowData.steps.length > 0) {
+            stepsSummary = `
+                <div class="steps-summary" style="margin-top: 12px; padding: 8px; background: var(--bg-primary); border-radius: 4px; border: 1px solid var(--border-light);">
+                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">Automation Steps:</div>
+                    <ol style="margin: 0; padding-left: 20px; font-size: 11px; color: var(--text-primary);">
+                        ${flowData.steps.slice(0, 5).map(step => {
+                            const stepName = step.name || step.action || 'Unknown step';
+                            const stepDesc = step.ai_instruction || step.description || '';
+                            return `<li style="margin-bottom: 4px;">
+                                <strong>${this.escapeHtml(stepName)}</strong>
+                                ${stepDesc ? `<div style="color: var(--text-tertiary); font-size: 10px;">${this.escapeHtml(stepDesc).substring(0, 60)}${stepDesc.length > 60 ? '...' : ''}</div>` : ''}
+                            </li>`;
+                        }).join('')}
+                        ${flowData.steps.length > 5 ? `<li style="color: var(--text-tertiary); font-style: italic;">... and ${flowData.steps.length - 5} more steps</li>` : ''}
+                    </ol>
+                </div>
+            `;
+        }
+        
         flowInfo.innerHTML = `
             <div class="flow-name">${this.escapeHtml(flowData.name || 'Unnamed Flow')}</div>
             <div class="flow-steps mb-8">${flowData.steps ? flowData.steps.length : 0} automation steps</div>
             ${flowData.startUrl ? `<div class="text-muted" style="font-size: 11px;">Start URL: ${this.escapeHtml(flowData.startUrl)}</div>` : ''}
+            ${stepsSummary}
             <button class="btn btn-stop" onclick="varsPanelManager.showFlowDetails()" style="
                 margin-top: 8px; 
                 padding: 4px 8px; 
                 font-size: 11px;
                 background: var(--bg-primary);
             ">
-                📋 View Steps
+                📋 View Full Details
             </button>
         `;
         
@@ -473,6 +497,7 @@ class VarsPanelManager {
                 <div class="mb-16">
                     <strong>Flow Name:</strong> ${this.escapeHtml(flow.name || 'Unnamed Flow')}
                 </div>
+                ${flow.description ? `<div class="mb-16"><strong>Description:</strong> ${this.escapeHtml(flow.description)}</div>` : ''}
                 ${flow.startUrl ? `<div class="mb-16"><strong>Start URL:</strong> ${this.escapeHtml(flow.startUrl)}</div>` : ''}
                 ${flow.successCheck ? `<div class="mb-16"><strong>Success Check:</strong> ${this.escapeHtml(flow.successCheck)}</div>` : ''}
         `;
@@ -491,15 +516,26 @@ class VarsPanelManager {
         if (flow.steps && flow.steps.length > 0) {
             html += `
                 <div>
-                    <strong>Automation Steps:</strong>
+                    <strong>Automation Steps (${flow.steps.length} total):</strong>
                     <ol style="margin-left: 20px; margin-top: 8px;">
-                        ${flow.steps.map((step, index) => `
-                            <li style="margin-bottom: 8px;">
-                                <strong>${this.escapeHtml(step.action)}</strong>
-                                ${step.target ? `<br><small>Target: ${this.escapeHtml(step.target)}</small>` : ''}
-                                ${step.value ? `<br><small>Value: ${this.escapeHtml(step.value)}</small>` : ''}
+                        ${flow.steps.map((step, index) => {
+                            const stepName = step.name || step.action || `Step ${index + 1}`;
+                            const instruction = step.ai_instruction || step.description || '';
+                            const snippet = step.snippet || '';
+                            const prefer = step.prefer || '';
+                            const selector = step.selector || step.target || '';
+                            const value = step.value || '';
+                            
+                            return `
+                            <li style="margin-bottom: 12px; padding: 8px; background: #f5f5f5; border-radius: 4px;">
+                                <strong style="color: #333;">${this.escapeHtml(stepName)}</strong>
+                                ${instruction ? `<div style="color: #666; font-size: 12px; margin-top: 4px;">📝 ${this.escapeHtml(instruction)}</div>` : ''}
+                                ${prefer ? `<div style="color: #888; font-size: 11px; margin-top: 2px;">⚙️ Strategy: ${this.escapeHtml(prefer)}</div>` : ''}
+                                ${selector ? `<div style="color: #888; font-size: 11px; margin-top: 2px;">🎯 Selector: <code>${this.escapeHtml(selector)}</code></div>` : ''}
+                                ${value ? `<div style="color: #888; font-size: 11px; margin-top: 2px;">📝 Value: ${this.escapeHtml(value)}</div>` : ''}
+                                ${snippet ? `<div style="color: #888; font-size: 10px; margin-top: 4px; padding: 4px; background: #fff; border-radius: 2px; font-family: monospace; overflow-x: auto;"><code>${this.escapeHtml(snippet).substring(0, 200)}${snippet.length > 200 ? '...' : ''}</code></div>` : ''}
                             </li>
-                        `).join('')}
+                        `}).join('')}
                     </ol>
                 </div>
             `;
@@ -556,14 +592,25 @@ class VarsPanelManager {
         const flowData = this.convertIntentSpecToFlow(intentSpec);
         this.loadFlow(flowData);
         
-        // Show panel with animation
+        // Show the flow variables section in the sidebar
         if (this.panel) {
-            this.panel.classList.remove('hidden');
-            this.panel.classList.add('visible');
+            this.panel.style.display = 'block';
+            
+            // Expand the flow variables section
+            const flowVarsContent = document.getElementById('flow-variables-content');
+            const flowVarsChevron = document.getElementById('flow-variables-chevron');
+            if (flowVarsContent && flowVarsContent.classList.contains('collapsed')) {
+                flowVarsContent.classList.remove('collapsed');
+            }
+            if (flowVarsChevron) {
+                flowVarsChevron.classList.remove('collapsed');
+                flowVarsChevron.textContent = '▼';
+            }
+            
             this.isVisible = true;
-            console.log('Vars panel shown');
+            console.log('Flow variables section shown in sidebar');
         } else {
-            console.error('Vars panel element not found!');
+            console.error('Flow variables section element not found!');
         }
         
         this.showStatus('Intent Spec loaded successfully - ready to configure and execute', 'success');
@@ -571,8 +618,20 @@ class VarsPanelManager {
 
     hideVarsPanel() {
         if (this.panel) {
-            this.panel.classList.remove('visible');
-            this.panel.classList.add('hidden');
+            // Hide the flow variables section
+            this.panel.style.display = 'none';
+            
+            // Collapse the section content
+            const flowVarsContent = document.getElementById('flow-variables-content');
+            const flowVarsChevron = document.getElementById('flow-variables-chevron');
+            if (flowVarsContent) {
+                flowVarsContent.classList.add('collapsed');
+            }
+            if (flowVarsChevron) {
+                flowVarsChevron.classList.add('collapsed');
+                flowVarsChevron.textContent = '▶';
+            }
+            
             this.isVisible = false;
         }
         this.currentIntentSpec = null;
@@ -587,8 +646,8 @@ class VarsPanelManager {
             name: intentSpec.name || 'Recorded Intent',
             description: intentSpec.description || 'Generated from recording',
             steps: intentSpec.steps || [],
-            params: intentSpec.variables || [],
-            startUrl: intentSpec.startUrl,
+            params: intentSpec.params || intentSpec.variables || [],  // Intent Spec uses 'params', not 'variables'
+            startUrl: intentSpec.url || intentSpec.startUrl,  // Intent Spec uses 'url'
             successCheck: intentSpec.successCheck
         };
     }

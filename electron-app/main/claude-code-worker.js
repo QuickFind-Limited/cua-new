@@ -22,10 +22,11 @@ process.on('message', async (message) => {
       let result = '';
       console.log('[Worker] Starting query...');
       // Use Claude Code SDK with Opus 4.1 (default)
+      // Note: maxTurns of 2 allows for system message + assistant response
       for await (const msg of query({
         prompt: message.prompt,
         options: {
-          maxTurns: 1
+          maxTurns: 2
         }
       })) {
         console.log('[Worker] Received message type:', msg.type, 'subtype:', msg.subtype);
