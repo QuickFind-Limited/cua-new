@@ -51,4 +51,4 @@ issue*.png
 # Backup files
 backup-*.tar.gz
 backup-*.zip
-*.backup
+*.backupcua-new/
