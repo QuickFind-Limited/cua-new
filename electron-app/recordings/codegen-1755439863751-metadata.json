@@ -1,0 +1,13 @@
+{
+  "sessionId": "codegen-1755439863751",
+  "startTime": 1755439863751,
+  "endTime": 1755439951749,
+  "duration": 87998,
+  "url": "https://www.zoho.com/us/inventory/logout/",
+  "title": "Codegen Recording",
+  "specFile": "codegen-1755439863751-recording.spec.ts",
+  "screenshotFile": "codegen-1755439863751-success-state.png",
+  "timestamp": "2025-08-17T14:12:35.148Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

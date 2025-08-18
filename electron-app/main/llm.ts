@@ -278,6 +278,82 @@ export async function analyzeRecordingLegacy(request: AnalysisRequest): Promise<
 }
 
 /**
+ * Creates a prompt for analyzing a recording session with actual actions
+ */
+function createSessionAnalysisPrompt(session: any): string {
+  const actions = session.actions || [];
+  const url = session.url || 'Unknown URL';
+  
+  // Create a human-readable description of actions
+  const actionDescriptions = actions.map((action: any, index: number) => {
+    switch(action.type) {
+      case 'navigate':
+        return `${index + 1}. Navigate to: ${action.url}`;
+      case 'click':
+        return `${index + 1}. Click on: ${action.selector || action.element?.text || 'element'}`;
+      case 'type':
+        return `${index + 1}. Type "${action.value}" into: ${action.selector || 'input field'}`;
+      case 'select':
+        return `${index + 1}. Select "${action.value}" from: ${action.selector || 'dropdown'}`;
+      case 'submit':
+        return `${index + 1}. Submit form: ${action.selector || 'form'}`;
+      case 'scroll':
+        return `${index + 1}. Scroll to position: x=${action.scrollPosition?.x}, y=${action.scrollPosition?.y}`;
+      default:
+        return `${index + 1}. ${action.type}: ${JSON.stringify(action)}`;
+    }
+  }).join('\n');
+  
+  return `You are an expert at analyzing browser automation recordings and converting them to Intent Specifications.
+
+Analyze these ACTUAL recorded user actions and create an Intent Spec. Output ONLY valid JSON.
+
+Recording Session Details:
+- Start URL: ${url}
+- Total Actions: ${actions.length}
+- Session ID: ${session.id || 'Unknown'}
+
+Recorded Actions:
+${actionDescriptions}
+
+Raw Action Data:
+${JSON.stringify(actions, null, 2)}
+
+CRITICAL RULES:
+1. Analyze ONLY the actual recorded actions - do not invent steps
+2. Detect patterns that should be variables (usernames, passwords, search terms, etc.)
+3. Each action should become a step in the Intent Spec
+4. Use the actual selectors from the recording
+5. Set prefer="snippet" for form fields and stable elements
+6. Set prefer="ai" for dynamic content
+
+Output this EXACT JSON structure:
+{
+  "name": "Descriptive name based on the actions performed",
+  "description": "Brief description of what this automation does",
+  "url": "${url}",
+  "params": ["VARIABLE_NAMES_IF_ANY"],
+  "steps": [
+    {
+      "name": "Step description",
+      "ai_instruction": "Natural language instruction",
+      "snippet": "await page.ACTION('selector', 'value');",
+      "prefer": "snippet or ai",
+      "fallback": "ai or snippet",
+      "selector": "The actual selector from recording",
+      "value": "The actual value or {{VARIABLE}}"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}
+
+Analyze the recording and output ONLY the JSON:`;
+}
+
+/**
  * Creates a prompt for analyzing Playwright spec code
  */
 function createPlaywrightSpecAnalysisPrompt(playwrightCode: string): string {
@@ -331,12 +407,17 @@ function createAnalysisPrompt(recordingData: any): string {
   console.log('Recording data type:', typeof recordingData);
   console.log('Recording data preview:', typeof recordingData === 'string' ? recordingData.substring(0, 500) : JSON.stringify(recordingData).substring(0, 500));
   
-  // Check if this is a Playwright spec string or structured data
-  const isPlaywrightSpec = typeof recordingData === 'string' && 
-    (recordingData.includes('test(') || recordingData.includes('await page.'));
+  // Check if this is a Playwright spec string, structured recording session, or raw actions
+  if (typeof recordingData === 'string') {
+    const isPlaywrightSpec = recordingData.includes('test(') || recordingData.includes('await page.');
+    if (isPlaywrightSpec) {
+      return createPlaywrightSpecAnalysisPrompt(recordingData);
+    }
+  }
   
-  if (isPlaywrightSpec) {
-    return createPlaywrightSpecAnalysisPrompt(recordingData);
+  // Check if it's a recording session with actions array
+  if (recordingData && recordingData.actions && Array.isArray(recordingData.actions)) {
+    return createSessionAnalysisPrompt(recordingData);
   }
   
   return `You are an expert at analyzing browser automation recordings and converting them to Intent Specifications.

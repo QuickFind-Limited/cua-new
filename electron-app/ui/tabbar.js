@@ -331,18 +331,25 @@ async function toggleRecording() {
         console.log('Stopping recording...');
         
         try {
-            // Send IPC message to stop Codegen recording
+            // Send IPC message to stop regular recording
             if (window.electronAPI) {
-                const result = await window.electronAPI.stopCodegenRecording();
+                const result = await window.electronAPI.stopRecording();
                 
-                if (result.success && result.data && result.data.result) {
-                    const recordingResult = result.data.result;
-                    console.log('Recording stopped successfully:', recordingResult);
-                    console.log(`Recording saved to: ${recordingResult.recordingPath}`);
-                    console.log(`Screenshot saved to: ${recordingResult.screenshotPath}`);
+                if (result.success && result.data && result.data.session) {
+                    const recordingSession = result.data.session;
+                    console.log('Recording stopped successfully:', recordingSession);
+                    console.log(`Recorded ${recordingSession.actions.length} actions`);
+                    
+                    // Generate Playwright code from the session
+                    if (window.electronAPI && window.electronAPI.generatePlaywrightCode) {
+                        const codeResult = await window.electronAPI.generatePlaywrightCode(recordingSession);
+                        if (codeResult.success) {
+                            recordingSession.specCode = codeResult.data.code;
+                        }
+                    }
                     
                     // Handle the recording data
-                    handleRecordingComplete(recordingResult);
+                    handleRecordingComplete(recordingSession);
                 } else {
                     console.error('Failed to stop recording:', result.error);
                     showRecordingError('Failed to stop recording: ' + (result.error || 'Unknown error'));
@@ -357,9 +364,9 @@ async function toggleRecording() {
         console.log('Starting recording...');
         
         try {
-            // Send IPC message to start Codegen recording (uses Playwright)
+            // Send IPC message to start regular recording (captures actual actions)
             if (window.electronAPI) {
-                const result = await window.electronAPI.startCodegenRecording();
+                const result = await window.electronAPI.startRecording();
                 
                 if (result.success && result.data && result.data.sessionId) {
                     recordBtn.classList.add('recording');
@@ -705,19 +712,18 @@ async function analyzeLastRecording() {
     try {
         if (window.electronAPI && window.electronAPI.analyzeRecording) {
             // Prepare recording data for analysis
-            // Extract the Playwright spec code from the recording session
-            const specCode = window.lastRecordingSession.specCode || 
-                            window.lastRecordingSession.session?.specCode || 
-                            window.lastRecordingSession.result?.session?.specCode || '';
+            // Send the actual recording session with actions, not just spec code
+            const recordingSession = window.lastRecordingSession;
             
-            console.log('Recording session object:', window.lastRecordingSession);
-            console.log('Spec code length:', specCode.length);
+            console.log('Recording session object:', recordingSession);
+            console.log('Number of actions:', recordingSession.actions ? recordingSession.actions.length : 0);
             
+            // If we have a full session with actions, send that. Otherwise fall back to spec code
             const recordingData = {
-                recordingData: specCode,
-                url: window.lastRecordingSession.session?.url || window.lastRecordingSession.url || '',
-                title: window.lastRecordingSession.session?.title || window.lastRecordingSession.title || 'Recording',
-                screenshotPath: window.lastRecordingSession.screenshotPath || window.lastRecordingSession.session?.screenshotPath
+                recordingData: recordingSession.actions ? recordingSession : (recordingSession.specCode || ''),
+                url: recordingSession.url || '',
+                title: recordingSession.title || 'Recording',
+                screenshotPath: recordingSession.screenshotPath
             };
             
             console.log('Sending recording for analysis:', recordingData);

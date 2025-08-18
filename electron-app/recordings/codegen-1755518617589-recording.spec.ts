@@ -1,0 +1,46 @@
+import { test, expect } from '@playwright/test';
+
+test('recorded flow - codegen-1755518617589', async ({ page }) => {
+  // Navigate to the starting URL
+  await page.goto('https://www.zoho.com/us/inventory/logout/');
+  
+  // Wait for page to load completely
+  await page.waitForLoadState('networkidle');
+  
+  // Recorded interactions will be inserted here by Playwright's codegen
+  // The trace file contains all user interactions and can be used to regenerate code
+  // To view the trace: npx playwright show-trace codegen-1755518617589-trace.zip
+  
+  // Common interaction patterns (examples):
+  // Navigation and form interactions
+  // await page.click('selector');
+  // await page.fill('input[name="field"]', 'value');
+  // await page.selectOption('select', 'option');
+  // await page.check('input[type="checkbox"]');
+  // await page.press('input', 'Enter');
+  
+  // Verification and assertions
+  await expect(page).toHaveURL(/https://inventory\.zoho\.com/app/893870319#/reports\?report_group=favourites/);
+  
+  // Additional verifications can be added based on final page state:
+  // await expect(page.locator('h1')).toBeVisible();
+  // await expect(page.locator('[data-testid="success"]')).toContainText('Success');
+});
+
+/*
+ * Recording Session Information:
+ * Generated on: 2025-08-18T12:04:13.049Z
+ * Session ID: codegen-1755518617589
+ * Start URL: https://www.zoho.com/us/inventory/logout/
+ * End URL: https://inventory.zoho.com/app/893870319#/reports?report_group=favourites
+ * Duration: 35s
+ * 
+ * To replay this test:
+ * npx playwright test codegen-1755518617589-recording.spec.ts
+ * 
+ * To view the trace:
+ * npx playwright show-trace recordings/codegen-1755518617589-trace.zip
+ * 
+ * To regenerate test code from trace:
+ * Use Playwright's codegen feature with the trace file
+ */
