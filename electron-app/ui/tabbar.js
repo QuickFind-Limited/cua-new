@@ -445,7 +445,6 @@ function handleRecorderExit(data) {
         if (recordingControls) {
             recordingControls.innerHTML = `
                 <button class="begin-analysis-btn" id="begin-analysis-btn" title="Analyze Recording">
-                    <span class="analysis-icon">🔍</span>
                     <span class="analysis-text">Begin Analysis</span>
                 </button>
             `;
@@ -508,7 +507,6 @@ async function analyzeRecording() {
         if (recordingControls) {
             recordingControls.innerHTML = `
                 <button class="launcher-btn" id="launcher-btn" title="Launch Playwright Recorder">
-                    <span class="launcher-icon">🎬</span>
                     <span class="launcher-text">Launch Recorder</span>
                 </button>
             `;
