@@ -110,6 +110,8 @@ body {
   padding: 8px;
   padding-bottom: 12px;
   min-height: 52px;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .nav-btn {
@@ -1305,7 +1307,7 @@ body {
   width: 320px;
   height: 100vh;
   background: #ffffff;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   transform: translateX(-100%); /* Hidden by default using transform */
   transition: transform 0.3s ease-in-out;
   z-index: 10000; /* Increased z-index to appear above webview */

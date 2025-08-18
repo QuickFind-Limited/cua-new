@@ -32,38 +32,32 @@ class ModernSidebar {
       this.timerElement = document.getElementById('analysis-timer');
       this.detailContent = document.getElementById('detail-content');
       
-      // Initialize sidebar as collapsed and hidden initially
-      this.isVisible = false;
-      this.isCollapsed = true;
-      this.sidebar.classList.add('collapsed');
-      this.sidebar.classList.remove('active');
-      document.body.classList.remove('sidebar-open', 'sidebar-collapsed');
+      // Initialize sidebar as always expanded and visible
+      this.isVisible = true;
+      this.isCollapsed = false;
+      this.sidebar.classList.add('active');
+      this.sidebar.classList.remove('collapsed');
+      document.body.classList.add('sidebar-open');
+      document.body.classList.remove('sidebar-collapsed');
       
-      // Set initial toggle button state for collapsed sidebar
+      // Hide toggle button - sidebar is always expanded
       if (this.toggleBtn) {
-        const svg = this.toggleBtn.querySelector('svg polyline');
-        if (svg) {
-          svg.setAttribute('points', '9 18 15 12 9 6'); // Right arrow for expand
-        }
-        this.toggleBtn.setAttribute('title', 'Expand');
+        this.toggleBtn.style.display = 'none';
       }
       
-      // Show floating toggle when sidebar is hidden
-      console.log('Floating toggle element found:', !!this.floatingToggle);
+      // Hide floating toggle since we don't need hidden state
       if (this.floatingToggle) {
-        console.log('Adding visible class to floating toggle');
-        this.floatingToggle.classList.add('visible');
-        
-        // Ensure floating toggle always shows right arrow (to expand)
-        const floatingSvg = this.floatingToggle.querySelector('svg polyline');
-        if (floatingSvg) {
-          floatingSvg.setAttribute('points', '9 18 15 12 9 6'); // Right arrow
-        }
-      } else {
-        console.log('Floating toggle element not found!');
+        this.floatingToggle.style.display = 'none';
       }
       
       console.log('Initial sidebar state - isVisible:', this.isVisible, 'isCollapsed:', this.isCollapsed);
+      
+      // Notify main process to set sidebar to full width (320px)
+      if (window.electronAPI && window.electronAPI.sidebar) {
+        window.electronAPI.sidebar.resize(320).then(result => {
+          console.log('Sidebar width set to 320px (always expanded):', result);
+        });
+      }
       
       // Setup event listeners
       this.setupEventListeners();
@@ -200,18 +194,13 @@ class ModernSidebar {
   }
   
   setupEventListeners() {
-    // Toggle button in sidebar header
-    if (this.toggleBtn) {
-      this.toggleBtn.addEventListener('click', () => this.toggleCollapse());
-    }
+    // Toggle button disabled - sidebar always expanded
+    // if (this.toggleBtn) {
+    //   this.toggleBtn.addEventListener('click', () => this.toggleCollapse());
+    // }
     
-    // Floating toggle button
-    if (this.floatingToggle) {
-      this.floatingToggle.addEventListener('click', () => {
-        console.log('Floating toggle clicked, calling show()');
-        this.show();
-      });
-    }
+    // Floating toggle button - disabled since we don't need hidden state
+    // No floating toggle needed
     
     // Listen for bounds updates from main process
     if (window.electronAPI && window.electronAPI.sidebar) {
@@ -319,10 +308,11 @@ class ModernSidebar {
       document.body.classList.add('sidebar-collapsed');
       document.body.classList.remove('sidebar-open');
       
-      // Update toggle button icon to expand arrow
+      // Update toggle button icon to expand arrow (RIGHT arrow when collapsed)
       if (this.toggleBtn) {
         const svg = this.toggleBtn.querySelector('svg polyline');
         if (svg) {
+          console.log('Setting collapsed toggle to RIGHT arrow for expand');
           svg.setAttribute('points', '9 18 15 12 9 6'); // Right arrow for expand
         }
         this.toggleBtn.setAttribute('title', 'Expand');
@@ -331,7 +321,9 @@ class ModernSidebar {
     
     // Notify main process to adjust WebContentsView bounds
     if (window.electronAPI && window.electronAPI.sidebar) {
-      const result = await window.electronAPI.sidebar.toggle(!this.isCollapsed);
+      // When collapsed, keep sidebar at 48px width (matching CSS); when expanded, use full 320px width
+      const width = this.isCollapsed ? 48 : 320;
+      const result = await window.electronAPI.sidebar.resize(width);
       console.log('Sidebar toggled, WebContentsView adjusted:', result);
     }
   }

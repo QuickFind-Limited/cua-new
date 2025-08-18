@@ -858,16 +858,26 @@ export class WebContentsTabManager extends EventEmitter {
     const bounds = this.window.getBounds();
     const [width, height] = this.window.getContentSize();
     
-    // Always reserve 40px on the left for floating toggle when sidebar is hidden
-    const toggleWidth = this.sidebarWidth === 0 ? 40 : 0;
-    const leftMargin = Math.max(this.sidebarWidth, toggleWidth);
+    // Sidebar is always expanded at 320px
+    const leftMargin = 320;
     
-    tab.view.setBounds({
-      x: leftMargin, // Offset by sidebar width or toggle width
-      y: this.chromeHeight, // Below tab bar and nav bar
-      width: width - leftMargin, // Reduce width by sidebar or toggle width
+    console.log(`[updateTabBounds] Fixed sidebar width: 320px`);
+    
+    const newBounds = {
+      x: leftMargin,
+      y: this.chromeHeight,
+      width: width - leftMargin,
       height: height - this.chromeHeight
-    });
+    };
+    
+    console.log(`[updateTabBounds] Setting bounds:`, newBounds);
+    
+    // Simple setBounds - no need for workarounds when not dynamically resizing
+    tab.view.setBounds(newBounds);
+    
+    if (tab.isActive) {
+      tab.view.setVisible(true);
+    }
   }
 
   /**
@@ -886,8 +896,20 @@ export class WebContentsTabManager extends EventEmitter {
     // Validate width
     const clampedWidth = Math.max(0, Math.min(width, 500));
     if (this.sidebarWidth !== clampedWidth) {
+      const previousWidth = this.sidebarWidth;
+      console.log(`[setSidebarWidth] Changing from ${previousWidth} to ${clampedWidth}`);
       this.sidebarWidth = clampedWidth;
-      this.updateAllTabBounds();
+      
+      // For collapse operations (going to smaller width), add a small delay
+      // to ensure the sidebar animation completes before repositioning webview
+      if (clampedWidth < previousWidth || clampedWidth === 48) {
+        console.log(`[setSidebarWidth] Collapse detected, delaying bounds update`);
+        setTimeout(() => {
+          this.updateAllTabBounds();
+        }, 100);
+      } else {
+        this.updateAllTabBounds();
+      }
       
       // Notify renderer of bounds change
       this.window.webContents.send('bounds-updated', {

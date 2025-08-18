@@ -92,19 +92,19 @@ html, body {
   height: 100vh;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-primary);
-  transform: translateX(calc(-1 * var(--sidebar-width)));
+  transform: translateX(0); /* Always visible */
   transition: transform var(--duration-moderate) ease;
   z-index: 1000;
   display: flex;
   flex-direction: column;
   will-change: transform;
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  /* box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1); removed shadow */
 }
 
 .modern-sidebar.active,
 .analysis-sidebar.active {
   transform: translateX(0);
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  /* box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15); removed shadow */
 }
 
 .modern-sidebar.collapsed,
@@ -127,9 +127,12 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-md);
+  padding: 0 var(--space-md);
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-primary);
+  height: 40px; /* Match tab bar height */
+  min-height: 40px;
+  box-shadow: none;
 }
 
 .sidebar-header h3 {
@@ -179,12 +182,15 @@ html, body {
   width: 16px;
   height: 16px;
   transition: transform var(--duration-quick) ease;
-  color: var(--text-primary);
+  color: var(--text-primary) !important;
+  stroke: var(--text-primary) !important;
 }
 
-.modern-sidebar.collapsed .sidebar-toggle-btn svg {
+/* Removed transform - chevron direction handled by JavaScript */
+/* .modern-sidebar.collapsed .sidebar-toggle-btn svg,
+.analysis-sidebar.collapsed .sidebar-toggle-btn svg {
   transform: rotate(180deg);
-}
+} */
 
 /* Progress Section */
 .progress-section {
@@ -390,14 +396,13 @@ html, body {
   width: 40px;
   height: 40px;
   background: var(--bg-primary);
-  border: 1px solid var(--border-primary);
-  border-left: none;
+  border: none; /* removed border to prevent grey line */
   border-radius: 0 8px 8px 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  /* box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1); removed shadow */
   transition: all var(--duration-quick) ease;
   z-index: 1001;
   opacity: 0;
@@ -422,7 +427,7 @@ html, body {
 .floating-toggle:hover {
   background: var(--bg-secondary);
   transform: translateY(-50%) translateX(4px);
-  box-shadow: 4px 0 8px rgba(0, 0, 0, 0.15);
+  /* box-shadow: 4px 0 8px rgba(0, 0, 0, 0.15); removed shadow */
 }
 
 .floating-toggle svg {
@@ -431,43 +436,34 @@ html, body {
   color: var(--text-primary);
 }
 
-/* Main UI Adjustment when sidebar is visible */
-body.sidebar-open .tab-bar,
-body.sidebar-open .nav-bar {
-  margin-left: var(--sidebar-width);
+/* Main UI Adjustment - sidebar is always visible at 320px */
+.tab-bar,
+.nav-bar {
+  margin-left: var(--sidebar-width); /* Always 320px */
   transition: margin-left var(--duration-moderate) var(--spring-smooth);
 }
 
-body.sidebar-collapsed .tab-bar,
-body.sidebar-collapsed .nav-bar {
-  margin-left: var(--sidebar-collapsed-width);
-  transition: margin-left var(--duration-moderate) var(--spring-smooth);
+/* Removed - no longer needed since sidebar is always expanded */
+
+/* Removed - no longer needed since sidebar is always expanded */
+
+/* Ensure collapsed sidebar has grey background */
+.analysis-sidebar.collapsed.active,
+.modern-sidebar.collapsed.active {
+  background: var(--bg-secondary) !important;
 }
 
-/* When sidebar is completely hidden, reserve space for floating toggle */
-body:not(.sidebar-open):not(.sidebar-collapsed) .tab-bar,
-body:not(.sidebar-open):not(.sidebar-collapsed) .nav-bar {
-  margin-left: 40px;
-  transition: margin-left var(--duration-moderate) ease;
-}
-
-/* Solid grey background for toggle space */
-body:not(.sidebar-open):not(.sidebar-collapsed)::before,
-body.sidebar-collapsed::before {
+/* Also ensure the entire collapsed width has grey background */
+.analysis-sidebar.collapsed.active::after,
+.modern-sidebar.collapsed.active::after {
   content: '';
-  position: fixed;
+  position: absolute;
   left: 0;
   top: 0;
-  width: 40px;
+  width: var(--sidebar-collapsed-width);
   height: 100vh;
   background: var(--bg-secondary);
-  z-index: 1000;
-  pointer-events: none;
-}
-
-/* Adjust width for collapsed sidebar */
-body.sidebar-collapsed::before {
-  width: var(--sidebar-collapsed-width);
+  z-index: -1;
 }
 
 /* Responsive Design */
