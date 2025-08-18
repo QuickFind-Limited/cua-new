@@ -136,40 +136,14 @@ class VarsPanelManager {
         const flowInfo = document.createElement('div');
         flowInfo.className = 'flow-info fade-in';
         
-        // Build steps summary
-        let stepsSummary = '';
-        if (flowData.steps && flowData.steps.length > 0) {
-            stepsSummary = `
-                <div class="steps-summary" style="margin-top: 12px; padding: 8px; background: var(--bg-primary); border-radius: 4px; border: 1px solid var(--border-light);">
-                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">Automation Steps:</div>
-                    <ol style="margin: 0; padding-left: 20px; font-size: 11px; color: var(--text-primary);">
-                        ${flowData.steps.slice(0, 5).map(step => {
-                            const stepName = step.name || step.action || 'Unknown step';
-                            const stepDesc = step.ai_instruction || step.description || '';
-                            return `<li style="margin-bottom: 4px;">
-                                <strong>${this.escapeHtml(stepName)}</strong>
-                                ${stepDesc ? `<div style="color: var(--text-tertiary); font-size: 10px;">${this.escapeHtml(stepDesc).substring(0, 60)}${stepDesc.length > 60 ? '...' : ''}</div>` : ''}
-                            </li>`;
-                        }).join('')}
-                        ${flowData.steps.length > 5 ? `<li style="color: var(--text-tertiary); font-style: italic;">... and ${flowData.steps.length - 5} more steps</li>` : ''}
-                    </ol>
-                </div>
-            `;
-        }
-        
+        // Simplified flow info - just show name and step count
         flowInfo.innerHTML = `
-            <div class="flow-name">${this.escapeHtml(flowData.name || 'Unnamed Flow')}</div>
-            <div class="flow-steps mb-8">${flowData.steps ? flowData.steps.length : 0} automation steps</div>
-            ${flowData.startUrl ? `<div class="text-muted" style="font-size: 11px;">Start URL: ${this.escapeHtml(flowData.startUrl)}</div>` : ''}
-            ${stepsSummary}
-            <button class="btn btn-stop" onclick="varsPanelManager.showFlowDetails()" style="
-                margin-top: 8px; 
-                padding: 4px 8px; 
-                font-size: 11px;
-                background: var(--bg-primary);
-            ">
-                📋 View Full Details
-            </button>
+            <div class="flow-name" style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">
+                ${this.escapeHtml(flowData.name || 'Unnamed Flow')}
+            </div>
+            <div class="flow-steps mb-8" style="font-size: 12px; color: var(--text-secondary);">
+                ${flowData.steps ? flowData.steps.length : 0} automation steps
+            </div>
         `;
         
         this.flowInfoContainer.innerHTML = '';
@@ -183,19 +157,19 @@ class VarsPanelManager {
             const noVarsMessage = document.createElement('div');
             noVarsMessage.className = 'text-center text-muted mb-16';
             noVarsMessage.innerHTML = `
-                <div style="margin-bottom: 8px;">✓ This flow requires no configuration</div>
-                <div style="font-size: 11px;">Ready to run immediately</div>
+                <div style="margin-bottom: 8px;">✓ No variables required</div>
+                <div style="font-size: 11px;">Ready to execute</div>
             `;
             this.variablesContainer.appendChild(noVarsMessage);
             return;
         }
         
-        // Create variables section header
+        // Create simple variable inputs
         const variablesHeader = document.createElement('div');
         variablesHeader.className = 'mb-16';
         variablesHeader.innerHTML = `
-            <h4 style="margin-bottom: 8px; font-size: 14px; color: var(--text-primary);">
-                Required Variables (${flowData.params.length})
+            <h4 style="margin-bottom: 12px; font-size: 13px; color: var(--text-primary); font-weight: 500;">
+                Enter Values:
             </h4>
             <div style="font-size: 11px; color: var(--text-muted);">
                 Fill in the following values to personalize the automation
@@ -336,9 +310,9 @@ class VarsPanelManager {
         
         // Update button text based on validation
         if (this.isExecuting) {
-            this.runFlowBtn.innerHTML = '<div class="loading-spinner"></div> Running...';
+            this.runFlowBtn.innerHTML = '<div class="loading-spinner"></div> Executing...';
         } else if (allRequiredFilled) {
-            this.runFlowBtn.textContent = 'Run Flow';
+            this.runFlowBtn.textContent = 'Execute with Magnitude';
         } else {
             this.runFlowBtn.textContent = 'Fill Required Fields';
         }
@@ -379,32 +353,30 @@ class VarsPanelManager {
         this.clearStatus();
         
         // Show execution start status
-        this.showStatus('Starting flow execution...', 'info');
+        this.showStatus('Starting Magnitude execution...', 'info');
         
-        // Create flow with substituted variables
-        const executableFlow = this.createExecutableFlow(this.currentFlow, variables);
-        
-        // Use FlowExecutor for execution
-        if (window.flowExecutor) {
-            window.flowExecutor.executeFlow(
-                executableFlow,
-                variables,
-                (progress) => this.handleFlowExecutionProgress(progress),
-                (result) => this.handleFlowExecutionResult(result)
-            );
-        } else {
-            // Fallback direct API call
-            if (window.electronAPI && window.electronAPI.executeFlow) {
-                window.electronAPI.executeFlow(executableFlow, variables);
-            } else {
-                // Demo mode fallback
-                setTimeout(() => {
+        // Execute the Intent Spec with Magnitude
+        if (window.electronAPI && window.electronAPI.executeFlow) {
+            console.log('Executing Intent Spec with Magnitude:', this.currentFlow.name);
+            console.log('Variables:', variables);
+            
+            // Send the Intent Spec for execution
+            window.electronAPI.executeFlow(this.currentFlow, variables)
+                .then(result => {
+                    console.log('Execution result:', result);
+                    this.handleFlowExecutionResult(result);
+                })
+                .catch(error => {
+                    console.error('Execution error:', error);
                     this.handleFlowExecutionResult({
-                        success: true,
-                        message: 'Flow executed successfully (demo mode)'
+                        success: false,
+                        error: error.message || 'Execution failed'
                     });
-                }, 2000);
-            }
+                });
+        } else {
+            this.showStatus('Execution API not available', 'error');
+            this.isExecuting = false;
+            this.validateForm();
         }
     }
 

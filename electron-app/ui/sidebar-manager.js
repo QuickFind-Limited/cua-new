@@ -353,10 +353,6 @@ class ModernSidebar {
       const element = document.getElementById(`progress-${item}`);
       if (element) {
         element.classList.remove('active', 'completed');
-        const statusElement = element.querySelector('.progress-status');
-        if (statusElement) {
-          statusElement.innerHTML = '';
-        }
       }
     });
     
@@ -367,21 +363,9 @@ class ModernSidebar {
         // We have a valid recording, mark as completed
         recordingElement.classList.add('completed');
         recordingElement.classList.remove('active');
-        const statusElement = recordingElement.querySelector('.progress-status');
-        if (statusElement) {
-          statusElement.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          `;
-        }
       } else {
         // No recording available, reset it
         recordingElement.classList.remove('active', 'completed');
-        const statusElement = recordingElement.querySelector('.progress-status');
-        if (statusElement) {
-          statusElement.innerHTML = '';
-        }
       }
     }
     
@@ -415,14 +399,6 @@ class ModernSidebar {
       } else if (status === 'completed') {
         element.classList.remove('active');
         element.classList.add('completed');
-        const statusElement = element.querySelector('.progress-status');
-        if (statusElement) {
-          statusElement.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          `;
-        }
       }
     }
     

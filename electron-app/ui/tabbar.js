@@ -331,22 +331,26 @@ async function toggleRecording() {
         console.log('Stopping recording...');
         
         try {
-            // Send IPC message to stop regular recording
+            // Send IPC message to stop codegen recording
             if (window.electronAPI) {
-                const result = await window.electronAPI.stopRecording();
+                const result = await window.electronAPI.stopCodegenRecording();
                 
-                if (result.success && result.data && result.data.session) {
-                    const recordingSession = result.data.session;
-                    console.log('Recording stopped successfully:', recordingSession);
-                    console.log(`Recorded ${recordingSession.actions.length} actions`);
+                if (result.success && result.data && result.data.result) {
+                    const codegenResult = result.data.result;
+                    console.log('Codegen recording stopped successfully:', codegenResult);
                     
-                    // Generate Playwright code from the session
-                    if (window.electronAPI && window.electronAPI.generatePlaywrightCode) {
-                        const codeResult = await window.electronAPI.generatePlaywrightCode(recordingSession);
-                        if (codeResult.success) {
-                            recordingSession.specCode = codeResult.data.code;
-                        }
-                    }
+                    // Create a recording session object with the spec code
+                    const recordingSession = {
+                        id: codegenResult.session.id,
+                        url: codegenResult.session.url,
+                        title: codegenResult.session.title,
+                        specCode: codegenResult.specCode,
+                        screenshotPath: codegenResult.screenshotPath,
+                        metadataPath: codegenResult.metadataPath,
+                        specFilePath: codegenResult.session.specFilePath
+                    };
+                    
+                    console.log('Generated Playwright spec code');
                     
                     // Handle the recording data
                     handleRecordingComplete(recordingSession);
@@ -364,14 +368,14 @@ async function toggleRecording() {
         console.log('Starting recording...');
         
         try {
-            // Send IPC message to start regular recording (captures actual actions)
+            // Send IPC message to start codegen recording (generates Playwright spec)
             if (window.electronAPI) {
-                const result = await window.electronAPI.startRecording();
+                const result = await window.electronAPI.startCodegenRecording();
                 
                 if (result.success && result.data && result.data.sessionId) {
                     recordBtn.classList.add('recording');
                     recordBtn.querySelector('.record-text').textContent = 'Stop';
-                    console.log('Recording started successfully:', result.data.sessionId);
+                    console.log('Codegen recording started successfully:', result.data.sessionId);
                     showRecordingStatus('Recording started');
                 } else {
                     console.error('Failed to start recording:', result.error);
@@ -718,9 +722,9 @@ async function analyzeLastRecording() {
             console.log('Recording session object:', recordingSession);
             console.log('Number of actions:', recordingSession.actions ? recordingSession.actions.length : 0);
             
-            // If we have a full session with actions, send that. Otherwise fall back to spec code
+            // Send the spec code for analysis (Playwright codegen generates spec code)
             const recordingData = {
-                recordingData: recordingSession.actions ? recordingSession : (recordingSession.specCode || ''),
+                recordingData: recordingSession.specCode || '',
                 url: recordingSession.url || '',
                 title: recordingSession.title || 'Recording',
                 screenshotPath: recordingSession.screenshotPath

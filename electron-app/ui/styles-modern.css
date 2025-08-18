@@ -98,7 +98,7 @@ html, body {
   display: flex;
   flex-direction: column;
   will-change: transform;
-  /* box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1); removed shadow */
+  padding-top: 40px; /* Add padding to account for removed header */
 }
 
 .modern-sidebar.active,
@@ -122,18 +122,9 @@ html, body {
   transform: translateX(calc(-1 * var(--sidebar-collapsed-width)));
 }
 
-/* Sidebar Header */
+/* Sidebar Header - Removed since we don't need it anymore */
 .sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-md);
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-primary);
-  border-bottom: 1px solid var(--border-primary);
-  height: 40px; /* Match tab bar height */
-  min-height: 40px;
-  box-shadow: none;
+  display: none;
 }
 
 .sidebar-header h3 {
@@ -226,44 +217,40 @@ html, body {
   padding: var(--space-md);
   margin-bottom: var(--space-sm);
   background: var(--bg-primary);
-  border: 1px solid var(--border-light);
+  border: 2px solid transparent;
   border-radius: 4px;
   position: relative;
   overflow: hidden;
   transition: all var(--duration-quick) ease;
 }
 
-.progress-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 3px;
-  background: var(--text-disabled);
-  transition: all var(--duration-quick) ease;
-}
-
-.progress-item.active::before {
-  background: var(--accent-primary);
-  width: 4px;
-  box-shadow: 0 0 10px var(--accent-primary);
-}
-
-.progress-item.completed::before {
-  background: var(--accent-success);
+/* Flashing blue border animation for active items */
+@keyframes pulse-border {
+  0% {
+    border-color: rgba(74, 144, 226, 0.3);
+    box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.4);
+  }
+  50% {
+    border-color: rgba(74, 144, 226, 1);
+    box-shadow: 0 0 10px 2px rgba(74, 144, 226, 0.3);
+  }
+  100% {
+    border-color: rgba(74, 144, 226, 0.3);
+    box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.4);
+  }
 }
 
 .progress-item.active {
-  background: var(--bg-secondary);
-  border-color: var(--accent-primary);
+  animation: pulse-border 1.5s ease-in-out infinite;
+  background: rgba(74, 144, 226, 0.05);
 }
 
 .progress-item.completed {
-  opacity: 0.7;
+  border-color: var(--accent-primary);
+  background: rgba(74, 144, 226, 0.02);
 }
 
-/* Progress Icon */
+/* Progress Icon - Always greyscale */
 .progress-icon {
   width: 32px;
   height: 32px;
@@ -271,16 +258,17 @@ html, body {
   align-items: center;
   justify-content: center;
   margin-right: var(--space-md);
-  color: var(--text-secondary);
-  transition: all var(--duration-quick) ease;
+  filter: grayscale(100%);
+  opacity: 0.7;
+  transition: opacity var(--duration-quick) ease;
 }
 
 .progress-item.active .progress-icon {
-  color: var(--accent-primary);
+  opacity: 1;
 }
 
 .progress-item.completed .progress-icon {
-  color: var(--accent-success);
+  opacity: 0.8;
 }
 
 
@@ -301,10 +289,9 @@ html, body {
   display: none;
 }
 
-/* Progress Status */
+/* Progress Status - Hide checkmarks since we're using border animation */
 .progress-status {
-  margin-left: auto;
-  transition: all var(--duration-quick) ease;
+  display: none;
 }
 
 .modern-sidebar.collapsed .progress-status {
@@ -539,6 +526,12 @@ html, body {
   overflow: hidden;
 }
 
+/* No border for analysis progress section */
+.collapsible-section.no-border {
+  border: none;
+  background: transparent;
+}
+
 .section-header {
   display: flex;
   align-items: center;
@@ -552,6 +545,16 @@ html, body {
 
 .section-header:hover {
   background: var(--bg-tertiary);
+}
+
+/* No background for analysis progress header */
+.section-header.no-background {
+  background: transparent;
+  border-bottom: none;
+}
+
+.section-header.no-background:hover {
+  background: transparent;
 }
 
 .section-chevron {

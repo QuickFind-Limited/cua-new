@@ -39,19 +39,11 @@
 
     <!-- Analysis Progress Sidebar (initially hidden) -->
     <div id="analysis-sidebar" class="analysis-sidebar">
-        <div class="sidebar-header">
-            <h3>Workflow Analysis</h3>
-            <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Expand">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <!-- Right arrow for collapsed state (to expand) -->
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-            </button>
-        </div>
+        <!-- Removed sidebar-header with Workflow Analysis text -->
         <div class="sidebar-content">
             <!-- Collapsible Analysis Progress Section -->
-            <div class="collapsible-section" id="analysis-progress-section">
-                <div class="section-header" onclick="toggleSection('analysis-progress')">
+            <div class="collapsible-section no-border" id="analysis-progress-section">
+                <div class="section-header no-background" onclick="toggleSection('analysis-progress')">
                     <span class="section-chevron" id="analysis-progress-chevron">▼</span>
                     <span class="section-title">Analysis Progress</span>
                     <span class="section-status" id="analysis-progress-status"></span>
@@ -60,9 +52,9 @@
                     <div class="progress-section">
                         <div class="progress-item" id="progress-recording">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10" fill="#ef4444"/>
-                                    <circle cx="12" cy="12" r="3" fill="white"/>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" fill="#888" opacity="0.3"/>
+                                    <circle cx="12" cy="12" r="3" fill="#888"/>
                                 </svg>
                             </span>
                             <span class="progress-label">Recording captured</span>
@@ -70,7 +62,7 @@
                         </div>
                         <div class="progress-item" id="progress-parsing">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                     <polyline points="14 2 14 8 20 8"></polyline>
                                 </svg>
@@ -80,7 +72,7 @@
                         </div>
                         <div class="progress-item" id="progress-analyzing">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
                                     <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"></path>
                                 </svg>
                             </span>
@@ -89,7 +81,7 @@
                         </div>
                         <div class="progress-item" id="progress-variables">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
                                     <line x1="18" y1="20" x2="18" y2="10"></line>
                                     <line x1="12" y1="20" x2="12" y2="4"></line>
                                     <line x1="6" y1="20" x2="6" y2="14"></line>
@@ -100,7 +92,7 @@
                         </div>
                         <div class="progress-item" id="progress-generating">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
                                     <circle cx="12" cy="12" r="3"></circle>
                                     <path d="M12 1v6"></path>
                                     <path d="M12 17v6"></path>
@@ -111,7 +103,7 @@
                         </div>
                         <div class="progress-item" id="progress-validating">
                             <span class="progress-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
                                     <path d="M9 11l3 3L22 4"></path>
                                     <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
                                 </svg>
