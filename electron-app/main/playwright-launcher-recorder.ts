@@ -2,7 +2,7 @@ import { BrowserWindow, ipcMain } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import { promises as fs } from 'fs';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import * as chokidar from 'chokidar';
 
 /**
@@ -98,12 +98,11 @@ export class PlaywrightLauncherRecorder {
       const sessionId = `recording-${Date.now()}`;
       this.currentOutputPath = path.join(this.recordingsDir, `${sessionId}.spec.ts`);
       
-      // Build codegen command
+      // Build codegen command - use standard codegen which handles recording properly
       const args = [
         'codegen',
         '--target=playwright-test',
         `--output=${this.currentOutputPath}`,
-        '--viewport-size=1920,1080',  // Use full HD viewport
         '--browser=chromium'
       ];
       
@@ -114,25 +113,19 @@ export class PlaywrightLauncherRecorder {
 
       console.log('Launching Playwright recorder...');
       console.log('Output will be saved to:', this.currentOutputPath);
+      console.log('Note: Maximize the browser window manually for best recording experience');
       
-      // Set environment variables to control Playwright behavior
-      const env = { ...process.env };
-      // Disable the inspector panel - this is the correct environment variable
-      env.PW_CODEGEN_NO_INSPECTOR = 'true';
-      
-      // Launch playwright codegen
+      // Launch playwright codegen - it will handle its own UI
       if (playwrightPath === 'playwright' || playwrightPath.includes('npx')) {
         const [cmd, ...cmdArgs] = playwrightPath.split(' ');
         this.codegenProcess = spawn(cmd, [...cmdArgs, ...args], {
           stdio: 'inherit',
-          shell: true,
-          env
+          shell: true
         });
       } else {
         this.codegenProcess = spawn(playwrightPath, args, {
           stdio: 'inherit',
-          shell: process.platform === 'win32',
-          env
+          shell: process.platform === 'win32'
         });
       }
 
