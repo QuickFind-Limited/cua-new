@@ -31,9 +31,11 @@ class ModernSidebar {
       this.timerElement = document.getElementById('analysis-timer');
       this.detailContent = document.getElementById('detail-content');
       
-      // Initialize visibility state based on actual DOM state
-      this.isVisible = this.sidebar.classList.contains('active');
-      this.isCollapsed = this.sidebar.classList.contains('collapsed');
+      // Initialize sidebar as collapsed but visible from the start
+      this.isVisible = true;
+      this.isCollapsed = true;
+      this.sidebar.classList.add('active', 'collapsed');
+      document.body.classList.add('sidebar-collapsed');
       console.log('Initial sidebar state - isVisible:', this.isVisible, 'isCollapsed:', this.isCollapsed);
       
       // Setup event listeners
@@ -202,6 +204,7 @@ class ModernSidebar {
     if (!this.isVisible) {
       console.log('Showing sidebar...');
       this.isVisible = true;
+      // Start collapsed during analysis, then expand when showing progress
       this.isCollapsed = false;
       this.sidebar.classList.add('active');
       this.sidebar.classList.remove('collapsed');
@@ -248,8 +251,43 @@ class ModernSidebar {
     // Only work if sidebar is visible
     if (!this.isVisible) return;
     
-    // Simply hide the sidebar when collapse button is clicked
-    await this.hide();
+    if (this.isCollapsed) {
+      // Expand the sidebar
+      this.isCollapsed = false;
+      this.sidebar.classList.remove('collapsed');
+      document.body.classList.remove('sidebar-collapsed');
+      document.body.classList.add('sidebar-open');
+      
+      // Update toggle button icon to collapse arrow
+      if (this.toggleBtn) {
+        const svg = this.toggleBtn.querySelector('svg polyline');
+        if (svg) {
+          svg.setAttribute('points', '15 18 9 12 15 6'); // Left arrow for collapse
+        }
+        this.toggleBtn.setAttribute('title', 'Collapse');
+      }
+    } else {
+      // Collapse the sidebar but keep it visible
+      this.isCollapsed = true;
+      this.sidebar.classList.add('collapsed');
+      document.body.classList.add('sidebar-collapsed');
+      document.body.classList.remove('sidebar-open');
+      
+      // Update toggle button icon to expand arrow
+      if (this.toggleBtn) {
+        const svg = this.toggleBtn.querySelector('svg polyline');
+        if (svg) {
+          svg.setAttribute('points', '9 18 15 12 9 6'); // Right arrow for expand
+        }
+        this.toggleBtn.setAttribute('title', 'Expand');
+      }
+    }
+    
+    // Notify main process to adjust WebContentsView bounds
+    if (window.electronAPI && window.electronAPI.sidebar) {
+      const result = await window.electronAPI.sidebar.toggle(!this.isCollapsed);
+      console.log('Sidebar toggled, WebContentsView adjusted:', result);
+    }
   }
   
   startTimer() {
@@ -354,10 +392,8 @@ class ModernSidebar {
     if (success) {
       this.updateProgress('validating', 'completed', 'Analysis completed successfully!');
       
-      // Auto-hide after 3 seconds on success
-      setTimeout(() => {
-        this.hide();
-      }, 3000);
+      // Keep sidebar expanded after analysis completes - no auto-hide
+      // User can manually close it using the collapse button
     } else {
       if (this.detailContent) {
         const detailItem = document.createElement('div');

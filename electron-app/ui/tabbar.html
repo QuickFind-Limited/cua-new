@@ -37,8 +37,8 @@
 
     <!-- Main content area managed by WebContentsView in main process -->
 
-    <!-- Analysis Progress Sidebar (initially hidden) -->
-    <div id="analysis-sidebar" class="analysis-sidebar">
+    <!-- Analysis Progress Sidebar (initially collapsed) -->
+    <div id="analysis-sidebar" class="analysis-sidebar collapsed">
         <div class="sidebar-header">
             <h3>Analysis Progress</h3>
             <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Collapse">
@@ -124,12 +124,6 @@
                     </span>
                     <span class="progress-label">Validating output</span>
                     <span class="progress-status"></span>
-                </div>
-            </div>
-            <div class="analysis-details" id="analysis-details">
-                <h4>Details</h4>
-                <div class="detail-content" id="detail-content">
-                    <!-- Dynamic content will be added here -->
                 </div>
             </div>
             <div class="analysis-timer">

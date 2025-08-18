@@ -42,7 +42,7 @@ async function getQueryFunction() {
       const result = await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Claude Code SDK timeout'));
-        }, 60000); // 60 second timeout
+        }, 120000); // 120 second timeout
         
         workerProcess.once('message', (msg: any) => {
           clearTimeout(timeout);

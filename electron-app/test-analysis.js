@@ -1,12 +1,12 @@
 // Test script to trigger analysis
-const { analyzeRecording } = require('./main/llm');
+const { analyzeRecording } = require('./dist/main/llm');
 const fs = require('fs');
 const path = require('path');
 
 async function testAnalysis() {
   try {
     // Read the latest recording
-    const recordingPath = path.join(__dirname, 'recordings', 'codegen-1755435784304-recording.spec.ts');
+    const recordingPath = path.join(__dirname, 'recordings', 'codegen-1755501403353-recording.spec.ts');
     const recordingData = fs.readFileSync(recordingPath, 'utf8');
     
     console.log('Starting analysis test...');
