@@ -514,6 +514,25 @@ class VarsPanelManager {
     }
 
     showStatus(message, type = 'info') {
+        // If statusContainer doesn't exist, create it or use an alternative
+        if (!this.statusContainer) {
+            // Try to find or create a status container
+            this.statusContainer = document.getElementById('vars-panel-status');
+            if (!this.statusContainer && this.variablesContainer) {
+                // Create a status container if it doesn't exist
+                this.statusContainer = document.createElement('div');
+                this.statusContainer.id = 'vars-panel-status';
+                this.statusContainer.className = 'vars-panel-status';
+                // Insert it after the variables container
+                this.variablesContainer.parentNode.insertBefore(this.statusContainer, this.variablesContainer.nextSibling);
+            }
+        }
+        
+        if (!this.statusContainer) {
+            console.log('VarsPanel status:', message, type);
+            return; // Can't show status without a container
+        }
+        
         this.clearStatus();
         
         const statusElement = document.createElement('div');
@@ -524,7 +543,9 @@ class VarsPanelManager {
     }
 
     clearStatus() {
-        this.statusContainer.innerHTML = '';
+        if (this.statusContainer) {
+            this.statusContainer.innerHTML = '';
+        }
     }
 
     showVarsPanel(intentSpec) {

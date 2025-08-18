@@ -346,8 +346,9 @@ class ModernSidebar {
   }
   
   resetProgress() {
-    // Reset all progress items
-    const items = ['recording', 'parsing', 'analyzing', 'variables', 'generating', 'validating'];
+    console.log('resetProgress called');
+    // Reset all progress items except recording
+    const items = ['parsing', 'analyzing', 'variables', 'generating', 'validating'];
     items.forEach(item => {
       const element = document.getElementById(`progress-${item}`);
       if (element) {
@@ -359,12 +360,40 @@ class ModernSidebar {
       }
     });
     
-    // Don't mark recording as completed here - wait for actual recording completion
-    // Recording will be marked complete when files are actually saved
+    // Handle recording step separately - keep it completed if we have a valid recording
+    const recordingElement = document.getElementById('progress-recording');
+    if (recordingElement) {
+      if (window.lastRecordingSession) {
+        // We have a valid recording, mark as completed
+        recordingElement.classList.add('completed');
+        recordingElement.classList.remove('active');
+        const statusElement = recordingElement.querySelector('.progress-status');
+        if (statusElement) {
+          statusElement.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          `;
+        }
+      } else {
+        // No recording available, reset it
+        recordingElement.classList.remove('active', 'completed');
+        const statusElement = recordingElement.querySelector('.progress-status');
+        if (statusElement) {
+          statusElement.innerHTML = '';
+        }
+      }
+    }
+    
+    // Start with parsing step active when resetting for re-analysis
+    const parsingElement = document.getElementById('progress-parsing');
+    if (parsingElement) {
+      parsingElement.classList.add('active');
+    }
     
     // Clear details
     if (this.detailContent) {
-      this.detailContent.innerHTML = '<div class="detail-item">Waiting for analysis to start...</div>';
+      this.detailContent.innerHTML = '<div class="detail-item">Starting analysis...</div>';
     }
   }
   
