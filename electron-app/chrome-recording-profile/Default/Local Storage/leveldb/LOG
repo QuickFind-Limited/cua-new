@@ -1,0 +1,6 @@
+2025/08/18-16:37:22.421 84f0 Reusing MANIFEST C:\client\cua-new\electron-app\chrome-recording-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2025/08/18-16:37:22.428 84f0 Recovering log #3
+2025/08/18-16:37:22.429 84f0 Reusing old log C:\client\cua-new\electron-app\chrome-recording-profile\Default\Local Storage\leveldb/000003.log 
+2025/08/18-16:38:22.449 6840 Level-0 table #5: started
+2025/08/18-16:38:22.457 6840 Level-0 table #5: 63823 bytes OK
+2025/08/18-16:38:22.461 6840 Delete type=0 #3

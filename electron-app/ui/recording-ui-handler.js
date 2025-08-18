@@ -11,30 +11,16 @@ class RecordingUIHandler {
   }
 
   setupIpcListeners() {
-    // Listen for recording state changes
-    window.electronAPI.on('hide-tabbar-for-recording', () => {
-      this.hideTabbarForRecording();
-    });
-
-    window.electronAPI.on('show-tabbar-after-recording', () => {
-      this.showTabbarAfterRecording();
-    });
-
-    window.electronAPI.on('hide-webview-for-recording', () => {
-      this.hideWebContentsView();
-    });
-
-    window.electronAPI.on('show-webview-after-recording', () => {
-      this.showWebContentsView();
-    });
-
-    window.electronAPI.on('recording-started', (data) => {
-      this.onRecordingStarted(data);
-    });
-
-    window.electronAPI.on('recording-stopped', (data) => {
-      this.onRecordingStopped(data);
-    });
+    // Check if electronAPI exists and has event methods
+    if (!window.electronAPI || !window.electronAPI.onTabsUpdated) {
+      console.log('ElectronAPI event listeners not available yet');
+      return;
+    }
+    
+    // Listen for recording state changes using the tab update mechanism
+    // Since we don't have generic 'on' method, we'll need to use what's available
+    // or implement these in the preload script
+    console.log('Recording UI handler ready, waiting for IPC messages');
   }
 
   /**

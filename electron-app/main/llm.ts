@@ -461,13 +461,15 @@ IMPORTANT RULES:
    - If prefer="snippet", set fallback="ai" (AI can often figure it out if snippet fails)
    - If prefer="ai", set fallback="snippet" (deterministic backup)
    - Use fallback="none" only if the other approach would definitely not work
-4. snippet should be valid Playwright code
-5. Replace dynamic values with {{PARAM_NAME}} and list in params array
-6. Common dynamic values: usernames, passwords, email addresses, dates, IDs
-7. Use descriptive parameter names: {{USERNAME}}, {{PASSWORD}}, {{EMAIL}}, {{SEARCH_TERM}}
-8. ai_instruction should be clear natural language instructions
-9. Make selectors robust (prefer IDs, then data attributes, then classes)
-10. preferences: Set based on overall pattern - if mostly forms/data entry use "snippet", if mostly dynamic use "ai"
+4. snippet should be valid Playwright code - PRESERVE EXACT SELECTORS FROM RECORDING
+5. CRITICAL: If the recording uses page.getByRole(), page.getByLabel(), page.getByText() - KEEP THESE EXACT SELECTORS
+6. DO NOT convert modern Playwright selectors to CSS selectors - keep getByRole, getByLabel, getByText as-is
+7. Replace dynamic values with {{PARAM_NAME}} and list in params array
+8. Common dynamic values: usernames, passwords, email addresses, dates, IDs
+9. Use descriptive parameter names: {{USERNAME}}, {{PASSWORD}}, {{EMAIL}}, {{SEARCH_TERM}}
+10. ai_instruction should be clear natural language instructions
+11. PRESERVE the recording's selector strategy - don't invent new selectors
+12. preferences: Set based on overall pattern - if mostly forms/data entry use "snippet", if mostly dynamic use "ai"
 
 EXAMPLE OUTPUT:
 {
@@ -495,46 +497,44 @@ EXAMPLE OUTPUT:
     {
       "name": "Enter email",
       "ai_instruction": "Enter email address in the email field",
-      "snippet": "await page.fill('input[id=\"login_id\"]', '{{EMAIL}}');",
+      "snippet": "await page.getByRole('textbox', { name: 'Email address or mobile number' }).fill('{{EMAIL}}');",
       "prefer": "snippet",
       "fallback": "ai",
-      "selector": "input[id=\"login_id\"]",
       "value": "{{EMAIL}}",
-      "comment": "Form field with stable ID - snippet preferred"
+      "comment": "PRESERVE getByRole selector from recording - more reliable than CSS"
     },
     {
       "name": "Click Next",
       "ai_instruction": "Click the Next button",
-      "snippet": "await page.click('button[id=\"nextbtn\"]');",
+      "snippet": "await page.getByRole('button', { name: 'Next' }).click();",
       "prefer": "snippet",
       "fallback": "ai",
-      "comment": "Button with stable ID"
+      "comment": "Modern Playwright selector - accessible and stable"
     },
     {
       "name": "Wait for password field",
       "ai_instruction": "Wait for password field to appear",
-      "snippet": "await page.waitForSelector('input[type=\"password\"]', { timeout: 5000 });",
+      "snippet": "await page.getByRole('textbox', { name: 'Enter password' }).waitFor({ timeout: 5000 });",
       "prefer": "snippet",
       "fallback": "none",
-      "comment": "Waiting is deterministic"
+      "comment": "Using role-based selector for waiting"
     },
     {
       "name": "Enter password",
       "ai_instruction": "Enter password in the password field",
-      "snippet": "await page.fill('input[id=\"password\"]', '{{PASSWORD}}');",
+      "snippet": "await page.getByRole('textbox', { name: 'Enter password' }).fill('{{PASSWORD}}');",
       "prefer": "snippet",
       "fallback": "ai",
-      "selector": "input[id=\"password\"]",
       "value": "{{PASSWORD}}",
-      "comment": "SENSITIVE DATA - always prefer snippet for passwords"
+      "comment": "SENSITIVE DATA - always prefer snippet for passwords, keep getByRole"
     },
     {
       "name": "Complete login",
       "ai_instruction": "Click the Sign In button to complete login",
-      "snippet": "await page.click('button[id=\"nextbtn\"]');",
+      "snippet": "await page.getByRole('button', { name: 'Sign in' }).click();",
       "prefer": "snippet",
       "fallback": "ai",
-      "comment": "Form submission with stable selector"
+      "comment": "Preserve exact selector from recording"
     }
   ],
   "preferences": {

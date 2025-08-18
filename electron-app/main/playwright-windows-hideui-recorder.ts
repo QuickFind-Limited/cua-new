@@ -79,20 +79,35 @@ export class PlaywrightWindowsHideUIRecorder {
       const viewHeight = bounds.height; // Full height - no tabbar
       
       // Launch Chromium with its native tabs visible
-      const windowTitle = `PlaywrightRecorder_${sessionId}`;
       this.playwrightBrowser = await chromium.launch({
         headless: false,
         args: [
-          `--window-name=${windowTitle}`,
           '--window-position=0,0',
           `--window-size=${viewWidth},${viewHeight}`,
           '--disable-blink-features=AutomationControlled',
-          '--user-data-dir=' + path.join(process.cwd(), 'playwright-profile'),
-          // Keep Chromium's native UI
-          '--enable-features=TabGroups',
-          '--enable-chrome-browser-cloud-management'
+          // Keep Chromium's native UI  
+          '--enable-features=TabGroups'
         ]
       });
+
+      // Get the browser process PID for window finding
+      // For Chromium, we need to get the browser process differently
+      let chromiumPid: number | null = null;
+      try {
+        // Try to get the browser process - this might vary by Playwright version
+        const browserProcess = (this.playwrightBrowser as any)._process || 
+                              (this.playwrightBrowser as any).process || 
+                              null;
+        if (browserProcess && browserProcess.pid) {
+          chromiumPid = browserProcess.pid;
+        } else if (browserProcess && typeof browserProcess === 'function') {
+          const proc = browserProcess();
+          chromiumPid = proc ? proc.pid : null;
+        }
+      } catch (e) {
+        console.warn('Could not get browser process PID:', e);
+      }
+      console.log('Chromium launched with PID:', chromiumPid);
 
       // Create context with recording capabilities
       this.playwrightContext = await this.playwrightBrowser.newContext({
@@ -122,13 +137,15 @@ export class PlaywrightWindowsHideUIRecorder {
       }
 
       // Wait for Chromium window to be created
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Embed Chromium window at position (320, 0) - no tabbar offset
-      const embedded = await this.embedChromiumFullHeight(windowTitle, sidebarWidth);
+      // Pass the PID for identification
+      const embedded = await this.embedChromiumFullHeight(sessionId, sidebarWidth, chromiumPid);
       
       if (!embedded) {
-        throw new Error('Failed to embed Chromium window');
+        console.error('Failed to embed Chromium window - continuing anyway');
+        // Don't throw error, let recording continue even if embedding fails
       }
 
       // Hide WebContentsView
@@ -245,23 +262,26 @@ export class PlaywrightWindowsHideUIRecorder {
   /**
    * Embed Chromium window with full height (no tabbar offset)
    */
-  private async embedChromiumFullHeight(windowTitle: string, sidebarWidth: number): Promise<boolean> {
+  private async embedChromiumFullHeight(sessionId: string, sidebarWidth: number, chromiumPid: number | null): Promise<boolean> {
     try {
       const electronHandle = this.electronWindow.getNativeWindowHandle();
-      const electronHex = electronHandle.toString('hex');
+      // CRITICAL: Convert buffer to number properly, not hex string
+      const parentHandle = electronHandle.readInt32LE(0);
       
+      // Wait a bit for Chrome window to be fully created
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // First, let's try a simpler approach - find the most recently created Chrome window
       const script = `
 $ErrorActionPreference = 'Stop'
 
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
-using System.Threading;
+using System.Collections.Generic;
+using System.Linq;
 
 public class Win32Embed {
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-    
     [DllImport("user32.dll")]
     public static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
     
@@ -281,95 +301,211 @@ public class Win32Embed {
     [DllImport("user32.dll")]
     public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
     
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    
+    [DllImport("user32.dll")]
+    public static extern bool RedrawWindow(IntPtr hWnd, IntPtr lpRect, IntPtr hrgnUpdate, uint flags);
+    
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+    
+    [DllImport("user32.dll")]
+    public static extern IntPtr SetFocus(IntPtr hWnd);
+    
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+    
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT {
         public int Left, Top, Right, Bottom;
     }
     
-    public static IntPtr FindChromiumWindow(string title) {
-        for (int i = 0; i < 10; i++) {
-            // Try by window title
-            IntPtr hwnd = FindWindow(null, title);
-            if (hwnd != IntPtr.Zero) return hwnd;
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+    
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+    
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
+    
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    
+    public static List<IntPtr> FindAllChromeWindows() {
+        var windows = new List<IntPtr>();
+        
+        EnumWindows(delegate(IntPtr wnd, IntPtr param) {
+            // Check if window is visible
+            if (!IsWindowVisible(wnd)) {
+                return true;
+            }
             
-            // Try by class name
-            hwnd = FindWindow("Chrome_WidgetWin_1", null);
-            if (hwnd != IntPtr.Zero) return hwnd;
+            var className = new System.Text.StringBuilder(256);
+            GetClassName(wnd, className, 256);
             
-            Thread.Sleep(500);
-        }
-        return IntPtr.Zero;
+            // Look for Chrome/Chromium window class (both use same class name)
+            if (className.ToString() == "Chrome_WidgetWin_1" -or className.ToString().StartsWith("Chrome_WidgetWin")) {
+                var windowText = new System.Text.StringBuilder(256);
+                GetWindowText(wnd, windowText, 256);
+                
+                // Skip DevTools and other special windows
+                string title = windowText.ToString();
+                if (!title.Contains("DevTools") && 
+                    !title.Contains("Extensions") &&
+                    !title.Contains("Task Manager")) {
+                    
+                    // Get process ID to verify it's a main window
+                    uint processId;
+                    GetWindowThreadProcessId(wnd, out processId);
+                    
+                    Console.WriteLine("Found Chrome window: Handle=" + wnd + ", Title='" + title + "', PID=" + processId);
+                    windows.Add(wnd);
+                }
+            }
+            return true; // Continue enumeration
+        }, IntPtr.Zero);
+        
+        return windows;
     }
 }
 "@
 
 try {
-    # Find Chromium window
-    $chromiumWindow = [Win32Embed]::FindChromiumWindow("${windowTitle}")
+    Write-Output "Searching for Chrome window with PID: ${chromiumPid || 0}"
+    
+    $targetPid = ${chromiumPid || 0}
+    $chromiumWindow = [IntPtr]::Zero
+    
+    # Method 1: Direct process search by PID
+    if ($targetPid -gt 0) {
+        try {
+            $proc = Get-Process -Id $targetPid -ErrorAction Stop
+            if ($proc.MainWindowHandle -ne 0) {
+                Write-Output "Found Chromium by PID with handle: $($proc.MainWindowHandle)"
+                $chromiumWindow = $proc.MainWindowHandle
+            }
+        } catch {
+            Write-Output "Could not find process with PID $targetPid"
+        }
+    }
+    
+    # Method 2: If not found by PID, find window for our specific process using Win32
+    if ($chromiumWindow -eq [IntPtr]::Zero -and $targetPid -gt 0) {
+        $chromeWindows = [Win32Embed]::FindAllChromeWindows()
+        foreach ($hwnd in $chromeWindows) {
+            $processId = 0
+            [Win32Embed]::GetWindowThreadProcessId($hwnd, [ref]$processId)
+            if ($processId -eq $targetPid) {
+                Write-Output "Found Chromium window by Win32 for PID $targetPid: $hwnd"
+                $chromiumWindow = $hwnd
+                break
+            }
+        }
+    }
+    
+    # Method 3: Fallback - use most recent Chrome window
+    if ($chromiumWindow -eq [IntPtr]::Zero) {
+        $chromeWindows = [Win32Embed]::FindAllChromeWindows()
+        if ($chromeWindows.Count -gt 0) {
+            Write-Output "Using fallback - most recent Chrome window"
+            $chromiumWindow = $chromeWindows[$chromeWindows.Count - 1]
+        }
+    }
     
     if ($chromiumWindow -eq [IntPtr]::Zero) {
-        Write-Output "ERROR: Chromium window not found"
+        Write-Output "ERROR: No Chrome window found"
+        Write-Output "Target PID was: $targetPid"
         exit 1
     }
     
-    Write-Output "Found Chromium window: $chromiumWindow"
+    Write-Output "Using Chrome window: $chromiumWindow"
     
-    # Get Electron window handle
-    $electronWindow = [IntPtr]"0x${electronHex}"
+    # Get Electron window handle (already converted to number in TypeScript)
+    $electronWindow = [IntPtr]${parentHandle}
+    Write-Output "Electron window: $electronWindow"
     
     # Window style constants
     $GWL_STYLE = -16
     $WS_CHILD = 0x40000000
     $WS_VISIBLE = 0x10000000
-    $WS_POPUP = 0x80000000
     
-    # Make Chromium a child window but keep its native UI
+    # Get current style
     $style = [Win32Embed]::GetWindowLong($chromiumWindow, $GWL_STYLE)
-    # Remove WS_POPUP and add WS_CHILD
-    $newStyle = ($style -band -bnot $WS_POPUP) -bor $WS_CHILD -bor $WS_VISIBLE
+    Write-Output "Original style: 0x$($style.ToString('X8'))"
+    
+    # Remove window caption and borders (0x00C00000 = WS_CAPTION)
+    # Add WS_CHILD and WS_VISIBLE
+    $newStyle = ($style -band -bnot 0x00C00000) -bor $WS_CHILD -bor $WS_VISIBLE
+    Write-Output "New style: 0x$($newStyle.ToString('X8'))"
+    
     [Win32Embed]::SetWindowLong($chromiumWindow, $GWL_STYLE, $newStyle)
     
     # Set Electron as parent
+    Write-Output "Setting parent window..."
     $result = [Win32Embed]::SetParent($chromiumWindow, $electronWindow)
     if ($result -eq [IntPtr]::Zero) {
-        Write-Output "ERROR: Failed to set parent"
+        Write-Output "ERROR: SetParent failed"
         exit 1
     }
+    Write-Output "SetParent succeeded: $result"
     
     # Get Electron client area
     $rect = New-Object Win32Embed+RECT
     [Win32Embed]::GetClientRect($electronWindow, [ref]$rect) | Out-Null
+    Write-Output "Electron client area: $($rect.Right - $rect.Left) x $($rect.Bottom - $rect.Top)"
     
-    # Position Chromium with FULL HEIGHT (no tabbar offset)
+    # Position Chromium
     $x = ${sidebarWidth}
-    $y = 0  # Start at top since Electron tabbar is hidden
+    $y = 0
     $width = $rect.Right - $rect.Left - ${sidebarWidth}
-    $height = $rect.Bottom - $rect.Top  # Full height
+    $height = $rect.Bottom - $rect.Top
+    
+    Write-Output "Positioning Chrome at: ($x, $y) size: $width x $height"
     
     # Move and size the window
-    [Win32Embed]::MoveWindow($chromiumWindow, $x, $y, $width, $height, $true) | Out-Null
+    $moveResult = [Win32Embed]::MoveWindow($chromiumWindow, $x, $y, $width, $height, $true)
+    Write-Output "MoveWindow result: $moveResult"
     
-    # Force refresh
+    # Ensure window is visible (SW_SHOW = 5)
+    [Win32Embed]::ShowWindow($chromiumWindow, 5)
+    
+    # Force refresh with multiple flags
     $SWP_FRAMECHANGED = 0x0020
     $SWP_NOZORDER = 0x0004
-    [Win32Embed]::SetWindowPos($chromiumWindow, [IntPtr]::Zero, $x, $y, $width, $height, 
-                              $SWP_FRAMECHANGED -bor $SWP_NOZORDER) | Out-Null
+    $RDW_INVALIDATE = 0x0001
+    $RDW_ALLCHILDREN = 0x0080
+    $RDW_UPDATENOW = 0x0100
+    $RDW_FRAME = 0x0400
+    
+    # Force proper redraw
+    [Win32Embed]::RedrawWindow($electronWindow, [IntPtr]::Zero, [IntPtr]::Zero, $RDW_INVALIDATE -bor $RDW_ALLCHILDREN -bor $RDW_UPDATENOW -bor $RDW_FRAME)
+    [Win32Embed]::RedrawWindow($chromiumWindow, [IntPtr]::Zero, [IntPtr]::Zero, $RDW_INVALIDATE -bor $RDW_UPDATENOW)
+    
+    # Restore focus to Chromium window
+    [Win32Embed]::SetForegroundWindow($chromiumWindow)
+    [Win32Embed]::SetFocus($chromiumWindow)
     
     Write-Output "SUCCESS: Embedded Chromium at ($x, $y) with size ($width x $height)"
     Write-Output "HANDLE:$chromiumWindow"
     
 } catch {
     Write-Output "ERROR: $($_.Exception.Message)"
+    Write-Output "Stack trace: $($_.Exception.StackTrace)"
     exit 1
 }
 `;
 
+      console.log('Executing PowerShell embedding script...');
       const { stdout, stderr } = await execAsync(
         `powershell -ExecutionPolicy Bypass -Command "${script.replace(/"/g, '\\"')}"`
       );
       
-      console.log('Embedding output:', stdout);
-      if (stderr) console.error('Embedding error:', stderr);
+      console.log('Embedding stdout:', stdout || '(empty)');
+      if (stderr) console.error('Embedding stderr:', stderr);
       
       // Extract window handle
       const handleMatch = stdout.match(/HANDLE:(\d+)/);

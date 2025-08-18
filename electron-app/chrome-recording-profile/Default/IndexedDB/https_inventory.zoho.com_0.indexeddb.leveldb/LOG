@@ -1,0 +1,6 @@
+2025/08/18-16:38:08.414 8418 Creating DB C:\client\cua-new\electron-app\chrome-recording-profile\Default\IndexedDB\https_inventory.zoho.com_0.indexeddb.leveldb since it was missing.
+2025/08/18-16:38:08.428 8418 Reusing MANIFEST C:\client\cua-new\electron-app\chrome-recording-profile\Default\IndexedDB\https_inventory.zoho.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/08/18-16:38:08.488 cd50 Level-0 table #5: started
+2025/08/18-16:38:08.509 cd50 Level-0 table #5: 540 bytes OK
+2025/08/18-16:38:08.513 cd50 Delete type=0 #3
+2025/08/18-16:38:08.514 8418 Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)

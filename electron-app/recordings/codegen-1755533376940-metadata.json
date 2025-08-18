@@ -1,0 +1,12 @@
+{
+  "sessionId": "codegen-1755533376940",
+  "startUrl": "https://www.google.com/",
+  "startTime": 1755533376940,
+  "endTime": 1755533387589,
+  "duration": 10649,
+  "tabCount": 1,
+  "actionCount": 2,
+  "tracePath": "C:\\client\\cua-new\\electron-app\\recordings\\codegen-1755533376940-trace.zip",
+  "specPath": "C:\\client\\cua-new\\electron-app\\recordings\\codegen-1755533376940-test.spec.ts",
+  "recordingMode": "chromium-native-tabs"
+}

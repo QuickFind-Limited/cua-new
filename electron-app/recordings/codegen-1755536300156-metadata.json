@@ -1,0 +1,10 @@
+{
+  "sessionId": "codegen-1755536300156",
+  "startUrl": "https://www.google.com/",
+  "startTime": 1755536300156,
+  "endTime": 1755536396807,
+  "duration": 96651,
+  "actionCount": 2,
+  "specPath": "C:\\client\\cua-new\\electron-app\\recordings\\codegen-1755536300156-test.spec.ts",
+  "recordingMode": "playwright-codegen"
+}

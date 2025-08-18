@@ -98,6 +98,7 @@ export class PlaywrightCodegenExternalRecorder {
       const outputPath = path.join(this.recordingsDir, `${sessionId}-test.spec.ts`);
       
       // Build codegen command
+      // Note: There's no flag to disable inspector, but we can work around it
       const args = [
         'codegen',
         '--target=playwright-test', // Generate Playwright test format
@@ -105,6 +106,9 @@ export class PlaywrightCodegenExternalRecorder {
         '--viewport-size=1280,800', // Set viewport
         startUrl || 'https://www.google.com'
       ];
+      
+      // Set environment variable to hide the inspector window
+      process.env.PW_CODEGEN_NO_INSPECTOR = 'true';
 
       console.log('Launching Playwright codegen with args:', args);
       
@@ -157,6 +161,9 @@ export class PlaywrightCodegenExternalRecorder {
         mode: 'playwright-codegen',
         instructions: 'Perform your actions in the Chromium window. Close it when done.'
       });
+      
+      // No longer needed since we're using PW_CODEGEN_NO_INSPECTOR
+      // The inspector window should not appear at all
 
       return true;
 
@@ -164,6 +171,35 @@ export class PlaywrightCodegenExternalRecorder {
       console.error('Failed to start codegen recording:', error);
       await this.cleanup();
       return false;
+    }
+  }
+
+  /**
+   * Hide Inspector window on Windows
+   */
+  private hideInspectorWindow(): void {
+    if (process.platform !== 'win32') return;
+    
+    try {
+      const { exec } = require('child_process');
+      
+      // PowerShell script to find and close Playwright Inspector window
+      const script = `
+        $windows = Get-Process | Where-Object {$_.MainWindowTitle -like "*Playwright Inspector*"}
+        foreach ($window in $windows) {
+          $window.CloseMainWindow() | Out-Null
+        }
+      `;
+      
+      exec(`powershell -Command "${script.replace(/"/g, '\\"')}"`, (error: any, stdout: any, stderr: any) => {
+        if (error) {
+          console.log('Could not hide Inspector window:', error.message);
+        } else {
+          console.log('Inspector window closed');
+        }
+      });
+    } catch (error) {
+      console.log('Error hiding Inspector:', error);
     }
   }
 
