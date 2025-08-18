@@ -171,7 +171,7 @@ export class PlaywrightWindowsMultiTabRecorder {
     const tabId = `tab-${++this.tabIdCounter}`;
     
     // Set up page-specific recording
-    this.setupPageRecording(page, tabId);
+    await this.setupPageRecording(page, tabId);
     
     // Navigate to URL
     if (url) {
@@ -230,7 +230,7 @@ export class PlaywrightWindowsMultiTabRecorder {
         };
 
         this.session!.tabs.set(tabId, tabInfo);
-        this.setupPageRecording(page, tabId);
+        await this.setupPageRecording(page, tabId);
         
         // Record new tab event
         this.recordTabAction(tabId, {
@@ -253,7 +253,7 @@ export class PlaywrightWindowsMultiTabRecorder {
   /**
    * Set up recording for a specific page/tab
    */
-  private setupPageRecording(page: Page, tabId: string): void {
+  private async setupPageRecording(page: Page, tabId: string): Promise<void> {
     // Track navigation
     page.on('framenavigated', (frame) => {
       if (frame === page.mainFrame()) {
@@ -309,9 +309,9 @@ export class PlaywrightWindowsMultiTabRecorder {
     });
 
     // Inject client-side recorder for detailed DOM interactions
-    page.evaluateOnNewDocument(() => {
-      window.__tabActions = [];
-      window.__tabId = ''; // Will be set per tab
+    await page.addInitScript(() => {
+      (window as any).__tabActions = [];
+      (window as any).__tabId = ''; // Will be set per tab
       
       // Enhanced click tracking
       document.addEventListener('click', (e) => {
@@ -319,7 +319,7 @@ export class PlaywrightWindowsMultiTabRecorder {
         const isNewTabLink = target.tagName === 'A' && 
                             (target as HTMLAnchorElement).target === '_blank';
         
-        window.__tabActions.push({
+        (window as any).__tabActions.push({
           type: 'click',
           selector: target.tagName.toLowerCase() + 
                    (target.id ? '#' + target.id : '') +
@@ -348,7 +348,7 @@ export class PlaywrightWindowsMultiTabRecorder {
           }
           
           if (action) {
-            window.__tabActions.push({
+            (window as any).__tabActions.push({
               type: 'keyboard-shortcut',
               action,
               timestamp: Date.now()
@@ -366,7 +366,7 @@ export class PlaywrightWindowsMultiTabRecorder {
           data[key] = key.includes('password') ? '***' : value;
         });
         
-        window.__tabActions.push({
+        (window as any).__tabActions.push({
           type: 'form-submit',
           formId: form.id,
           action: form.action,

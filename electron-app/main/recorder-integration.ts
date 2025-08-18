@@ -80,7 +80,8 @@ export class RecorderIntegration {
       startUrl = startUrl || 'https://www.google.com';
 
       // Store current state
-      this.activeTabIdBeforeRecording = await this.tabManager.getActiveTabId();
+      const activeTab = this.tabManager.getActiveTab();
+      this.activeTabIdBeforeRecording = activeTab ? activeTab.id : null;
       
       // Hide all WebContentsViews
       await this.hideAllWebContentsViews();
@@ -166,7 +167,7 @@ export class RecorderIntegration {
     console.log('Hiding all WebContentsViews for recording');
     
     // Get all tabs from tab manager
-    const tabs = this.tabManager.getAllTabs();
+    const tabs = this.tabManager.getTabs();
     
     for (const tab of tabs) {
       if (tab.view) {
@@ -186,7 +187,7 @@ export class RecorderIntegration {
    * Hide only the current WebContentsView
    */
   private hideCurrentWebContentsView(): void {
-    const activeTab = this.tabManager.getActiveTabSync();
+    const activeTab = this.tabManager.getActiveTab();
     if (activeTab && activeTab.view) {
       console.log('Hiding active WebContentsView:', activeTab.id);
       

@@ -97,7 +97,7 @@ export class PlaywrightWindowsRecorder {
       this.playwrightPage = await this.playwrightContext.newPage();
       
       // Set up comprehensive action recording
-      this.setupActionRecording();
+      await this.setupActionRecording();
 
       // Navigate to start URL
       if (startUrl) {
@@ -138,7 +138,7 @@ export class PlaywrightWindowsRecorder {
   /**
    * Set up comprehensive action recording
    */
-  private setupActionRecording(): void {
+  private async setupActionRecording(): Promise<void> {
     if (!this.playwrightPage) return;
 
     // Clear previous actions
@@ -182,13 +182,13 @@ export class PlaywrightWindowsRecorder {
     });
 
     // Inject client-side recorder for detailed DOM interactions
-    this.playwrightPage.evaluateOnNewDocument(() => {
-      window.__recordedActions = [];
+    await this.playwrightPage.addInitScript(() => {
+      (window as any).__recordedActions = [];
       
       // Record clicks
       document.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        window.__recordedActions.push({
+        (window as any).__recordedActions.push({
           type: 'click',
           selector: target.tagName.toLowerCase() + 
                    (target.id ? '#' + target.id : '') +
@@ -201,7 +201,7 @@ export class PlaywrightWindowsRecorder {
       // Record form inputs
       document.addEventListener('input', (e) => {
         const target = e.target as HTMLInputElement;
-        window.__recordedActions.push({
+        (window as any).__recordedActions.push({
           type: 'input',
           selector: target.tagName.toLowerCase() + 
                    (target.id ? '#' + target.id : '') +
@@ -214,7 +214,7 @@ export class PlaywrightWindowsRecorder {
       // Record form submissions
       document.addEventListener('submit', (e) => {
         const target = e.target as HTMLFormElement;
-        window.__recordedActions.push({
+        (window as any).__recordedActions.push({
           type: 'submit',
           selector: 'form' + (target.id ? '#' + target.id : ''),
           timestamp: Date.now()

@@ -211,13 +211,13 @@ export class PlaywrightWindowsHideUIRecorder {
       });
       
       // Inject action recorder into page
-      page.evaluateOnNewDocument(() => {
-        window.__recordedActions = [];
+      await page.addInitScript(() => {
+        (window as any).__recordedActions = [];
         
         // Record clicks
         document.addEventListener('click', (e) => {
           const target = e.target as HTMLElement;
-          window.__recordedActions.push({
+          (window as any).__recordedActions.push({
             type: 'click',
             selector: target.tagName.toLowerCase() + 
                      (target.id ? '#' + target.id : ''),
@@ -229,7 +229,7 @@ export class PlaywrightWindowsHideUIRecorder {
         // Record form inputs
         document.addEventListener('input', (e) => {
           const target = e.target as HTMLInputElement;
-          window.__recordedActions.push({
+          (window as any).__recordedActions.push({
             type: 'input',
             selector: target.tagName.toLowerCase() + 
                      (target.id ? '#' + target.id : '') +
