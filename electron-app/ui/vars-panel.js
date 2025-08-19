@@ -20,7 +20,7 @@ class VarsPanelManager {
         this.variablesContainer = document.getElementById('variables-form');
         this.actionsContainer = document.getElementById('actionsContainer');
         this.statusContainer = document.getElementById('statusContainer');
-        this.runFlowBtn = document.getElementById('run-flow-btn');
+        this.runFlowBtn = document.getElementById('runFlowBtn');
         this.saveFlowBtn = document.getElementById('save-flow-btn');
         this.launchRecorderBtn = document.getElementById('launch-recorder-btn');
         this.runMagnitudeBtn = document.getElementById('run-magnitude-btn');

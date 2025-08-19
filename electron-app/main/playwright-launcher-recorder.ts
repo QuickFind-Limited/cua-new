@@ -114,9 +114,9 @@ export class PlaywrightLauncherRecorder {
       console.log('Launching Playwright recorder...');
       console.log('Output will be saved to:', this.currentOutputPath);
       
-      // Create environment with inspector disabled
+      // Create environment - inspector will be shown for full control
       const env = { ...process.env };
-      env.PW_CODEGEN_NO_INSPECTOR = 'true';  // This hides the inspector window
+      // env.PW_CODEGEN_NO_INSPECTOR = 'true';  // Commented out - showing inspector for better recording control
       
       // Launch playwright codegen with environment variable
       if (playwrightPath === 'playwright' || playwrightPath.includes('npx')) {
