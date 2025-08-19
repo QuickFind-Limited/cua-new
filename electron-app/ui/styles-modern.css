@@ -92,6 +92,7 @@ html, body {
   height: 100vh;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-primary);
+  border-top: 1px solid var(--border-primary);
   transform: translateX(0); /* Always visible */
   transition: transform var(--duration-moderate) ease;
   z-index: 1000;

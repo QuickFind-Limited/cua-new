@@ -1036,7 +1036,17 @@ export function registerIpcHandlers(): void {
       // Disconnect when done
       await controller.disconnect();
       
-      return result;
+      // Return a serializable result
+      return {
+        success: result.success,
+        results: result.results.map(r => ({
+          step: r.step,
+          success: r.success,
+          error: r.error
+        })),
+        errors: result.errors,
+        message: result.success ? 'Flow executed successfully!' : 'Flow execution completed with errors'
+      };
     } catch (error) {
       console.error('Magnitude WebView execution error:', error);
       return {

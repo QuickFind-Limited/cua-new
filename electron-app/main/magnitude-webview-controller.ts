@@ -9,7 +9,7 @@ export class MagnitudeWebViewController {
   private webView: WebContentsView | null = null;
   private playwrightBrowser: Browser | null = null;
   private playwrightPage: Page | null = null;
-  private cdpPort: number = 9222;
+  private cdpPort: number = 9333;
   private isConnected = false;
 
   /**
