@@ -22,13 +22,9 @@ export class MagnitudeWebViewController {
       // Enable remote debugging on the WebContents
       const webContents = webView.webContents;
       
-      // Attach debugger to enable CDP
-      try {
-        webContents.debugger.attach('1.3');
-        console.log('Debugger attached to WebContentsView');
-      } catch (err) {
-        console.log('Debugger already attached or error:', err);
-      }
+      // Get the current URL to match the correct page
+      const currentUrl = webContents.getURL();
+      console.log('Current WebView URL:', currentUrl);
 
       // Get the WebSocket debugger URL
       const debuggerUrl = await this.getDebuggerUrl(webContents);
@@ -44,20 +40,47 @@ export class MagnitudeWebViewController {
       
       // Get the existing context and page
       const contexts = this.playwrightBrowser.contexts();
+      console.log(`Found ${contexts.length} browser contexts`);
+      
       if (contexts.length > 0) {
-        const context = contexts[0];
-        const pages = context.pages();
+        // Find the page that matches our WebView URL
+        let foundPage = false;
+        for (const context of contexts) {
+          const pages = context.pages();
+          console.log(`Context has ${pages.length} pages`);
+          
+          for (const page of pages) {
+            const pageUrl = page.url();
+            console.log(`Checking page URL: ${pageUrl}`);
+            
+            // Match the page by URL or use the first available page
+            if (pageUrl === currentUrl || pageUrl.includes(currentUrl) || currentUrl.includes(pageUrl)) {
+              this.playwrightPage = page;
+              console.log('Found matching page:', pageUrl);
+              foundPage = true;
+              break;
+            }
+          }
+          
+          if (foundPage) break;
+        }
         
-        if (pages.length > 0) {
-          this.playwrightPage = pages[0];
-          console.log('Connected to existing page:', await this.playwrightPage.url());
-        } else {
-          // Create a new page in the existing context
-          this.playwrightPage = await context.newPage();
+        // If no matching page found, use the first available
+        if (!foundPage && contexts[0].pages().length > 0) {
+          this.playwrightPage = contexts[0].pages()[0];
+          console.log('Using first available page:', await this.playwrightPage.url());
+        } else if (!foundPage) {
+          // Create a new page if none exist
+          this.playwrightPage = await contexts[0].newPage();
           console.log('Created new page in existing context');
         }
       } else {
         console.error('No contexts found in connected browser');
+        return false;
+      }
+
+      if (!this.playwrightPage) {
+        console.error('Could not establish page connection');
         return false;
       }
 
@@ -67,6 +90,11 @@ export class MagnitudeWebViewController {
 
     } catch (error) {
       console.error('Failed to connect to WebContentsView:', error);
+      // Provide more detailed error information
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
       return false;
     }
   }
@@ -75,33 +103,19 @@ export class MagnitudeWebViewController {
    * Get debugger URL from WebContents
    */
   private async getDebuggerUrl(webContents: any): Promise<string | null> {
-    return new Promise((resolve) => {
-      // Try to get the debugger URL directly
-      const processId = webContents.getOSProcessId();
-      const webContentsId = webContents.id;
+    try {
+      // For Electron apps with remote-debugging-port enabled,
+      // we should connect to the main CDP endpoint and find the correct page
+      const cdpEndpoint = `http://127.0.0.1:${this.cdpPort}`;
       
-      // Construct the CDP URL
-      // Note: This might need adjustment based on Electron version
-      const cdpUrl = `ws://127.0.0.1:${this.cdpPort}/devtools/page/${webContentsId}`;
+      console.log(`Attempting to connect via CDP endpoint: ${cdpEndpoint}`);
       
-      // Alternative: Try to get URL from webContents debugger
-      try {
-        // Send a CDP command to test connection
-        webContents.debugger.sendCommand('Runtime.evaluate', {
-          expression: '1+1'
-        }).then(() => {
-          console.log('CDP connection verified');
-          resolve(cdpUrl);
-        }).catch((err: any) => {
-          console.error('CDP test failed:', err);
-          // Try alternative URL format
-          resolve(`http://127.0.0.1:${this.cdpPort}`);
-        });
-      } catch (error) {
-        console.error('Failed to get debugger URL:', error);
-        resolve(null);
-      }
-    });
+      // Return the base CDP endpoint - Playwright will discover available pages
+      return cdpEndpoint;
+    } catch (error) {
+      console.error('Failed to get debugger URL:', error);
+      return null;
+    }
   }
 
   /**
