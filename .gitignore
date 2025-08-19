@@ -51,4 +51,36 @@ issue*.png
 # Backup files
 backup-*.tar.gz
 backup-*.zip
-*.backupcua-new/
+*.backup
+cua-new-backup-*.tar.gz
+cua-new-backup-*.zip
+*.bak
+*.old
+*.orig
+*.save
+*~
+.#*
+*#
+*.swp
+*.swo
+*.tmp
+*.temp
+
+# Archive files
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tgz
+*.zip
+*.7z
+*.rar
+
+# cua-new directory (if it exists as subdirectory)
+cua-new/
+
+# Chrome/Chromium profile data
+chrome-recording-profile/
+chrome-profile/
+**/chrome-recording-profile/
+**/chrome-profile/

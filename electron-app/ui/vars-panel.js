@@ -20,7 +20,7 @@ class VarsPanelManager {
         this.variablesContainer = document.getElementById('variables-form');
         this.actionsContainer = document.getElementById('actionsContainer');
         this.statusContainer = document.getElementById('statusContainer');
-        this.runFlowBtn = document.getElementById('runFlowBtn');
+        this.runFlowBtn = document.getElementById('run-magnitude-btn'); // The actual Run button in tabbar.html
         this.saveFlowBtn = document.getElementById('save-flow-btn');
         this.launchRecorderBtn = document.getElementById('launch-recorder-btn');
         this.runMagnitudeBtn = document.getElementById('run-magnitude-btn');
