@@ -329,15 +329,16 @@ export class MagnitudeWebViewController {
     try {
       // Check URL patterns that indicate authentication
       const authenticatedUrlPatterns = [
-        /dashboard/i,
-        /profile/i,
-        /account/i,
-        /home(?!\/|$)/i, // home but not homepage
-        /app\//i,
-        /user\//i
+        /\/dashboard\//i,
+        /\/profile/i,
+        /\/account/i,
+        /\/home\/(?!$)/i, // /home/ but not /home as landing page
+        /\/app\//i,
+        /\/user\//i
       ];
 
       if (authenticatedUrlPatterns.some(pattern => pattern.test(currentUrl))) {
+        console.log(`✅ URL indicates authenticated state: ${currentUrl}`);
         return true;
       }
 
@@ -679,21 +680,80 @@ export class MagnitudeWebViewController {
     }
     
     // Navigate to start URL if needed
+    let redirectOccurred = false;
+    let redirectUrl = '';
     if (!skipNavigation && intentSpec.url && this.playwrightPage) {
       try {
-        console.log(`Navigating to: ${intentSpec.url}`);
-        await this.playwrightPage.goto(intentSpec.url);
-        results.push({ step: 'navigation', success: true });
+        const targetUrl = intentSpec.url;
+        console.log(`Navigating to: ${targetUrl}`);
+        
+        // Store the target URL to compare after navigation
+        await this.playwrightPage.goto(targetUrl);
+        
+        // Check if we were redirected after navigation
+        const finalUrl = this.playwrightPage.url();
+        redirectOccurred = finalUrl !== targetUrl;
+        redirectUrl = finalUrl;
+        
+        if (redirectOccurred) {
+          console.log(`🔀 REDIRECT DETECTED: ${targetUrl} → ${finalUrl}`);
+          
+          // Check if redirected to authenticated URLs
+          const authenticatedUrlPatterns = [
+            /\/app\//,
+            /\/dashboard\//,
+            /\/home\/(?!$)/  // /home/ but not /home as landing page
+          ];
+          
+          const redirectedToAuthenticatedArea = authenticatedUrlPatterns.some(pattern => 
+            pattern.test(finalUrl)
+          );
+          
+          if (redirectedToAuthenticatedArea) {
+            console.log(`✅ Redirected to authenticated area - user appears to be logged in already`);
+            results.push({ 
+              step: 'navigation', 
+              success: true, 
+              data: { 
+                redirected: true,
+                targetUrl,
+                finalUrl,
+                authenticatedRedirect: true,
+                reason: 'Redirected to authenticated area - user already logged in'
+              } 
+            });
+          } else {
+            console.log(`ℹ️ Redirected but not to authenticated area`);
+            results.push({ 
+              step: 'navigation', 
+              success: true, 
+              data: { 
+                redirected: true,
+                targetUrl,
+                finalUrl,
+                authenticatedRedirect: false
+              } 
+            });
+          }
+        } else {
+          results.push({ step: 'navigation', success: true, data: { redirected: false } });
+        }
       } catch (error) {
         errors.push(`Navigation failed: ${error}`);
         console.error('Navigation failed:', error);
       }
     }
 
-    // Check page state after navigation (if we navigated)
+    // Always re-run state detection after navigation to catch redirects
     console.log('Detecting page state after navigation/decision...');
     const postNavigationResult = await this.detectPageStateDetailed(this.playwrightPage, detectionRuleSets);
-    console.log(`Current page state: ${postNavigationResult.state} (confidence: ${postNavigationResult.confidence})`);
+    const currentPageUrl = this.playwrightPage.url();
+    console.log(`Current page state: ${postNavigationResult.state} (confidence: ${postNavigationResult.confidence}) at URL: ${currentPageUrl}`);
+    
+    if (redirectOccurred) {
+      console.log(`🔍 Re-analyzing state after redirect to: ${redirectUrl}`);
+    }
+    
     results.push({ 
       step: 'page_state_detection', 
       success: true, 
@@ -701,7 +761,9 @@ export class MagnitudeWebViewController {
         state: postNavigationResult.state,
         confidence: postNavigationResult.confidence,
         url: postNavigationResult.url,
-        matchedRules: postNavigationResult.matchedRules.length
+        matchedRules: postNavigationResult.matchedRules.length,
+        redirectDetected: redirectOccurred,
+        redirectUrl: redirectOccurred ? redirectUrl : undefined
       }
     });
     
@@ -1033,6 +1095,16 @@ export class MagnitudeWebViewController {
               'profile'
             ],
             weight: 0.5
+          },
+          {
+            name: 'authenticated_urls',
+            description: 'URLs indicating authenticated state',
+            urlPatterns: [
+              '.*\\/app\\/.*',
+              '.*\\/dashboard\\/.*',
+              '.*\\/home\\/(?!$).*'
+            ],
+            weight: 2.5
           }
         ]
       }
@@ -1756,42 +1828,144 @@ export class MagnitudeWebViewController {
           },
           {
             name: 'dashboard_url',
-            description: 'Dashboard/app URL patterns',
-            urlPatterns: ['.*dashboard.*', '.*app/.*', '.*/home(?!/|$).*'],
-            weight: 1.5
+            description: 'Dashboard/app URL patterns - strong indicator of being logged in',
+            urlPatterns: ['.*\\/dashboard\\/.*', '.*\\/app\\/.*', '.*\\/home\\/(?!$).*'],
+            weight: 2.5
+          },
+          {
+            name: 'zoho_app_url',
+            description: 'Zoho app-specific URL patterns',
+            urlPatterns: ['.*\\.zoho\\.com/app/.*', '.*inventory\\.zoho\\.com/app/.*'],
+            weight: 2.0
           },
           {
             name: 'user_menu',
             description: 'User menu/profile elements',
             selectors: ['.user-menu', '.profile-menu', '[data-testid*="user"]', '[data-testid*="profile"]'],
             weight: 1.0
+          },
+          {
+            name: 'zoho_user_profile',
+            description: 'Zoho-specific user profile elements',
+            selectors: [
+              '.user-profile',
+              '.user-dropdown',
+              '.profile-dropdown',
+              '.user-info',
+              '.profile-pic',
+              '.user-avatar',
+              '[class*="user"]',
+              '[class*="profile"]',
+              '.organization-name',
+              '.org-name',
+              '.user-name',
+              '.username'
+            ],
+            weight: 1.5
           }
         ]
       },
       {
         name: 'Login Page Detection',
-        description: 'Detects login/signin pages',
+        description: 'Detects login/signin pages with strict requirements',
         stateName: 'login_page',
-        minimumConfidence: 0.5,
+        minimumConfidence: 0.7,
         rules: [
           {
-            name: 'login_form',
-            description: 'Login form elements',
-            selectors: ['input[type="password"]', 'input[name*="password"]', 'input[name*="email"]', 'input[name*="username"]'],
-            requiredCount: 2,
+            name: 'required_password_field',
+            description: 'Must have password field',
+            selectors: ['input[type="password"]', 'input[name*="password"]:not([name*="confirm"])'],
+            requiredCount: 1,
+            weight: 3.0
+          },
+          {
+            name: 'required_email_username_field',
+            description: 'Must have email or username field',
+            selectors: [
+              'input[type="email"]',
+              'input[name*="email"]:not([name*="confirm"])',
+              'input[name*="username"]',
+              'input[name*="user"]:not([name*="confirm"])',
+              'input[id*="email"]:not([id*="confirm"])',
+              'input[id*="username"]',
+              'input[id*="user"]:not([id*="confirm"])'
+            ],
+            requiredCount: 1,
+            weight: 3.0
+          },
+          {
+            name: 'login_action_elements',
+            description: 'Login submit buttons or forms',
+            selectors: [
+              'button[type="submit"]:has-text("sign in")',
+              'button[type="submit"]:has-text("login")',
+              'button[type="submit"]:has-text("log in")',
+              'button:has-text("sign in")',
+              'button:has-text("login")',
+              'button:has-text("log in")',
+              'input[type="submit"][value*="sign"]',
+              'input[type="submit"][value*="login"]',
+              'form[action*="login"]',
+              'form[action*="signin"]',
+              'form[id*="login"]',
+              'form[id*="signin"]'
+            ],
             weight: 2.0
           },
           {
-            name: 'login_url',
-            description: 'Login URL patterns',
-            urlPatterns: ['.*login.*', '.*signin.*', '.*sign-in.*'],
-            weight: 1.5
+            name: 'login_url_patterns',
+            description: 'Specific login URL patterns',
+            urlPatterns: [
+              '.*[/.]login([/?].*)?$',
+              '.*[/.]signin([/?].*)?$',
+              '.*[/.]sign-in([/?].*)?$',
+              '.*[/.]auth([/?].*)?$',
+              '.*accounts[.].*[/.]signin([/?].*)?$',
+              '.*accounts[.].*[/.]login([/?].*)?$'
+            ],
+            weight: 2.5
           },
           {
-            name: 'no_logout',
-            description: 'No logout button present',
-            excludeSelectors: ['button:has-text("logout")', 'a:has-text("logout")'],
-            weight: 0.5
+            name: 'exclude_search_engines',
+            description: 'Exclude search engines and other non-login sites',
+            urlPatterns: [
+              '^https?://(?:www[.])?(?:google|bing|yahoo|duckduckgo)[.].*',
+              '^https?://(?:www[.])?(?:facebook|twitter|instagram|linkedin)[.]com/?$',
+              '.*[/.]search([/?].*)?$',
+              '.*[/.](?:home|index)([/?].*)?$',
+              '.*[/.](?:about|contact|help|support)([/?].*)?$'
+            ],
+            excludeSelectors: ['*'],
+            weight: 1.0
+          },
+          {
+            name: 'exclude_search_functionality',
+            description: 'Exclude pages with search functionality',
+            excludeSelectors: [
+              '[name="q"]',
+              '[name="search"]',
+              'input[title*="Search"]',
+              'input[placeholder*="Search"]',
+              '[role="searchbox"]',
+              '[aria-label*="Search"]'
+            ],
+            weight: 1.0
+          },
+          {
+            name: 'no_authenticated_elements',
+            description: 'Should not have authenticated user elements',
+            excludeSelectors: [
+              'button:has-text("logout")',
+              'a:has-text("logout")',
+              'button:has-text("sign out")',
+              'a:has-text("sign out")',
+              '.user-menu',
+              '.profile-menu',
+              '[data-testid*="user-menu"]',
+              '[class*="user-dropdown"]',
+              '[class*="profile-dropdown"]'
+            ],
+            weight: 1.5
           }
         ]
       }
