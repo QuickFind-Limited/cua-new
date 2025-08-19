@@ -324,8 +324,8 @@ CRITICAL RULES:
 2. Detect patterns that should be variables (usernames, passwords, search terms, etc.)
 3. Each action should become a step in the Intent Spec
 4. Use the actual selectors from the recording
-5. Set prefer="snippet" for form fields and stable elements
-6. Set prefer="ai" for dynamic content
+5. Set prefer="ai" for form fields and user inputs (they may move or change)
+6. Set prefer="snippet" for navigation and stable buttons
 
 Output this EXACT JSON structure:
 {
@@ -372,6 +372,8 @@ CRITICAL RULES:
 4. Convert each await page.* action to an Intent Spec step
 5. Detect variables (values that should be parameterized like usernames, passwords, search terms)
 6. DO NOT invent or hallucinate steps that aren't in the code
+7. Set prefer="ai" for form inputs (email, password, search) as they may change position
+8. Set prefer="snippet" for navigation (goto) and stable elements
 
 Output this EXACT JSON structure:
 {
