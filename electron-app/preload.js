@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Recorder events
   onRecordingLaunched: (callback) => ipcRenderer.on('recorder-launched', (event, data) => callback(data)),
+  onRecordingStarted: (callback) => ipcRenderer.on('recording-started', (event, data) => callback(data)),
   onRecordingSaved: (callback) => ipcRenderer.on('recording-saved', (event, data) => callback(data)),
   onRecordingCancelled: (callback) => ipcRenderer.on('recording-cancelled', (event, data) => callback(data)),
   onRecorderExit: (callback) => ipcRenderer.on('recorder-exit', (event, data) => callback(data)),

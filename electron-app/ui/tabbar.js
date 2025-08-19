@@ -375,6 +375,16 @@ function startRecorderMonitoring() {
             });
         }
         
+        // Listen for when recording starts (file detected)
+        if (window.electronAPI.onRecordingStarted) {
+            window.electronAPI.onRecordingStarted((data) => {
+                console.log('Recording started:', data);
+                lastRecordingData = data;
+                // Show Begin Analysis button immediately
+                showBeginAnalysisButton();
+            });
+        }
+        
         // Listen for when recording is saved
         if (window.electronAPI.onRecordingSaved) {
             window.electronAPI.onRecordingSaved((data) => {
@@ -422,6 +432,29 @@ function startRecorderMonitoring() {
             console.error('Error checking recorder status:', error);
         }
     }, 2000); // Check every 2 seconds
+}
+
+// Show Begin Analysis button immediately when recording starts
+function showBeginAnalysisButton() {
+    console.log('Showing Begin Analysis button immediately');
+    
+    const recordingControls = document.querySelector('.recording-controls');
+    if (recordingControls) {
+        recordingControls.innerHTML = `
+            <button class="begin-analysis-btn" id="begin-analysis-btn" title="Analyze Recording">
+                <span class="analysis-text">Begin Analysis</span>
+            </button>
+        `;
+        
+        // Add event listener to begin analysis button
+        const beginAnalysisBtn = document.getElementById('begin-analysis-btn');
+        if (beginAnalysisBtn) {
+            beginAnalysisBtn.addEventListener('click', async () => {
+                console.log('Begin analysis clicked');
+                await analyzeRecording();
+            });
+        }
+    }
 }
 
 // Handle when recorder process exits
