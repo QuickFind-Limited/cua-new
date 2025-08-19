@@ -277,19 +277,82 @@ export class PlaywrightLauncherRecorder {
       // Count Playwright actions to gauge recording progress
       const actionCount = this.countPlaywrightActions(content);
       
-      console.log(`Recording updated: ${actionCount} actions recorded`);
+      // Check if recording has been stopped (test is complete)
+      const isRecordingStopped = this.isRecordingComplete(content);
       
-      // Notify UI that recording was saved/updated
-      this.electronWindow.webContents.send('recording-saved', {
+      console.log(`Recording updated: ${actionCount} actions recorded${isRecordingStopped ? ' (RECORDING STOPPED)' : ''}`);
+      
+      // If recording just stopped, capture screenshot immediately
+      let screenshotPath: string | undefined;
+      if (isRecordingStopped && !this.lastRecordingData?.recordingStopped) {
+        console.log('Recording stopped detected - capturing success state screenshot...');
+        screenshotPath = await this.captureSuccessScreenshot(filePath);
+      }
+      
+      // Store recording data
+      this.lastRecordingData = {
         path: filePath,
         size: stats.size,
         actionCount,
         timestamp: Date.now(),
-        specCode: content
-      });
+        specCode: content,
+        recordingStopped: isRecordingStopped,
+        screenshotPath
+      };
+      
+      // Notify UI that recording was saved/updated
+      this.electronWindow.webContents.send('recording-saved', this.lastRecordingData);
     } catch (error) {
       console.error('Error processing file change:', error);
     }
+  }
+  
+  /**
+   * Check if the recording is complete (test closure detected)
+   */
+  private isRecordingComplete(content: string): boolean {
+    // When user clicks stop in the floating toolbar, Playwright writes the complete test
+    // A complete test has the structure: test('...', async ({ page }) => { ... });
+    
+    // Check if we have both opening and closing brackets for the test
+    const hasTestOpening = content.includes("test('") || content.includes('test("');
+    const hasAsyncFunction = content.includes('async ({ page })') || content.includes('async ({page})');
+    const hasClosingBrackets = content.trim().endsWith('});');
+    
+    // Also check if the last action is followed by the closing brackets
+    // (no more actions will be added after the stop button is clicked)
+    const lines = content.trim().split('\n');
+    const lastFewLines = lines.slice(-3).join('\n');
+    const hasProperClosure = lastFewLines.includes('});');
+    
+    return hasTestOpening && hasAsyncFunction && (hasClosingBrackets || hasProperClosure);
+  }
+  
+  /**
+   * Capture screenshot of current browser state
+   */
+  private async captureSuccessScreenshot(recordingPath: string): Promise<string | undefined> {
+    try {
+      const sessionId = path.basename(recordingPath, '.spec.ts');
+      const screenshotPath = path.join(this.recordingsDir, `${sessionId}-success.png`);
+      
+      // Get the active tab manager to capture screenshot
+      const { getTabManager } = await import('./main');
+      const tabManager = getTabManager();
+      
+      if (tabManager) {
+        const activeTab = tabManager.getActiveTab();
+        if (activeTab?.view) {
+          const screenshot = await activeTab.view.webContents.capturePage();
+          await fs.writeFile(screenshotPath, screenshot.toPNG());
+          console.log('Success screenshot saved:', screenshotPath);
+          return screenshotPath;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to capture success screenshot:', error);
+    }
+    return undefined;
   }
 
   /**
@@ -331,6 +394,30 @@ export class PlaywrightLauncherRecorder {
       
       // Wait longer for file to be written by Playwright
       await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Capture screenshot of final state for validation
+      let screenshotPath: string | undefined;
+      try {
+        const sessionId = path.basename(this.currentOutputPath, '.spec.ts');
+        screenshotPath = path.join(this.recordingsDir, `${sessionId}-success.png`);
+        
+        // Get the active tab manager to capture screenshot
+        const { getTabManager } = await import('./main');
+        const tabManager = getTabManager();
+        
+        if (tabManager) {
+          const activeTab = tabManager.getActiveTab();
+          if (activeTab?.view) {
+            console.log('Capturing success state screenshot...');
+            const screenshot = await activeTab.view.webContents.capturePage();
+            await fs.writeFile(screenshotPath, screenshot.toPNG());
+            console.log('Success screenshot saved:', screenshotPath);
+          }
+        }
+      } catch (screenshotError) {
+        console.error('Failed to capture success screenshot:', screenshotError);
+        screenshotPath = undefined;
+      }
       
       // First check if the exact file was created
       let recordingFilePath = this.currentOutputPath;

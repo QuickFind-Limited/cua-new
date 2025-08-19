@@ -334,6 +334,7 @@ Output this EXACT JSON structure:
   "url": "${url}",
   "params": ["VARIABLE_NAMES_IF_ANY"],
   "skipNavigationStates": ["authenticated_area", "dashboard", "logged_in"],
+  "success_screenshot": "${screenshotPath || ''}",
   "steps": [
     {
       "name": "Step description",
@@ -357,7 +358,7 @@ Analyze the recording and output ONLY the JSON:`;
 /**
  * Creates a prompt for analyzing Playwright spec code
  */
-function createPlaywrightSpecAnalysisPrompt(playwrightCode: string): string {
+function createPlaywrightSpecAnalysisPrompt(playwrightCode: string, screenshotPath: string = ''): string {
   return `You are an expert at analyzing Playwright test code and converting it to Intent Specifications.
 
 Analyze this Playwright test recording and extract ONLY the actual user actions performed. 
@@ -383,6 +384,7 @@ Output this EXACT JSON structure:
   "url": "The first page.goto() URL",
   "params": ["VARIABLE_NAMES_HERE"],
   "skipNavigationStates": ["authenticated_area", "dashboard", "logged_in"],
+  "success_screenshot": "${screenshotPath}",
   "steps": [
     {
       "name": "Step description",
@@ -411,13 +413,38 @@ function createAnalysisPrompt(recordingData: any): string {
   console.log('Recording data type:', typeof recordingData);
   console.log('Recording data preview:', typeof recordingData === 'string' ? recordingData.substring(0, 500) : JSON.stringify(recordingData).substring(0, 500));
   
+  // Extract screenshot path if provided
+  let screenshotPath = '';
+  let actualRecordingData = recordingData;
+  
+  // Check if recordingData contains both code and screenshot path
+  if (recordingData && typeof recordingData === 'object' && !Array.isArray(recordingData)) {
+    if (recordingData.recordingData) {
+      actualRecordingData = recordingData.recordingData;
+      screenshotPath = recordingData.screenshotPath || '';
+    } else if (recordingData.specCode) {
+      actualRecordingData = recordingData.specCode;
+      screenshotPath = recordingData.screenshotPath || '';
+    }
+  }
+  
   // Check if it's a recording session with actions array
-  if (recordingData && recordingData.actions && Array.isArray(recordingData.actions)) {
-    return createSessionAnalysisPrompt(recordingData);
+  if (actualRecordingData && actualRecordingData.actions && Array.isArray(actualRecordingData.actions)) {
+    return createSessionAnalysisPrompt(actualRecordingData);
   }
   
   // For Playwright specs and all other cases, use the general prompt that allows inference
   // This enables Claude to intelligently infer steps from start/end URLs
+  const recordingString = typeof actualRecordingData === 'string' ? actualRecordingData : JSON.stringify(actualRecordingData);
+  
+  // Check if it's Playwright spec code
+  if (typeof recordingString === 'string' && 
+      (recordingString.includes('import { test') || 
+       recordingString.includes("import { test") ||
+       recordingString.includes('test(') ||
+       recordingString.includes("test("))) {
+    return createPlaywrightSpecAnalysisPrompt(recordingString, screenshotPath);
+  }
   
   return `You are an expert at analyzing browser automation recordings and converting them to Intent Specifications.
 
