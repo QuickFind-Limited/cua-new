@@ -333,6 +333,7 @@ Output this EXACT JSON structure:
   "description": "Brief description of what this automation does",
   "url": "${url}",
   "params": ["VARIABLE_NAMES_IF_ANY"],
+  "skipNavigationStates": ["authenticated_area", "dashboard", "logged_in"],
   "steps": [
     {
       "name": "Step description",
@@ -381,6 +382,7 @@ Output this EXACT JSON structure:
   "description": "Brief description of what this automation does",
   "url": "The first page.goto() URL",
   "params": ["VARIABLE_NAMES_HERE"],
+  "skipNavigationStates": ["authenticated_area", "dashboard", "logged_in"],
   "steps": [
     {
       "name": "Step description",
@@ -426,6 +428,10 @@ CRITICAL: Choose execution strategy intelligently:
 - SNIPPET PREFERRED for: simple navigation, waiting, screenshots, elements with stable IDs/data-testid
 - AI PREFERRED for: dynamic content, search results, marketing pages, elements that may move/change
 - AI PREFERRED for: popups, modals, complex interactions needing context
+
+IMPORTANT: For authentication steps (login, sign in, email, password):
+- Add skipConditions with requiredState: "authenticated_area" to skip if already logged in
+- This allows the flow to skip auth steps when user is already authenticated
 
 REQUIRED OUTPUT FORMAT:
 {
@@ -503,6 +509,7 @@ EXAMPLE OUTPUT:
       "prefer": "snippet",
       "fallback": "ai",
       "value": "{{EMAIL}}",
+      "skipConditions": [{"requiredState": "authenticated_area"}],
       "comment": "PRESERVE getByRole selector from recording - more reliable than CSS"
     },
     {
@@ -528,6 +535,7 @@ EXAMPLE OUTPUT:
       "prefer": "snippet",
       "fallback": "ai",
       "value": "{{PASSWORD}}",
+      "skipConditions": [{"requiredState": "authenticated_area"}],
       "comment": "SENSITIVE DATA - always prefer snippet for passwords, keep getByRole"
     },
     {
