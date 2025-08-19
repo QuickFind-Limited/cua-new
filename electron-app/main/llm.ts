@@ -283,6 +283,7 @@ export async function analyzeRecordingLegacy(request: AnalysisRequest): Promise<
 function createSessionAnalysisPrompt(session: any): string {
   const actions = session.actions || [];
   const url = session.url || 'Unknown URL';
+  const screenshotPath = session.screenshotPath || '';
   
   // Create a human-readable description of actions
   const actionDescriptions = actions.map((action: any, index: number) => {

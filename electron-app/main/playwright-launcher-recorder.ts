@@ -332,25 +332,88 @@ export class PlaywrightLauncherRecorder {
    * Capture screenshot of current browser state
    */
   private async captureSuccessScreenshot(recordingPath: string): Promise<string | undefined> {
+    console.log('[Screenshot] Starting capture for recording:', recordingPath);
+    
     try {
       const sessionId = path.basename(recordingPath, '.spec.ts');
       const screenshotPath = path.join(this.recordingsDir, `${sessionId}-success.png`);
+      console.log('[Screenshot] Target path:', screenshotPath);
       
       // Get the active tab manager to capture screenshot
+      console.log('[Screenshot] Importing tab manager...');
       const { getTabManager } = await import('./main');
       const tabManager = getTabManager();
+      console.log('[Screenshot] Tab manager obtained:', !!tabManager);
       
       if (tabManager) {
         const activeTab = tabManager.getActiveTab();
+        console.log('[Screenshot] Active tab found:', !!activeTab);
+        console.log('[Screenshot] Active tab has view:', !!activeTab?.view);
+        
         if (activeTab?.view) {
+          console.log('[Screenshot] WebContents available:', !!activeTab.view.webContents);
+          
+          // Check if webContents is destroyed
+          if (activeTab.view.webContents.isDestroyed()) {
+            console.log('[Screenshot] ERROR: WebContents is destroyed!');
+            return undefined;
+          }
+          
+          // Get the URL being recorded
+          const currentUrl = activeTab.view.webContents.getURL();
+          console.log('[Screenshot] Current URL:', currentUrl);
+          
+          console.log('[Screenshot] Capturing page...');
           const screenshot = await activeTab.view.webContents.capturePage();
-          await fs.writeFile(screenshotPath, screenshot.toPNG());
-          console.log('Success screenshot saved:', screenshotPath);
+          console.log('[Screenshot] Screenshot captured, size:', screenshot ? screenshot.getSize() : 'null');
+          
+          console.log('[Screenshot] Converting to PNG...');
+          const pngBuffer = screenshot.toPNG();
+          console.log('[Screenshot] PNG buffer size:', pngBuffer.length);
+          
+          console.log('[Screenshot] Writing to file...');
+          await fs.writeFile(screenshotPath, pngBuffer);
+          console.log('[Screenshot] Success! Screenshot saved:', screenshotPath);
+          
+          // Verify file was written
+          const stats = await fs.stat(screenshotPath);
+          console.log('[Screenshot] File verified, size:', stats.size, 'bytes');
+          
           return screenshotPath;
+        } else {
+          console.log('[Screenshot] No active tab with view available');
+          
+          // Try alternative: look for Playwright browser window
+          console.log('[Screenshot] Attempting to find Playwright browser window...');
+          const { BrowserWindow } = await import('electron');
+          const allWindows = BrowserWindow.getAllWindows();
+          console.log('[Screenshot] Total windows:', allWindows.length);
+          
+          for (const win of allWindows) {
+            const title = win.getTitle();
+            const url = win.webContents.getURL();
+            console.log(`[Screenshot] Window: ${title}, URL: ${url}`);
+            
+            // Check if this might be the Playwright browser
+            if (!url.includes('localhost:') && !url.includes('file://')) {
+              console.log('[Screenshot] Found potential browser window, attempting capture...');
+              try {
+                const screenshot = await win.webContents.capturePage();
+                await fs.writeFile(screenshotPath, screenshot.toPNG());
+                console.log('[Screenshot] Alternative capture successful!');
+                return screenshotPath;
+              } catch (altError) {
+                console.log('[Screenshot] Alternative capture failed:', altError);
+              }
+            }
+          }
         }
+      } else {
+        console.log('[Screenshot] No tab manager available');
       }
     } catch (error) {
-      console.error('Failed to capture success screenshot:', error);
+      console.error('[Screenshot] Failed to capture:', error);
+      console.error('[Screenshot] Error stack:', (error as Error).stack);
     }
     return undefined;
   }
