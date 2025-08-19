@@ -103,7 +103,6 @@ export class PlaywrightLauncherRecorder {
         'codegen',
         '--target=playwright-test',
         `--output=${this.currentOutputPath}`,
-        '--viewport-size=1920,1080',  // Large viewport
         '--browser=chromium'
       ];
       
@@ -123,13 +122,13 @@ export class PlaywrightLauncherRecorder {
       if (playwrightPath === 'playwright' || playwrightPath.includes('npx')) {
         const [cmd, ...cmdArgs] = playwrightPath.split(' ');
         this.codegenProcess = spawn(cmd, [...cmdArgs, ...args], {
-          stdio: 'pipe',  // Use pipe to avoid showing console output
+          stdio: 'pipe',
           shell: true,
           env
         });
       } else {
         this.codegenProcess = spawn(playwrightPath, args, {
-          stdio: 'pipe',  // Use pipe to avoid showing console output
+          stdio: 'pipe',
           shell: process.platform === 'win32',
           env
         });
@@ -137,15 +136,13 @@ export class PlaywrightLauncherRecorder {
       
       // Handle process output silently
       this.codegenProcess.stdout?.on('data', (data) => {
-        // Log silently
-        console.log('Codegen:', data.toString());
+        console.log('Codegen output:', data.toString());
       });
       
       this.codegenProcess.stderr?.on('data', (data) => {
-        // Log errors
         console.error('Codegen error:', data.toString());
       });
-
+      
       // Watch for file changes
       this.startFileWatcher();
 
@@ -330,27 +327,53 @@ export class PlaywrightLauncherRecorder {
     }
 
     try {
+      console.log('Checking for recording file:', this.currentOutputPath);
+      
+      // Wait longer for file to be written by Playwright
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // First check if the exact file was created
+      let recordingFilePath = this.currentOutputPath;
+      let fileExists = existsSync(recordingFilePath);
+      
+      // If not found, look for any new recording file in the directory
+      if (!fileExists) {
+        console.log('Exact file not found, scanning for any new recording files...');
+        const files = await fs.readdir(this.recordingsDir);
+        const recordingFiles = files.filter(f => f.startsWith('recording-') && f.endsWith('.spec.ts'));
+        
+        if (recordingFiles.length > 0) {
+          // Sort by name (which includes timestamp) and get the most recent
+          recordingFiles.sort();
+          const mostRecentFile = recordingFiles[recordingFiles.length - 1];
+          recordingFilePath = path.join(this.recordingsDir, mostRecentFile);
+          fileExists = true;
+          console.log('Found recording file:', recordingFilePath);
+        }
+      }
+      
       // Check if file was created
-      if (existsSync(this.currentOutputPath)) {
-        const stats = await fs.stat(this.currentOutputPath);
+      if (fileExists) {
+        console.log('Recording file found:', recordingFilePath);
+        const stats = await fs.stat(recordingFilePath);
         
         if (stats.size > 0) {
           // Read the final recording
-          const specCode = await fs.readFile(this.currentOutputPath, 'utf8');
+          const specCode = await fs.readFile(recordingFilePath, 'utf8');
           
           // Store last recording data for retrieval
           this.lastRecordingData = {
-            path: this.currentOutputPath,
+            path: recordingFilePath,
             specCode,
-            sessionId: path.basename(this.currentOutputPath, '.spec.ts'),
+            sessionId: path.basename(recordingFilePath, '.spec.ts'),
             timestamp: Date.now()
           };
           
           // Notify UI with the complete recording
           this.electronWindow.webContents.send('recording-complete', {
-            path: this.currentOutputPath,
+            path: recordingFilePath,
             specCode,
-            sessionId: path.basename(this.currentOutputPath, '.spec.ts')
+            sessionId: path.basename(recordingFilePath, '.spec.ts')
           });
           
           // Also send recorder exit with recording flag
