@@ -84,3 +84,6 @@ chrome-recording-profile/
 chrome-profile/
 **/chrome-recording-profile/
 **/chrome-profile/
+nul
+electron-app/recordings/*.spec.ts
+electron-app/recordings/*.png
