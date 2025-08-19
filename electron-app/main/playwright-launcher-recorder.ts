@@ -4,6 +4,7 @@ import * as path from 'path';
 import { promises as fs } from 'fs';
 import { existsSync, writeFileSync } from 'fs';
 import * as chokidar from 'chokidar';
+import { chromium, Browser, Page } from 'playwright';
 
 /**
  * Playwright Launcher Recorder
@@ -20,6 +21,10 @@ export class PlaywrightLauncherRecorder {
   private lastModified = 0;
   private isRecordingActive = false;
   private lastRecordingData: any = null;
+  private cdpBrowser: Browser | null = null;
+  private cdpPage: Page | null = null;
+  private stopButtonClicked = false;
+  private screenshotPath: string | null = null;
 
   constructor(electronWindow: BrowserWindow) {
     this.electronWindow = electronWindow;
@@ -34,6 +39,13 @@ export class PlaywrightLauncherRecorder {
     }
   }
 
+  /**
+   * Find Playwright executable
+   */
+  private findPlaywrightExecutable(): string {
+    return this.findPlaywrightPath() || 'playwright';
+  }
+  
   /**
    * Find Playwright executable
    */
@@ -98,12 +110,13 @@ export class PlaywrightLauncherRecorder {
       const sessionId = `recording-${Date.now()}`;
       this.currentOutputPath = path.join(this.recordingsDir, `${sessionId}.spec.ts`);
       
-      // Build codegen command
+      // Build codegen command with CDP debugging
       const args = [
         'codegen',
         '--target=playwright-test',
         `--output=${this.currentOutputPath}`,
-        '--browser=chromium'
+        '--browser=chromium',
+        '--browser-arg=--remote-debugging-port=9223'  // Enable CDP on port 9223
       ];
       
       // Add URL if provided
@@ -145,6 +158,13 @@ export class PlaywrightLauncherRecorder {
       
       // Watch for file changes
       this.startFileWatcher();
+
+      // Connect to Playwright browser via CDP after a short delay
+      setTimeout(() => {
+        this.connectToCDPBrowser(sessionId).catch(err => {
+          console.error('Failed to connect via CDP:', err);
+        });
+      }, 3000); // Give Playwright time to launch browser
 
       // Handle process exit
       this.codegenProcess.on('exit', (code) => {
@@ -271,6 +291,12 @@ export class PlaywrightLauncherRecorder {
    * Process file changes and notify UI
    */
   private async processFileChange(filePath: string, stats: any): Promise<void> {
+    // If stop button was clicked, skip file processing (already handled via CDP)
+    if (this.stopButtonClicked) {
+      console.log('[FileWatcher] Skipping file change - stop button already handled');
+      return;
+    }
+    
     try {
       const content = await fs.readFile(filePath, 'utf8');
       
@@ -282,11 +308,12 @@ export class PlaywrightLauncherRecorder {
       
       console.log(`Recording updated: ${actionCount} actions recorded${isRecordingStopped ? ' (RECORDING STOPPED)' : ''}`);
       
-      // If recording just stopped, capture screenshot immediately
+      // If recording just stopped via file change (not button), we can't capture screenshot
+      // because browser might already be closing
       let screenshotPath: string | undefined;
       if (isRecordingStopped && !this.lastRecordingData?.recordingStopped) {
-        console.log('Recording stopped detected - capturing success state screenshot...');
-        screenshotPath = await this.captureSuccessScreenshot(filePath);
+        console.log('Recording stopped detected via file change - browser may be closing');
+        // Don't attempt screenshot - browser likely gone
       }
       
       // Store recording data
@@ -442,9 +469,206 @@ export class PlaywrightLauncherRecorder {
   }
 
   /**
+   * Connect to Playwright browser via CDP
+   */
+  private async connectToCDPBrowser(sessionId: string): Promise<void> {
+    console.log('[CDP] Attempting to connect to Playwright browser...');
+    
+    // Try common CDP ports
+    const ports = [9222, 9223, 9224, 9225, 9333, 9335];
+    
+    for (const port of ports) {
+      try {
+        console.log(`[CDP] Trying port ${port}...`);
+        
+        // First check if port is accessible
+        const response = await fetch(`http://localhost:${port}/json/version`).catch(() => null);
+        if (!response || !response.ok) continue;
+        
+        console.log(`[CDP] Port ${port} is accessible, connecting...`);
+        
+        // Connect to the browser
+        this.cdpBrowser = await chromium.connectOverCDP(`http://localhost:${port}`);
+        console.log(`[CDP] Successfully connected to browser on port ${port}`);
+        
+        // Get the first context and page
+        const contexts = this.cdpBrowser.contexts();
+        if (contexts.length > 0) {
+          const pages = contexts[0].pages();
+          
+          // Find the main page (not DevTools)
+          this.cdpPage = pages.find(p => !p.url().startsWith('devtools://')) || pages[0];
+          
+          if (this.cdpPage) {
+            console.log('[CDP] Found target page:', this.cdpPage.url());
+            
+            // Inject stop button detection script
+            await this.injectStopButtonDetection(sessionId);
+            
+            return; // Success
+          }
+        }
+      } catch (error) {
+        console.log(`[CDP] Failed to connect on port ${port}:`, error.message);
+      }
+    }
+    
+    console.error('[CDP] Failed to connect to Playwright browser on any port');
+  }
+
+  /**
+   * Inject script to detect stop button click in Playwright toolbar
+   */
+  private async injectStopButtonDetection(sessionId: string): Promise<void> {
+    if (!this.cdpPage) return;
+    
+    console.log('[CDP] Injecting stop button detection script...');
+    
+    try {
+      // Listen for console messages that we'll trigger
+      this.cdpPage.on('console', async (msg) => {
+        if (msg.text().includes('PLAYWRIGHT_STOP_CLICKED')) {
+          console.log('[CDP] Stop button clicked detected!');
+          await this.handleStopButtonClick(sessionId);
+        }
+      });
+      
+      // Inject script to detect stop button click
+      await this.cdpPage.evaluate(() => {
+        console.log('[Injected] Setting up stop button detection...');
+        
+        // Function to check for stop button
+        const detectStopButton = () => {
+          // Look for Playwright's recording toolbar
+          // The stop button typically has aria-label="Stop" or title="Stop recording"
+          const stopButtons = document.querySelectorAll(
+            '[aria-label*="Stop"], [title*="Stop"], [title*="stop"], button:has(.codicon-stop-circle)'
+          );
+          
+          stopButtons.forEach(button => {
+            // Check if we've already attached listener
+            if (!(button as any).__stopListenerAttached) {
+              (button as any).__stopListenerAttached = true;
+              
+              button.addEventListener('click', () => {
+                console.log('PLAYWRIGHT_STOP_CLICKED');
+                
+                // Also try to capture immediately before Playwright processes the click
+                setTimeout(() => {
+                  console.log('Stop button click processed');
+                }, 10);
+              }, true); // Use capture phase to get event early
+              
+              console.log('[Injected] Attached listener to stop button');
+            }
+          });
+        };
+        
+        // Check immediately
+        detectStopButton();
+        
+        // Also monitor for new buttons (in case toolbar loads later)
+        const observer = new MutationObserver(() => {
+          detectStopButton();
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['aria-label', 'title']
+        });
+        
+        console.log('[Injected] Stop button detection active');
+      });
+      
+      console.log('[CDP] Stop button detection script injected successfully');
+    } catch (error) {
+      console.error('[CDP] Failed to inject stop button detection:', error);
+    }
+  }
+
+  /**
+   * Handle stop button click - capture screenshot immediately
+   */
+  private async handleStopButtonClick(sessionId: string): Promise<void> {
+    if (this.stopButtonClicked) {
+      console.log('[CDP] Stop button click already processed');
+      return;
+    }
+    
+    this.stopButtonClicked = true;
+    console.log('[CDP] Processing stop button click...');
+    
+    try {
+      // Capture screenshot immediately
+      if (this.cdpPage) {
+        this.screenshotPath = path.join(this.recordingsDir, `${sessionId}-success.png`);
+        
+        console.log('[CDP] Capturing screenshot...');
+        const screenshot = await this.cdpPage.screenshot({
+          path: this.screenshotPath,
+          fullPage: false, // Capture viewport for consistency
+          type: 'png'
+        });
+        
+        console.log('[CDP] Screenshot captured successfully:', this.screenshotPath);
+        
+        // Mark recording as complete
+        this.markRecordingComplete(sessionId);
+      }
+    } catch (error) {
+      console.error('[CDP] Failed to capture screenshot:', error);
+    }
+  }
+
+  /**
+   * Mark recording as complete and notify UI
+   */
+  private markRecordingComplete(sessionId: string): void {
+    console.log('[Recording] Marking as complete due to stop button click');
+    
+    // Read the current recording file if it exists
+    if (this.currentOutputPath && existsSync(this.currentOutputPath)) {
+      try {
+        const content = require('fs').readFileSync(this.currentOutputPath, 'utf-8');
+        const actionCount = this.countPlaywrightActions(content);
+        
+        // Store recording data
+        this.lastRecordingData = {
+          path: this.currentOutputPath,
+          actionCount,
+          timestamp: Date.now(),
+          specCode: content,
+          recordingStopped: true,
+          screenshotPath: this.screenshotPath,
+          stoppedByButton: true
+        };
+        
+        // Notify UI immediately - show "Begin Analysis" button
+        this.electronWindow.webContents.send('recording-complete', {
+          ...this.lastRecordingData,
+          sessionId
+        });
+        
+        console.log('[Recording] UI notified - Begin Analysis button should be available');
+      } catch (error) {
+        console.error('[Recording] Failed to read recording file:', error);
+      }
+    }
+  }
+
+  /**
    * Handle recorder closed
    */
   private async handleRecorderClosed(): Promise<void> {
+    // If stop button was clicked, we've already handled everything
+    if (this.stopButtonClicked) {
+      console.log('[Recorder] Process closed after stop button click - already handled');
+      this.cleanup();
+      return;
+    }
+    
     if (!this.currentOutputPath) {
       this.cleanup();
       // Notify UI that recorder exited without recording
@@ -453,7 +677,7 @@ export class PlaywrightLauncherRecorder {
     }
 
     try {
-      console.log('Checking for recording file:', this.currentOutputPath);
+      console.log('Checking for recording file (browser closed without stop button):', this.currentOutputPath);
       
       // Wait longer for file to be written by Playwright
       await new Promise(resolve => setTimeout(resolve, 3000));
@@ -605,6 +829,15 @@ export class PlaywrightLauncherRecorder {
       this.fileWatcher = null;
     }
     
+    // Close CDP browser connection
+    if (this.cdpBrowser) {
+      this.cdpBrowser.close().catch(err => {
+        console.error('[CDP] Error closing browser connection:', err);
+      });
+      this.cdpBrowser = null;
+      this.cdpPage = null;
+    }
+    
     if (this.codegenProcess && !this.codegenProcess.killed) {
       this.codegenProcess.kill();
     }
@@ -612,6 +845,8 @@ export class PlaywrightLauncherRecorder {
     this.codegenProcess = null;
     this.currentOutputPath = null;
     this.isRecordingActive = false;
+    this.stopButtonClicked = false;
+    this.screenshotPath = null;
   }
 
   /**

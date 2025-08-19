@@ -530,25 +530,38 @@ async function analyzeRecording() {
 
 // Handle completed recording data (kept for IPC listener compatibility)
 function handleRecordingComplete(session) {
-    console.log('Recording session complete:', session);
+    console.log('Recording session complete (stop button clicked):', session);
     
     // Store the recording session for analysis
     window.lastRecordingSession = session;
+    lastRecordingData = session;
     
-    // Keep analyze button always visible for testing
-    // const analyzeBtn = document.getElementById('analyze-btn');
-    // if (analyzeBtn) {
-    //     analyzeBtn.style.display = 'inline-block';
-    //     
-    //     // Remove any existing listeners and add a fresh one
-    //     const newAnalyzeBtn = analyzeBtn.cloneNode(true);
-    //     analyzeBtn.parentNode.replaceChild(newAnalyzeBtn, analyzeBtn);
-    //     
-    //     newAnalyzeBtn.addEventListener('click', async () => {
-    //         console.log('Analyze button clicked (from recording complete)');
-    //         await analyzeLastRecording();
-    //     });
-    // }
+    // Stop monitoring since recording is complete
+    if (recorderMonitorInterval) {
+        clearInterval(recorderMonitorInterval);
+        recorderMonitorInterval = null;
+    }
+    isMonitoringRecorder = false;
+    
+    // Show Begin Analysis button immediately
+    const recordingControls = document.querySelector('.recording-controls');
+    if (recordingControls) {
+        console.log('Showing Begin Analysis button after stop button click');
+        recordingControls.innerHTML = `
+            <button class="begin-analysis-btn" id="begin-analysis-btn" title="Analyze Recording">
+                <span class="analysis-text">Begin Analysis</span>
+            </button>
+        `;
+        
+        // Add event listener to begin analysis button
+        const beginAnalysisBtn = document.getElementById('begin-analysis-btn');
+        if (beginAnalysisBtn) {
+            beginAnalysisBtn.addEventListener('click', async () => {
+                console.log('Begin analysis clicked');
+                await analyzeRecording();
+            });
+        }
+    }
     
     // Show recording summary
     showRecordingSummary(session);
