@@ -11,6 +11,78 @@ class VarsPanelManager {
         this.initializeElements();
         this.setupEventListeners();
         this.setupIPCListeners();
+        this.setupMutationObserver();
+    }
+    
+    setupMutationObserver() {
+        // Watch for changes to flow-variables-content
+        const flowContent = document.getElementById('flow-variables-content');
+        if (flowContent) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    console.log('Mutation detected in flow-variables-content:', mutation.type);
+                    if (mutation.type === 'childList') {
+                        console.log('Nodes removed:', mutation.removedNodes.length);
+                        console.log('Nodes added:', mutation.addedNodes.length);
+                        mutation.removedNodes.forEach(node => {
+                            if (node.className && node.className.includes('flow-actions')) {
+                                console.error('ERROR: flow-actions div was removed!');
+                                console.trace();
+                            }
+                        });
+                    }
+                });
+                
+                // After mutations, check what's in the content
+                setTimeout(() => {
+                    const flowActions = document.querySelector('.flow-actions');
+                    const runBtn = document.getElementById('run-magnitude-btn');
+                    console.log('After mutation - flow-actions exists?', !!flowActions);
+                    console.log('After mutation - run button exists?', !!runBtn);
+                    
+                    if (runBtn) {
+                        const rect = runBtn.getBoundingClientRect();
+                        const styles = window.getComputedStyle(runBtn);
+                        console.log('Run button position:', JSON.stringify({
+                            top: rect.top,
+                            left: rect.left,
+                            width: rect.width,
+                            height: rect.height,
+                            visible: rect.width > 0 && rect.height > 0
+                        }));
+                        console.log('Run button styles:', JSON.stringify({
+                            display: styles.display,
+                            visibility: styles.visibility,
+                            position: styles.position,
+                            zIndex: styles.zIndex
+                        }));
+                        
+                        // Check parent visibility
+                        const parent = runBtn.parentElement;
+                        const parentRect = parent.getBoundingClientRect();
+                        console.log('Parent (flow-actions) position:', JSON.stringify({
+                            top: parentRect.top,
+                            left: parentRect.left,
+                            width: parentRect.width,
+                            height: parentRect.height
+                        }));
+                    }
+                    
+                    if (!flowActions) {
+                        console.log('Current flow-variables-content children:', flowContent.children.length);
+                        for (let i = 0; i < flowContent.children.length; i++) {
+                            console.log(`Child ${i}:`, flowContent.children[i].id || flowContent.children[i].className);
+                        }
+                    }
+                }, 100);
+            });
+            
+            observer.observe(flowContent, {
+                childList: true,
+                subtree: true,
+                attributes: true
+            });
+        }
     }
 
     initializeElements() {
@@ -21,6 +93,38 @@ class VarsPanelManager {
         this.actionsContainer = document.getElementById('actionsContainer');
         this.statusContainer = document.getElementById('statusContainer');
         this.runFlowBtn = document.getElementById('run-magnitude-btn'); // The actual Run button in tabbar.html
+        
+        // Debug: Check if the button exists
+        console.log('Run button element:', this.runFlowBtn);
+        console.log('Run button in DOM:', document.getElementById('run-magnitude-btn'));
+        console.log('Flow actions div:', document.querySelector('.flow-actions'));
+        const flowContent = document.getElementById('flow-variables-content');
+        if (flowContent) {
+            console.log('Flow content HTML:', flowContent.innerHTML);
+        }
+        
+        // Check button visibility
+        const runBtn = document.getElementById('run-magnitude-btn');
+        if (runBtn) {
+            const computedStyle = window.getComputedStyle(runBtn);
+            console.log('Run button display:', computedStyle.display);
+            console.log('Run button visibility:', computedStyle.visibility);
+            console.log('Run button opacity:', computedStyle.opacity);
+            console.log('Run button parent:', runBtn.parentElement);
+            console.log('Run button parent display:', window.getComputedStyle(runBtn.parentElement).display);
+        }
+        
+        // Check section collapsed state
+        const sectionContent = document.getElementById('flow-variables-content');
+        if (sectionContent) {
+            console.log('Section content classes:', sectionContent.className);
+            console.log('Section content collapsed?:', sectionContent.classList.contains('collapsed'));
+            const computedStyle = window.getComputedStyle(sectionContent);
+            console.log('Section content max-height:', computedStyle.maxHeight);
+            console.log('Section content height:', computedStyle.height);
+            console.log('Section content overflow:', computedStyle.overflow);
+        }
+        
         this.saveFlowBtn = document.getElementById('save-flow-btn');
         this.launchRecorderBtn = document.getElementById('launch-recorder-btn');
         this.runMagnitudeBtn = document.getElementById('run-magnitude-btn');
