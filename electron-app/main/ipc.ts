@@ -982,6 +982,30 @@ export function registerIpcHandlers(): void {
     }
   });
   
+  // Save Intent Spec to file
+  ipcMain.handle('save-intent-spec', async (event: IpcMainInvokeEvent, intentSpec: any, filename: string) => {
+    try {
+      const fs = await import('fs').then(m => m.promises);
+      const path = await import('path');
+      const recordingsDir = path.join(process.cwd(), 'recordings');
+      
+      // Ensure recordings directory exists
+      await fs.mkdir(recordingsDir, { recursive: true });
+      
+      const filePath = path.join(recordingsDir, filename);
+      await fs.writeFile(filePath, JSON.stringify(intentSpec, null, 2), 'utf-8');
+      
+      console.log('Intent Spec saved to:', filePath);
+      return { success: true, path: filePath };
+    } catch (error) {
+      console.error('Failed to save Intent Spec:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to save Intent Spec' 
+      };
+    }
+  });
+  
   // Get recorder status
   ipcMain.handle('get-recorder-status', async (event: IpcMainInvokeEvent) => {
     try {

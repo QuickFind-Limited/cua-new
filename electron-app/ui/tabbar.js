@@ -954,6 +954,19 @@ async function analyzeLastRecording() {
                 console.log('Analysis successful:', result.data);
                 console.log('Intent Spec:', JSON.stringify(result.data.intentSpec, null, 2));
                 
+                // Save Intent Spec to file for debugging and reuse
+                if (result.data.intentSpec && window.electronAPI && window.electronAPI.saveIntentSpec) {
+                    const timestamp = Date.now();
+                    const filename = `intent-spec-${timestamp}.json`;
+                    window.electronAPI.saveIntentSpec(result.data.intentSpec, filename)
+                        .then(saveResult => {
+                            console.log('Intent Spec saved to:', saveResult.path);
+                        })
+                        .catch(err => {
+                            console.error('Failed to save Intent Spec:', err);
+                        });
+                }
+                
                 // Keep analyze button visible for testing
                 // if (analyzeBtn) {
                 //     analyzeBtn.style.display = 'none';

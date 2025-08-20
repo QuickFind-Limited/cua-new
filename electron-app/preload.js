@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   launchRecorder: (startUrl) => ipcRenderer.invoke('launch-recorder', startUrl),
   getRecorderStatus: () => ipcRenderer.invoke('get-recorder-status'),
   getLastRecording: () => ipcRenderer.invoke('get-last-recording'),
+  saveIntentSpec: (intentSpec, filename) => ipcRenderer.invoke('save-intent-spec', intentSpec, filename),
   runMagnitudeWithWebView: (flowSpec, variables) => ipcRenderer.invoke('run-magnitude-webview', { flowSpec, variables }),
 
   // Flow events

@@ -1,5 +1,6 @@
 import { WebContentsView } from 'electron';
 import { EnhancedMagnitudeController } from './enhanced-magnitude-controller';
+import { executionLogger } from './execution-logger';
 
 /**
  * Enhanced Flow Executor
@@ -64,6 +65,10 @@ export class EnhancedFlowExecutor {
 
     console.log('🚀 Starting enhanced flow execution:', intentSpec.name);
     console.log('Intent spec:', JSON.stringify(intentSpec, null, 2));
+    
+    // Start logging session
+    await executionLogger.startSession(intentSpec.name || 'unnamed-flow');
+    await executionLogger.log('INFO', 'EXECUTION', 'Intent Spec received', intentSpec);
 
     try {
       // Connect to WebView
@@ -121,8 +126,14 @@ export class EnhancedFlowExecutor {
         });
 
         try {
+          // Log step start
+          await executionLogger.logStep(i, step.name || `Step ${i + 1}`, step.snippet || step.ai_instruction, { starting: true });
+          
           // Execute with enhanced controller
           const result = await this.controller.executeStepEnhanced(step, variables);
+          
+          // Log step result
+          await executionLogger.logStep(i, step.name || `Step ${i + 1}`, step.snippet || step.ai_instruction, result);
 
           if (result.success) {
             if (result.skipped) {

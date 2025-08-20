@@ -863,14 +863,27 @@ class VarsPanelManager {
 
     convertIntentSpecToFlow(intentSpec) {
         // Convert Intent Spec format to flow format for compatibility
-        return {
+        const flow = {
             name: intentSpec.name || 'Recorded Intent',
             description: intentSpec.description || 'Generated from recording',
             steps: intentSpec.steps || [],
             params: intentSpec.params || intentSpec.variables || [],  // Intent Spec uses 'params', not 'variables'
-            startUrl: intentSpec.url || intentSpec.startUrl,  // Intent Spec uses 'url'
+            url: intentSpec.url || intentSpec.startUrl,  // Include url field for navigation
+            startUrl: intentSpec.url || intentSpec.startUrl,  // Keep startUrl for compatibility
             successCheck: intentSpec.successCheck
         };
+        
+        // If there's a goto in the first step, extract the URL
+        if (flow.steps.length > 0 && flow.steps[0].snippet) {
+            const gotoMatch = flow.steps[0].snippet.match(/page\.goto\(['"]([^'"]+)['"]\)/);
+            if (gotoMatch && !flow.url) {
+                flow.url = gotoMatch[1];
+                console.log('Extracted URL from first step:', flow.url);
+            }
+        }
+        
+        console.log('Converted flow:', flow);
+        return flow;
     }
 
     closePanel() {
