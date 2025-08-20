@@ -253,18 +253,12 @@ class VarsPanelManager {
     }
 
     renderFlowInfo(flowData) {
-        const flowInfo = document.createElement('div');
-        flowInfo.className = 'flow-info fade-in';
-        
-        // Simplified flow info - just show name
-        flowInfo.innerHTML = `
-            <div class="flow-name" style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+        // Just show the flow name directly without wrapper
+        this.flowInfoContainer.innerHTML = `
+            <div class="flow-name" style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">
                 ${this.escapeHtml(flowData.name || 'Unnamed Flow')}
             </div>
         `;
-        
-        this.flowInfoContainer.innerHTML = '';
-        this.flowInfoContainer.appendChild(flowInfo);
     }
 
     renderVariablesForm(flowData) {
@@ -507,8 +501,8 @@ class VarsPanelManager {
         this.validateForm();
         this.clearStatus();
         
-        // Show execution start status
-        this.showStatus('Starting Magnitude execution...', 'info');
+        // Don't show execution start status - keep UI clean
+        // this.showStatus('Starting Magnitude execution...', 'info');
         
         // Execute the Intent Spec with Magnitude
         if (window.electronAPI && window.electronAPI.executeFlow) {
@@ -621,8 +615,8 @@ class VarsPanelManager {
         this.validateForm();
         this.clearStatus();
         
-        // Show execution start status
-        this.showStatus('Starting Magnitude execution with WebView control...', 'info');
+        // Don't show execution start status - keep UI clean
+        // this.showStatus('Starting Magnitude execution with WebView control...', 'info');
         
         // Execute the Intent Spec with Magnitude using WebView
         if (window.electronAPI && window.electronAPI.runMagnitudeWithWebView) {
@@ -680,16 +674,16 @@ class VarsPanelManager {
     }
 
     handleFlowExecutionProgress(progress) {
-        this.showStatus(`Step ${progress.currentStep}/${progress.totalSteps}: ${progress.description}`, 'info');
+        // Disabled - don't show execution progress under variables
+        // this.showStatus(`Step ${progress.currentStep}/${progress.totalSteps}: ${progress.description}`, 'info');
     }
 
     handleFlowExecutionResult(result) {
         this.isExecuting = false;
         this.validateForm();
         
-        if (result.success) {
-            this.showStatus(result.message || 'Flow completed successfully!', 'success');
-        } else {
+        // Only show errors, not success messages - keep UI clean
+        if (!result.success) {
             this.showStatus(result.error || 'Flow execution failed', 'error');
         }
         

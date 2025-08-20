@@ -85,9 +85,35 @@ export class EnhancedMagnitudeController {
         const pages = context.pages();
         
         if (pages.length > 0) {
-          // Use existing page
-          this.playwrightPage = pages[0];
-          console.log('Using existing page from context');
+          // CRITICAL: Filter out Electron UI pages and only use WebView pages
+          // Electron UI pages typically have chrome-extension:// or devtools:// URLs
+          let webViewPage = null;
+          
+          for (const page of pages) {
+            const url = page.url();
+            console.log(`Found page with URL: ${url}`);
+            
+            // Skip Electron chrome/UI pages
+            if (url.startsWith('chrome-extension://') || 
+                url.startsWith('devtools://') ||
+                url.startsWith('chrome://') ||
+                url.includes('localhost:') && url.includes('tabbar.html')) {
+              console.log('Skipping Electron UI page');
+              continue;
+            }
+            
+            // This should be a WebView page (actual web content)
+            webViewPage = page;
+            console.log('Found WebView page, using it for automation');
+            break;
+          }
+          
+          if (webViewPage) {
+            this.playwrightPage = webViewPage;
+          } else {
+            console.error('No WebView page found, only Electron UI pages detected');
+            return false;
+          }
         } else {
           // Create new page
           this.playwrightPage = await context.newPage();
@@ -102,6 +128,9 @@ export class EnhancedMagnitudeController {
         console.error('Could not establish page connection');
         return false;
       }
+      
+      // Don't clear cookies/session - it affects the WebView's initial state
+      // The enhanced-flow-executor will navigate to the correct URL anyway
       
       this.isConnected = true;
       console.log('Successfully connected Playwright to WebContentsView');

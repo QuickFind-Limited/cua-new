@@ -136,6 +136,9 @@ export function registerIpcHandlers(): void {
       };
       
       if (mainWindow) {
+        // Add 2-second delay for parsing step visibility
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         // Notify that parsing is complete and AI analysis is starting
         mainWindow.webContents.send('analysis-progress', { 
           step: 'parsing', 
@@ -157,11 +160,15 @@ export function registerIpcHandlers(): void {
 
       // Send progress for remaining steps
       if (mainWindow) {
+        // AI analysis is already done, just update UI
         mainWindow.webContents.send('analysis-progress', { 
           step: 'analyzing', 
           status: 'completed', 
           message: 'AI analysis complete' 
         });
+        
+        // Add 2-second delay before variables step
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         mainWindow.webContents.send('analysis-progress', { 
           step: 'variables', 
@@ -182,6 +189,9 @@ export function registerIpcHandlers(): void {
       
       // Send final progress updates
       if (mainWindow) {
+        // Add 2-second delay for variables completion
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         const varCount = fullIntentSpec.params ? fullIntentSpec.params.length : 0;
         mainWindow.webContents.send('analysis-progress', { 
           step: 'variables', 
@@ -195,7 +205,7 @@ export function registerIpcHandlers(): void {
           message: 'Generating Intent Spec...' 
         });
         
-        // Small delay for visual feedback
+        // 2-second delay for generating step
         setTimeout(() => {
           mainWindow.webContents.send('analysis-progress', { 
             step: 'generating', 
@@ -209,14 +219,15 @@ export function registerIpcHandlers(): void {
             message: 'Validating output...' 
           });
           
+          // 2-second delay for validation step
           setTimeout(() => {
             mainWindow.webContents.send('analysis-progress', { 
               step: 'validating', 
               status: 'completed', 
               message: 'Output validated' 
             });
-          }, 100);
-        }, 100);
+          }, 2000);
+        }, 2000);
       }
       
       return processedResult;

@@ -467,12 +467,12 @@ function toggleSection(sectionName) {
       // Expand
       content.classList.remove('collapsed');
       chevron.classList.remove('collapsed');
-      chevron.textContent = '▼';
+      // Keep the same character, let CSS handle rotation
     } else {
       // Collapse
       content.classList.add('collapsed');
       chevron.classList.add('collapsed');
-      chevron.textContent = '▶';
+      // Keep the same character, let CSS handle rotation
     }
   }
 }

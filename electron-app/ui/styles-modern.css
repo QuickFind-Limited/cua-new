@@ -561,11 +561,11 @@ html, body {
   overflow: hidden;
 }
 
-/* No border for analysis progress section */
+/* Consistent styling for both sections */
 .collapsible-section.no-border {
   border: none;
   background: transparent;
-  margin-top: var(--space-sm); /* Small top margin for first section */
+  margin-bottom: var(--space-md); /* Consistent spacing between sections */
 }
 
 .section-header {
@@ -594,8 +594,11 @@ html, body {
 }
 
 .section-chevron {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
+  height: 20px;
   font-size: 12px;
   transition: transform var(--duration-quick) ease;
   color: var(--text-secondary);
@@ -652,10 +655,8 @@ html, body {
 }
 
 #flow-info {
-  margin-bottom: var(--space-md);
-  padding: var(--space-md);
-  background: var(--bg-tertiary);
-  border-radius: 4px;
+  /* Removed background to show only text */
+  margin-bottom: var(--space-sm);
 }
 
 #variables-form {

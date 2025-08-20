@@ -416,6 +416,37 @@ export class PreFlightAnalyzer {
     const url = page.url();
     const title = await page.title();
     
+    // Generic logout/sign-out detection (works for any site)
+    const isOnLogoutPage = url.includes('logout') || url.includes('signout') || 
+                          url.includes('sign-out') || url.includes('log-out') ||
+                          title.toLowerCase().includes('logout') || 
+                          title.toLowerCase().includes('signed out');
+    
+    if (isOnLogoutPage) {
+      console.log('📋 Detected logout/signout page - user is NOT logged in');
+      // If we're on logout page and looking for "logged in" state, return false
+      if (targetState.toLowerCase().includes('logged') || 
+          targetState.toLowerCase().includes('authenticated') ||
+          targetState.toLowerCase().includes('dashboard')) {
+        return { matches: false, confidence: 0.95 };
+      }
+    }
+    
+    // Generic login page detection
+    const isOnLoginPage = url.includes('login') || url.includes('signin') || 
+                         url.includes('sign-in') || url.includes('auth') ||
+                         title.toLowerCase().includes('login') || 
+                         title.toLowerCase().includes('sign in');
+    
+    if (isOnLoginPage) {
+      console.log('📋 Detected login/signin page - user needs to authenticate');
+      // If we're on login page and looking for "logged in" state, return false
+      if (targetState.toLowerCase().includes('logged') || 
+          targetState.toLowerCase().includes('authenticated')) {
+        return { matches: false, confidence: 0.9 };
+      }
+    }
+    
     // Priority 1: Check step-specific skip conditions from Intent Spec
     if (step?.skipConditions) {
       for (const condition of step.skipConditions) {

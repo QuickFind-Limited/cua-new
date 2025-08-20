@@ -188,11 +188,7 @@ body {
   animation: pulse 1.5s infinite;
 }
 
-.launcher-btn.monitoring .launcher-text::after {
-  content: ' (Monitoring...)';
-  font-size: 12px;
-  opacity: 0.9;
-}
+/* Removed ::after content to prevent duplicate text */
 
 .launcher-icon {
   font-size: 16px;
@@ -407,11 +403,8 @@ body {
 
 /* Flow information display */
 .flow-info {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 16px;
-  margin-bottom: 20px;
+  /* Removed background and border to show only text */
+  margin-bottom: 12px;
 }
 
 .flow-name {
@@ -1452,7 +1445,7 @@ body {
 }
 
 .progress-item.completed .progress-icon svg {
-  stroke: #22c55e;
+  stroke: #007acc;
 }
 
 .progress-label {
