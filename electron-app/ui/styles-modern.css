@@ -605,7 +605,7 @@ html, body {
 }
 
 .section-chevron.collapsed {
-  transform: rotate(-90deg);
+  transform: rotate(90deg);
 }
 
 .section-title {
@@ -644,6 +644,13 @@ html, body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  transition: max-height var(--duration-moderate) ease;
+}
+
+#flow-variables-content.collapsed {
+  max-height: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 /* Ensure flow-actions stays visible */
