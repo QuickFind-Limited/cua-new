@@ -23,6 +23,8 @@ export interface PreFlightAnalysis {
     selector: string;
     alternativeSelectors?: string[];
     attributes?: Record<string, string>;
+    isAmbiguous?: boolean;
+    matchCount?: number;
   } | null;
   skipRecommendation: {
     shouldSkip: boolean;
@@ -164,9 +166,25 @@ export class PreFlightAnalyzer {
       const selector = this.extractSelectorFromSnippet(snippet);
       if (!selector) return null;
 
-      // Check if element exists
-      const element = await page.locator(selector).first();
-      const exists = await element.count() > 0;
+      // Check if element exists - handle different selector types
+      let element;
+      let exists = false;
+      
+      try {
+        // Check if this is a Playwright selector method (getByRole, getByLabel, etc.)
+        if (snippet.includes('getByRole') || snippet.includes('getByLabel') || snippet.includes('getByText')) {
+          // This is a Playwright selector, try to reconstruct it
+          element = this.reconstructPlaywrightSelector(page, snippet);
+          exists = element ? await element.count() > 0 : false;
+        } else {
+          // Regular CSS selector
+          element = await page.locator(selector).first();
+          exists = await element.count() > 0;
+        }
+      } catch (error) {
+        console.log('Error checking element existence:', error.message);
+        exists = false;
+      }
       
       if (!exists) {
         // Try to find alternative selectors using AI
@@ -180,19 +198,76 @@ export class PreFlightAnalyzer {
         };
       }
 
-      // Get element properties
-      const [visible, enabled, attributes] = await Promise.all([
-        element.isVisible(),
-        element.isEnabled(),
-        element.evaluate(el => {
+      // Check for ambiguity
+      const count = await element.count();
+      if (count > 1) {
+        console.warn(`⚠️ Selector ambiguity detected: ${count} elements match`);
+        
+        // Generate disambiguation strategies
+        const disambiguationStrategies = [];
+        
+        // Strategy 1: Use index
+        disambiguationStrategies.push(`${selector} >> nth=${0}`);
+        
+        // Strategy 2: Try to find unique parent
+        try {
+          const firstEl = element.first();
+          const parentText = await firstEl.evaluate(el => el.parentElement?.className || '');
+          if (parentText) {
+            disambiguationStrategies.push(`.${parentText.split(' ')[0]} ${selector}`);
+          }
+        } catch {}
+        
+        // Strategy 3: Use visible/enabled state
+        for (let i = 0; i < Math.min(count, 3); i++) {
+          const el = element.nth(i);
+          const isVis = await el.isVisible().catch(() => false);
+          if (isVis) {
+            disambiguationStrategies.push(`${selector}:visible >> nth=${i}`);
+            break;
+          }
+        }
+        
+        return {
+          exists: true,
+          visible: false,
+          enabled: false,
+          selector,
+          isAmbiguous: true,
+          matchCount: count,
+          alternativeSelectors: disambiguationStrategies
+        };
+      }
+
+      // Get element properties with error handling
+      let visible = false;
+      let enabled = false;
+      let attributes: Record<string, string> = {};
+      
+      try {
+        visible = await element.isVisible();
+      } catch (error) {
+        console.log('Error checking element visibility:', error.message);
+      }
+      
+      try {
+        enabled = await element.isEnabled();
+      } catch (error) {
+        console.log('Error checking element enabled state:', error.message);
+      }
+      
+      try {
+        attributes = await element.evaluate(el => {
           const attrs: Record<string, string> = {};
           for (let i = 0; i < el.attributes.length; i++) {
             const attr = el.attributes[i];
             attrs[attr.name] = attr.value;
           }
           return attrs;
-        })
-      ]);
+        });
+      } catch (error) {
+        console.log('Error getting element attributes:', error.message);
+      }
 
       return {
         exists,
@@ -203,6 +278,54 @@ export class PreFlightAnalyzer {
       };
     } catch (error) {
       console.error('Error extracting target element:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Reconstruct Playwright selector from snippet
+   */
+  private reconstructPlaywrightSelector(page: Page, snippet: string): any | null {
+    try {
+      // Handle getByRole patterns
+      if (snippet.includes('getByRole')) {
+        // Extract role and options
+        const roleMatch = snippet.match(/getByRole\(\s*['"]([^'"]+)['"](?:\s*,\s*({[^}]+}))?\s*\)/);
+        if (roleMatch) {
+          const role = roleMatch[1];
+          const optionsStr = roleMatch[2];
+          
+          if (optionsStr) {
+            // Parse options like { name: 'Email address or mobile number' }
+            const nameMatch = optionsStr.match(/name:\s*['"]([^'"]+)['"]/);
+            if (nameMatch) {
+              return page.getByRole(role as any, { name: nameMatch[1] });
+            }
+          }
+          
+          return page.getByRole(role as any);
+        }
+      }
+      
+      // Handle getByLabel patterns
+      if (snippet.includes('getByLabel')) {
+        const labelMatch = snippet.match(/getByLabel\(['"]([^'"]+)['"]\)/);
+        if (labelMatch) {
+          return page.getByLabel(labelMatch[1]);
+        }
+      }
+      
+      // Handle getByText patterns
+      if (snippet.includes('getByText')) {
+        const textMatch = snippet.match(/getByText\(['"]([^'"]+)['"]\)/);
+        if (textMatch) {
+          return page.getByText(textMatch[1]);
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.log('Error reconstructing Playwright selector:', error.message);
       return null;
     }
   }

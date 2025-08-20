@@ -87,6 +87,7 @@ chrome-profile/
 playwright-profile/
 **/playwright-profile/
 **/browser-profile/
+**/chrome-automation-profile/
 nul
 electron-app/recordings/*.spec.ts
 electron-app/recordings/*.png

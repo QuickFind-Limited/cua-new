@@ -44,6 +44,71 @@ export class PlaywrightLauncherRecorder {
   }
   
   /**
+   * Minimize Playwright Inspector window using Windows API
+   */
+  private minimizeInspectorWindow(): void {
+    try {
+      const { exec } = require('child_process');
+      
+      // Use PowerShell to find and minimize Playwright Inspector windows
+      const powershellScript = `
+        Add-Type -TypeDefinition @"
+          using System;
+          using System.Runtime.InteropServices;
+          public class Win32 {
+            [DllImport("user32.dll")]
+            public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+            [DllImport("user32.dll")]
+            public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+            [DllImport("user32.dll")]
+            public static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+            [DllImport("user32.dll")]
+            public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder strText, int maxCount);
+            [DllImport("user32.dll")]
+            public static extern int GetWindowTextLength(IntPtr hWnd);
+            [DllImport("user32.dll")]
+            public static extern bool IsWindowVisible(IntPtr hWnd);
+            public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+          }
+"@
+        
+        $SW_MINIMIZE = 6
+        
+        # Function to minimize window if title contains "Playwright"
+        $callback = {
+          param($hWnd, $lParam)
+          if ([Win32]::IsWindowVisible($hWnd)) {
+            $length = [Win32]::GetWindowTextLength($hWnd)
+            if ($length -gt 0) {
+              $builder = New-Object System.Text.StringBuilder($length + 1)
+              [Win32]::GetWindowText($hWnd, $builder, $builder.Capacity) | Out-Null
+              $windowTitle = $builder.ToString()
+              if ($windowTitle -match "Playwright|Inspector") {
+                Write-Host "Minimizing window: $windowTitle"
+                [Win32]::ShowWindow($hWnd, $SW_MINIMIZE) | Out-Null
+              }
+            }
+          }
+          return $true
+        }
+        
+        [Win32]::EnumWindows($callback, [IntPtr]::Zero)
+      `;
+      
+      exec(`powershell -Command "${powershellScript}"`, (error, stdout, stderr) => {
+        if (error) {
+          console.log('Note: Could not minimize inspector window automatically:', error.message);
+        } else {
+          console.log('✅ Inspector window minimized');
+        }
+      });
+      
+    } catch (error) {
+      console.log('Note: Inspector window minimization not available on this platform');
+    }
+  }
+
+  /**
    * Find Playwright executable
    */
   private findPlaywrightPath(): string | null {
@@ -107,26 +172,12 @@ export class PlaywrightLauncherRecorder {
       const sessionId = `recording-${Date.now()}`;
       this.currentOutputPath = path.join(this.recordingsDir, `${sessionId}.spec.ts`);
       
-      // Ensure user data directory exists for recorder
-      const userDataDir = path.join(this.recordingsDir, 'browser-profile');
-      if (!existsSync(userDataDir)) {
-        await fs.mkdir(userDataDir, { recursive: true });
-        
-        // Create First Run file to suppress Chrome welcome
-        const firstRunFile = path.join(userDataDir, 'First Run');
-        await fs.writeFile(firstRunFile, '');
-        console.log('Created browser profile for recorder');
-      }
-      
-      // Build codegen command with user data directory
-      // Keep the output flag - we'll monitor for the file OR capture from inspector
+      // Build codegen command - back to working version
       const args = [
         'codegen',
         '--target=playwright-test',
         `--output=${this.currentOutputPath}`,
-        '--browser=chromium',
-        `--user-data-dir=${userDataDir}`,
-        '--no-default-browser-check'
+        '--browser=chromium'
       ];
       
       // Add URL if provided
@@ -136,12 +187,14 @@ export class PlaywrightLauncherRecorder {
 
       console.log('Launching Playwright recorder...');
       console.log('Output will be saved to:', this.currentOutputPath);
+      console.log('📌 NOTE: If Chrome shows promotional popup, click "Not interested" to proceed');
+      console.log('💡 TIP: Inspector window will be minimized automatically for a cleaner experience.');
       
-      // Create environment - keep inspector enabled so user can save recording
+      // Create environment - keep inspector enabled for full functionality
       const env = { 
         ...process.env
-        // Note: We need the inspector window to save recordings
-        // PW_CODEGEN_NO_INSPECTOR: 'true'  // Commented out - inspector needed
+        // Note: We need the inspector window for saving recordings - will minimize it programmatically
+        // PW_CODEGEN_NO_INSPECTOR: 'true'  // Commented out - we want the inspector
       };
       
       // Launch playwright codegen with environment variable
@@ -171,6 +224,13 @@ export class PlaywrightLauncherRecorder {
       
       // Watch for file changes
       this.startFileWatcher();
+
+      // Minimize inspector window after a short delay (Windows only)
+      if (process.platform === 'win32') {
+        setTimeout(() => {
+          this.minimizeInspectorWindow();
+        }, 3000); // Wait 3 seconds for windows to fully open
+      }
 
       // Handle process exit
       this.codegenProcess.on('exit', (code) => {

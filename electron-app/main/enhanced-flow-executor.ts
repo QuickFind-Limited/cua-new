@@ -74,6 +74,36 @@ export class EnhancedFlowExecutor {
       // Reset statistics for this flow
       this.controller.resetStats();
 
+      // Navigate to initial URL if specified in intent spec
+      console.log('Checking for initial URL in intent spec...');
+      console.log('Intent spec URL:', intentSpec.url);
+      
+      if (intentSpec.url) {
+        console.log(`📍 Navigating to initial URL: ${intentSpec.url}`);
+        try {
+          const page = await this.controller.getPlaywrightPage();
+          console.log('Got Playwright page:', !!page);
+          
+          if (page) {
+            console.log('Attempting navigation to:', intentSpec.url);
+            await page.goto(intentSpec.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            console.log('✅ Successfully navigated to initial URL');
+            
+            // Wait a bit for the page to stabilize
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log('Page URL after navigation:', await page.url());
+          } else {
+            console.warn('⚠️ Could not get Playwright page for initial navigation');
+          }
+        } catch (error) {
+          console.error('❌ Failed to navigate to initial URL:', error.message);
+          console.error('Full error:', error);
+          // Continue with execution anyway - first step might handle navigation
+        }
+      } else {
+        console.log('No initial URL specified in intent spec');
+      }
+
       // Execute each step with enhanced logic
       const steps = intentSpec.steps || [];
       for (let i = 0; i < steps.length; i++) {
