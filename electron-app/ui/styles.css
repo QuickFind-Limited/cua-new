@@ -311,12 +311,24 @@ body {
 }
 
 .run-magnitude-btn {
-  background: #9C27B0;
+  background: #007acc;
   color: white;
 }
 
-.run-magnitude-btn:hover {
-  background: #7B1FA2;
+.run-magnitude-btn:hover:not(:disabled) {
+  background: #005a9e;
+}
+
+.run-magnitude-btn:disabled {
+  background: #6c757d;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.run-magnitude-btn.executing {
+  background: #6c757d;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .run-flow-btn {

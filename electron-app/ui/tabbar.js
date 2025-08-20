@@ -344,7 +344,7 @@ async function launchPlaywrightRecorder() {
                 
                 // Update button to show monitoring state
                 launcherBtn.classList.add('monitoring');
-                launcherBtn.querySelector('.launcher-text').textContent = 'Recording';
+                launcherBtn.querySelector('.launcher-text').textContent = 'Monitoring Recording';
                 
                 // Start monitoring for recording completion
                 startRecorderMonitoring();
@@ -825,7 +825,7 @@ class AnalysisSidebar {
                 const statusElement = element.querySelector('.progress-status');
                 if (statusElement) {
                     statusElement.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#007acc" stroke-width="3">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>`;
                 }

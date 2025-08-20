@@ -256,13 +256,10 @@ class VarsPanelManager {
         const flowInfo = document.createElement('div');
         flowInfo.className = 'flow-info fade-in';
         
-        // Simplified flow info - just show name and step count
+        // Simplified flow info - just show name
         flowInfo.innerHTML = `
-            <div class="flow-name" style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">
+            <div class="flow-name" style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">
                 ${this.escapeHtml(flowData.name || 'Unnamed Flow')}
-            </div>
-            <div class="flow-steps mb-8" style="font-size: 12px; color: var(--text-secondary);">
-                ${flowData.steps ? flowData.steps.length : 0} automation steps
             </div>
         `;
         
@@ -314,21 +311,37 @@ class VarsPanelManager {
         const placeholder = this.getPlaceholderForParam(param);
         const description = this.getDescriptionForParam(param);
         
+        const isPasswordField = inputType === 'password';
+        
         inputGroup.innerHTML = `
             <label class="variable-label" for="var-${param}">
                 ${param}
                 ${this.isRequiredParam(param) ? '<span style="color: var(--accent-red);">*</span>' : ''}
             </label>
             ${description ? `<div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">${description}</div>` : ''}
-            <input 
-                type="${inputType}" 
-                class="variable-input" 
-                id="var-${param}" 
-                name="${param}"
-                placeholder="${placeholder}"
-                ${this.isRequiredParam(param) ? 'required' : ''}
-                data-param="${param}"
-            >
+            <div style="position: relative;">
+                <input 
+                    type="${inputType}" 
+                    class="variable-input ${isPasswordField ? 'password-input' : ''}" 
+                    id="var-${param}" 
+                    name="${param}"
+                    placeholder="${placeholder}"
+                    ${this.isRequiredParam(param) ? 'required' : ''}
+                    data-param="${param}"
+                    style="${isPasswordField ? 'padding-right: 35px;' : ''}"
+                >
+                ${isPasswordField ? `
+                    <button 
+                        type="button" 
+                        class="password-toggle" 
+                        data-target="var-${param}"
+                        style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; padding: 4px; color: var(--text-muted);"
+                        title="Show password"
+                    >
+                        👁
+                    </button>
+                ` : ''}
+            </div>
         `;
         
         // Add input event listener
@@ -337,6 +350,25 @@ class VarsPanelManager {
             this.variables[param] = e.target.value;
             this.validateForm();
         });
+        
+        // Add password toggle functionality
+        const passwordToggle = inputGroup.querySelector('.password-toggle');
+        if (passwordToggle) {
+            passwordToggle.addEventListener('click', (e) => {
+                const targetInput = document.getElementById(passwordToggle.dataset.target);
+                if (targetInput) {
+                    if (targetInput.type === 'password') {
+                        targetInput.type = 'text';
+                        passwordToggle.textContent = '👁‍🗨';
+                        passwordToggle.title = 'Hide password';
+                    } else {
+                        targetInput.type = 'password';
+                        passwordToggle.textContent = '👁';
+                        passwordToggle.title = 'Show password';
+                    }
+                }
+            });
+        }
         
         return inputGroup;
     }
@@ -428,13 +460,16 @@ class VarsPanelManager {
         
         this.runFlowBtn.disabled = !allRequiredFilled || this.isExecuting;
         
-        // Update button text based on validation
+        // Update button text and style based on validation
         if (this.isExecuting) {
             this.runFlowBtn.innerHTML = '<div class="loading-spinner"></div> Executing...';
+            this.runFlowBtn.classList.add('executing');
         } else if (allRequiredFilled) {
-            this.runFlowBtn.textContent = 'Execute with Magnitude';
+            this.runFlowBtn.textContent = 'Start Automation';
+            this.runFlowBtn.classList.remove('executing');
         } else {
             this.runFlowBtn.textContent = 'Fill Required Fields';
+            this.runFlowBtn.classList.remove('executing');
         }
     }
 
@@ -793,7 +828,7 @@ class VarsPanelManager {
             console.error('Flow variables section element not found!');
         }
         
-        this.showStatus('Intent Spec loaded successfully - ready to configure and execute', 'success');
+        // Don't show success message, just load the spec
     }
 
     hideVarsPanel() {
