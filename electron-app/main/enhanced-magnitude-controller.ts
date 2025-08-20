@@ -2,7 +2,7 @@ import { WebContentsView } from 'electron';
 import { Browser, Page } from 'playwright';
 import { PreFlightAnalyzer, PreFlightAnalysis } from './preflight-analyzer';
 import { ErrorAnalyzer, ErrorAnalysis } from './error-analyzer';
-import { getMagnitudeAgent } from './llm';
+import { getMagnitudeAgent, executeRuntimeAIAction } from './llm';
 
 /**
  * Enhanced Magnitude WebView Controller
@@ -253,35 +253,68 @@ export class EnhancedMagnitudeController {
     preFlightAnalysis: PreFlightAnalysis
   ): Promise<ExecutionResult> {
     try {
-      if (!this.magnitudeAgent) {
-        this.magnitudeAgent = await getMagnitudeAgent();
-      }
-
       // Prepare instruction for AI
-      let instruction = step.name || step.snippet || '';
+      let instruction = step.aiInstruction || step.name || step.snippet || '';
       for (const [key, value] of Object.entries(variables)) {
         instruction = instruction.replace(new RegExp(`{{${key}}}`, 'g'), value);
       }
 
-      console.log(`🤖 Using AI for: ${instruction}`);
+      console.log(`🤖 Using Sonnet 4 for runtime AI action: ${instruction}`);
 
-      // Execute with Magnitude
-      const result = await this.magnitudeAgent.act({
-        page: this.playwrightPage,
-        instruction,
-        context: preFlightAnalysis.pageContent
-      });
+      // Determine if this needs full Magnitude (browser control) or just Sonnet (decision making)
+      const needsBrowserControl = this.requiresBrowserControl(instruction);
 
-      return {
-        success: true,
-        data: result,
-        executionMethod: 'ai'
-      };
+      if (needsBrowserControl && this.playwrightPage) {
+        // Complex browser interactions still use Magnitude with Sonnet
+        if (!this.magnitudeAgent) {
+          this.magnitudeAgent = await getMagnitudeAgent();
+        }
+
+        const result = await this.magnitudeAgent.act({
+          page: this.playwrightPage,
+          instruction,
+          context: preFlightAnalysis.pageContent
+        });
+
+        console.log(`✅ Magnitude (Sonnet) completed: ${instruction}`);
+        return {
+          success: true,
+          data: result,
+          executionMethod: 'ai'
+        };
+      } else {
+        // Simple AI decisions use Sonnet directly (faster, cheaper)
+        const result = await executeRuntimeAIAction(
+          instruction,
+          preFlightAnalysis.pageContent
+        );
+
+        console.log(`✅ Sonnet 4 completed: ${result.result} (confidence: ${result.confidence})`);
+        return {
+          success: result.success,
+          data: result.result,
+          executionMethod: 'ai',
+          confidence: result.confidence
+        };
+      }
 
     } catch (error) {
       console.error('AI execution failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Determine if instruction requires browser control vs just decision making
+   */
+  private requiresBrowserControl(instruction: string): boolean {
+    const browserKeywords = [
+      'click', 'type', 'fill', 'select', 'hover', 'scroll',
+      'navigate', 'press', 'drag', 'upload', 'download'
+    ];
+    
+    const instructionLower = instruction.toLowerCase();
+    return browserKeywords.some(keyword => instructionLower.includes(keyword));
   }
 
   /**

@@ -84,7 +84,7 @@ import { generateIntentSpecPrompt, generateSimpleIntentSpecPrompt, generateValid
 const OPUS_MODEL = 'claude-opus-4-1-20250805';
 const SONNET_MODEL = 'claude-sonnet-4-20250514';
 
-// Initialize standard Anthropic SDK for Sonnet 4 (Magnitude act only)
+// Initialize standard Anthropic SDK for Sonnet 4 (runtime AI actions)
 let anthropicClient: Anthropic | null = null;
 
 function getAnthropicClient(): Anthropic {
@@ -96,6 +96,55 @@ function getAnthropicClient(): Anthropic {
     anthropicClient = new Anthropic({ apiKey });
   }
   return anthropicClient;
+}
+
+/**
+ * Execute runtime AI action using Sonnet 4 (faster, cheaper for simple tasks)
+ * Used for the 10% of steps that need AI during execution
+ */
+export async function executeRuntimeAIAction(
+  instruction: string,
+  context?: string
+): Promise<{ success: boolean; result: string; confidence: number }> {
+  try {
+    const client = getAnthropicClient();
+    
+    // Use Sonnet for runtime actions - faster and cheaper
+    const response = await client.messages.create({
+      model: SONNET_MODEL,
+      max_tokens: 1000,
+      temperature: 0.2, // Lower temperature for more deterministic actions
+      system: "You are a browser automation assistant. Execute the given instruction and return a JSON response with the action taken and result. Be concise and deterministic.",
+      messages: [
+        {
+          role: 'user',
+          content: `Execute this browser action: ${instruction}\n\nPage context: ${context || 'No context provided'}\n\nReturn JSON: {"action": "what you did", "success": true/false, "details": "brief result"}`
+        }
+      ]
+    });
+
+    const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
+    
+    // Try to parse JSON response
+    try {
+      const parsed = JSON.parse(responseText);
+      return {
+        success: parsed.success !== false,
+        result: parsed.details || parsed.action || responseText,
+        confidence: parsed.confidence || 0.85
+      };
+    } catch {
+      // If not JSON, still return the response
+      return {
+        success: true,
+        result: responseText,
+        confidence: 0.7
+      };
+    }
+  } catch (error) {
+    console.error('Runtime AI action failed:', error);
+    throw error;
+  }
 }
 
 // Magnitude agent singleton
@@ -202,7 +251,9 @@ interface QueryResponse {
 }
 
 /**
- * Analyze recording using Claude Code (Opus 4.1) and return IntentSpec
+ * Analyze recording using Claude Code SDK with Opus 4.1 for complex reasoning
+ * This is used ONCE during analysis phase to create the Intent Spec
+ * Opus is ideal for understanding intent and creating structured automation plans
  */
 export async function analyzeRecording(recordingData: any): Promise<IntentSpec> {
   const maxRetries = 3;
