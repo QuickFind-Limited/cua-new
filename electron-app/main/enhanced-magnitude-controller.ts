@@ -3,6 +3,8 @@ import { Browser, Page } from 'playwright';
 import { PreFlightAnalyzer, PreFlightAnalysis } from './preflight-analyzer';
 import { ErrorAnalyzer, ErrorAnalysis } from './error-analyzer';
 import { getMagnitudeAgent, executeRuntimeAIAction } from './llm';
+import * as path from 'path';
+import * as fs from 'fs';
 
 /**
  * Enhanced Magnitude WebView Controller
@@ -33,6 +35,7 @@ export class EnhancedMagnitudeController {
   private playwrightPage: Page | null = null;
   private playwrightBrowser: Browser | null = null;
   private isConnected = false;
+  private userDataDir: string = path.join(process.cwd(), 'playwright-profile');
   
   private preFlightAnalyzer: PreFlightAnalyzer;
   private errorAnalyzer: ErrorAnalyzer;
@@ -51,6 +54,27 @@ export class EnhancedMagnitudeController {
   constructor() {
     this.preFlightAnalyzer = new PreFlightAnalyzer();
     this.errorAnalyzer = new ErrorAnalyzer();
+    
+    // Ensure user data directory exists
+    this.ensureUserDataDir();
+  }
+  
+  private ensureUserDataDir(): void {
+    try {
+      if (!fs.existsSync(this.userDataDir)) {
+        fs.mkdirSync(this.userDataDir, { recursive: true });
+        console.log(`📁 Created browser profile directory: ${this.userDataDir}`);
+      }
+      
+      // Create a First Run file to suppress Chrome's first run experience
+      const firstRunFile = path.join(this.userDataDir, 'First Run');
+      if (!fs.existsSync(firstRunFile)) {
+        fs.writeFileSync(firstRunFile, '');
+        console.log(`✅ Created First Run file to suppress Chrome welcome screen`);
+      }
+    } catch (error) {
+      console.error('Failed to create user data directory:', error);
+    }
   }
 
   /**

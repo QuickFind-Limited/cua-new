@@ -107,13 +107,26 @@ export class PlaywrightLauncherRecorder {
       const sessionId = `recording-${Date.now()}`;
       this.currentOutputPath = path.join(this.recordingsDir, `${sessionId}.spec.ts`);
       
-      // Build codegen command
+      // Ensure user data directory exists for recorder
+      const userDataDir = path.join(this.recordingsDir, 'browser-profile');
+      if (!existsSync(userDataDir)) {
+        await fs.mkdir(userDataDir, { recursive: true });
+        
+        // Create First Run file to suppress Chrome welcome
+        const firstRunFile = path.join(userDataDir, 'First Run');
+        await fs.writeFile(firstRunFile, '');
+        console.log('Created browser profile for recorder');
+      }
+      
+      // Build codegen command with user data directory
       // Keep the output flag - we'll monitor for the file OR capture from inspector
       const args = [
         'codegen',
         '--target=playwright-test',
         `--output=${this.currentOutputPath}`,
-        '--browser=chromium'
+        '--browser=chromium',
+        `--user-data-dir=${userDataDir}`,
+        '--no-default-browser-check'
       ];
       
       // Add URL if provided
