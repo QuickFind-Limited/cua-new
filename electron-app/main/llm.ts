@@ -150,7 +150,7 @@ export async function executeRuntimeAIAction(
 // Magnitude agent singleton
 let magnitudeAgent: any = null;
 
-async function getMagnitudeAgent() {
+export async function getMagnitudeAgent() {
   if (!magnitudeAgent) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {

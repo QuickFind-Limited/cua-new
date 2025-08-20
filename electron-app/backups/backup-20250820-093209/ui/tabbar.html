@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <title>WebView2 Multi-Tab Browser</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles-modern.css">
+</head>
+<body>
+    <!-- Tab Bar -->
+    <div class="tab-bar" id="tab-bar">
+        <div class="tabs-container" id="tabs-container">
+            <!-- Tabs will be dynamically added here -->
+            <button class="new-tab-btn" id="new-tab-btn" title="New Tab">+</button>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <div class="nav-bar">
+        <button class="nav-btn" id="back-btn" title="Back" disabled>←</button>
+        <button class="nav-btn" id="forward-btn" title="Forward" disabled>→</button>
+        <button class="nav-btn" id="reload-btn" title="Reload">⟳</button>
+        <input type="text" class="address-bar" id="address-bar" placeholder="Enter URL or search...">
+        <button class="nav-btn" id="go-btn" title="Go">Go</button>
+        <div class="recording-controls">
+            <button class="launcher-btn" id="launcher-btn" title="Launch Playwright Recorder">
+                <span class="launcher-text">Launch Recorder</span>
+            </button>
+            <button class="capture-screenshot-btn" id="capture-screenshot-btn" title="Capture Success State" style="display: none;">
+                <span class="screenshot-text">📸 Capture Success State</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main content area managed by WebContentsView in main process -->
+
+    <!-- Analysis Progress Sidebar (initially hidden) -->
+    <div id="analysis-sidebar" class="analysis-sidebar">
+        <!-- Removed sidebar-header with Workflow Analysis text -->
+        <div class="sidebar-content">
+            <!-- Collapsible Analysis Progress Section -->
+            <div class="collapsible-section no-border" id="analysis-progress-section">
+                <div class="section-header no-background" onclick="toggleSection('analysis-progress')">
+                    <span class="section-chevron" id="analysis-progress-chevron">▼</span>
+                    <span class="section-title">Analysis Progress</span>
+                    <span class="section-status" id="analysis-progress-status"></span>
+                </div>
+                <div class="section-content" id="analysis-progress-content">
+                    <div class="progress-section">
+                        <div class="progress-item" id="progress-recording">
+                            <span class="progress-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.3"/>
+                                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                                </svg>
+                            </span>
+                            <span class="progress-label">Recording captured</span>
+                            <span class="progress-status"></span>
+                        </div>
+                        <div class="progress-item" id="progress-parsing">
+                            <span class="progress-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                            </span>
+                            <span class="progress-label">Parsing actions</span>
+                            <span class="progress-status"></span>
+                        </div>
+                        <div class="progress-item" id="progress-analyzing">
+                            <span class="progress-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"></path>
+                                </svg>
+                            </span>
+                            <span class="progress-label">AI analysis</span>
+                            <span class="progress-status"></span>
+                        </div>
+                        <div class="progress-item" id="progress-variables">
+                            <span class="progress-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                            </span>
+                            <span class="progress-label">Extracting variables</span>
+                            <span class="progress-status"></span>
+                        </div>
+                        <div class="progress-item" id="progress-generating">
+                            <span class="progress-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M12 1v6"></path>
+                                    <path d="M12 17v6"></path>
+                                </svg>
+                            </span>
+                            <span class="progress-label">Generating Intent Spec</span>
+                            <span class="progress-status"></span>
+                        </div>
+                        <div class="progress-item" id="progress-validating">
+                            <span class="progress-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 11l3 3L22 4"></path>
+                                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                                </svg>
+                            </span>
+                            <span class="progress-label">Validating output</span>
+                            <span class="progress-status"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Collapsible Flow Variables Section -->
+            <div class="collapsible-section" id="flow-variables-section" style="display: none;">
+                <div class="section-header" onclick="toggleSection('flow-variables')">
+                    <span class="section-chevron" id="flow-variables-chevron">▼</span>
+                    <span class="section-title">Flow Variables</span>
+                    <span class="section-status" id="flow-variables-status"></span>
+                </div>
+                <div class="section-content" id="flow-variables-content">
+                    <div id="flow-info"></div>
+                    <div id="variables-form"></div>
+                    <div class="flow-actions">
+                        <button class="run-magnitude-btn" id="run-magnitude-btn">Run</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating toggle for when sidebar is hidden -->
+    <button class="floating-toggle" id="floating-toggle" title="Show Analysis Panel">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </button>
+
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <span id="status-text"></span>
+        <span id="tab-count" class="tab-count">0 tabs</span>
+    </div>
+
+    <!-- Load scripts -->
+    <script src="vars-panel.js"></script>
+    <script src="sidebar-manager.js"></script>
+    <script src="recording-ui-handler.js"></script>
+    <script src="tabbar.js"></script>
+</body>
+</html>

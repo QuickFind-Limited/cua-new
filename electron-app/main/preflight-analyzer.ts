@@ -186,7 +186,8 @@ export class PreFlightAnalyzer {
         element.isEnabled(),
         element.evaluate(el => {
           const attrs: Record<string, string> = {};
-          for (const attr of el.attributes) {
+          for (let i = 0; i < el.attributes.length; i++) {
+            const attr = el.attributes[i];
             attrs[attr.name] = attr.value;
           }
           return attrs;
@@ -242,7 +243,7 @@ export class PreFlightAnalyzer {
   ): Promise<PreFlightAnalysis['skipRecommendation']> {
     // Check if already in desired state
     if (step.targetState) {
-      const currentState = await this.detectCurrentState(page, step.targetState);
+      const currentState = await this.detectCurrentState(page, step.targetState, step);
       if (currentState.matches) {
         return {
           shouldSkip: true,
@@ -252,6 +253,20 @@ export class PreFlightAnalyzer {
       }
     }
 
+    // Check Intent Spec's skipNavigationStates (dynamic from analysis)
+    if (step.skipNavigationStates && Array.isArray(step.skipNavigationStates)) {
+      for (const skipState of step.skipNavigationStates) {
+        // Check if URL contains any skip state indicator
+        if (pageState.url.toLowerCase().includes(skipState.toLowerCase())) {
+          return {
+            shouldSkip: true,
+            reason: `Already in ${skipState} - skipping navigation/login`,
+            confidence: 0.85
+          };
+        }
+      }
+    }
+    
     // Skip if navigation step and already on target URL
     if (step.snippet?.includes('goto')) {
       const targetUrl = this.extractUrlFromGoto(step.snippet);
@@ -397,34 +412,72 @@ export class PreFlightAnalyzer {
   /**
    * Helper: Detect current state
    */
-  private async detectCurrentState(page: Page, targetState: string): Promise<{ matches: boolean; confidence: number }> {
-    // This would use your existing page state detection logic
-    // For now, return a simple check
-    const pageText = await page.locator('body').textContent();
-    const stateKeywords = this.getStateKeywords(targetState);
+  private async detectCurrentState(page: Page, targetState: string, step?: any): Promise<{ matches: boolean; confidence: number }> {
+    const url = page.url();
+    const title = await page.title();
     
-    const matches = stateKeywords.some(keyword => 
-      pageText?.toLowerCase().includes(keyword.toLowerCase())
-    );
-
+    // Priority 1: Check step-specific skip conditions from Intent Spec
+    if (step?.skipConditions) {
+      for (const condition of step.skipConditions) {
+        if (condition.type === 'url_match' && url.includes(condition.value)) {
+          return { matches: true, confidence: 0.95 };
+        }
+        
+        if (condition.type === 'element_exists') {
+          try {
+            const exists = await page.locator(condition.value).count() > 0;
+            if (exists) return { matches: true, confidence: 0.9 };
+          } catch {
+            // Element not found, continue
+          }
+        }
+      }
+    }
+    
+    // Priority 2: Use AI for intelligent state detection (no hardcoding)
+    try {
+      const { executeRuntimeAIAction } = await import('./llm');
+      const pageText = await page.locator('body').textContent() || '';
+      
+      // Let AI determine state based on actual page content
+      const prompt = `Analyze if the page indicates: "${targetState}". 
+        URL: ${url}. 
+        Page has these indicators: ${pageText.slice(0, 500)}
+        Reply with YES or NO and confidence 0-1`;
+      
+      const result = await executeRuntimeAIAction(prompt, '');
+      
+      return {
+        matches: result.result.toUpperCase().includes('YES'),
+        confidence: result.confidence || 0.7
+      };
+    } catch (error) {
+      // AI failed, use minimal fallback
+      console.log('AI state detection unavailable');
+    }
+    
+    // Priority 3: Minimal fallback - just check if target state text appears
+    const pageText = await page.locator('body').textContent();
+    const matches = pageText?.toLowerCase().includes(targetState.toLowerCase()) || false;
+    
     return {
       matches,
-      confidence: matches ? 0.8 : 0.2
+      confidence: 0.3  // Low confidence without AI
     };
   }
 
   /**
-   * Helper: Get state keywords
+   * Helper: Get state keywords from Intent Spec or use AI
    */
-  private getStateKeywords(state: string): string[] {
-    const stateMap: Record<string, string[]> = {
-      'logged_in': ['dashboard', 'logout', 'profile', 'welcome'],
-      'checkout': ['payment', 'billing', 'order total', 'place order'],
-      'search_results': ['results', 'found', 'showing', 'sort by'],
-      // Add more states as needed
-    };
+  private getStateKeywords(state: string, step?: any): string[] {
+    // First, check if the step has custom keywords defined
+    if (step?.stateKeywords && step.stateKeywords[state]) {
+      return step.stateKeywords[state];
+    }
 
-    return stateMap[state] || [state];
+    // Otherwise, just use the state name itself as a keyword
+    // The AI will handle more complex detection
+    return [state];
   }
 
   /**

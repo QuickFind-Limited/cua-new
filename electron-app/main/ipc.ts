@@ -1009,9 +1009,9 @@ export function registerIpcHandlers(): void {
         throw new Error('TabManager not initialized');
       }
       
-      // Import the WebView controller
-      const { MagnitudeWebViewController } = await import('./magnitude-webview-controller');
-      const controller = new MagnitudeWebViewController();
+      // Import the ENHANCED flow executor with pre-flight analysis and skip logic
+      const { EnhancedFlowExecutor } = await import('./enhanced-flow-executor');
+      const executor = new EnhancedFlowExecutor();
       
       // Get the current WebContentsView from tab manager
       const activeTabId = tabManager.getActiveTabId();
@@ -1024,28 +1024,26 @@ export function registerIpcHandlers(): void {
         throw new Error('Active tab has no WebContentsView');
       }
       
-      // Connect Magnitude to the WebView
-      const connected = await controller.connectToWebView(activeTab.view);
-      if (!connected) {
-        throw new Error('Failed to connect Magnitude to WebView');
-      }
+      // Set up progress callback to forward to renderer
+      executor.onProgress((progress) => {
+        event.sender.send('flow-progress', progress);
+      });
       
-      // Execute the flow
-      const result = await controller.executeFlow(params.flowSpec, params.variables);
+      // Execute the flow with ENHANCED executor (includes pre-flight analysis)
+      const result = await executor.executeFlow(params.flowSpec, params.variables, activeTab.view);
       
-      // Disconnect when done
-      await controller.disconnect();
-      
-      // Return a serializable result
+      // Return a serializable result matching the expected format
       return {
         success: result.success,
-        results: result.results.map(r => ({
-          step: r.step,
-          success: r.success,
-          error: r.error
-        })),
-        errors: result.errors,
-        message: result.success ? 'Flow executed successfully!' : 'Flow execution completed with errors'
+        results: [], // Enhanced executor doesn't provide step-by-step results in same format
+        errors: result.errors.map(e => e.error),
+        completedSteps: result.completedSteps,
+        totalSteps: result.totalSteps,
+        skippedSteps: result.skippedSteps,
+        executionStats: result.executionStats,
+        message: result.success 
+          ? `Flow executed successfully! (${result.completedSteps}/${result.totalSteps} completed, ${result.skippedSteps} skipped)`
+          : 'Flow execution completed with errors'
       };
     } catch (error) {
       console.error('Magnitude WebView execution error:', error);

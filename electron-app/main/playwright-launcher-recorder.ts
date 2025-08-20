@@ -108,8 +108,7 @@ export class PlaywrightLauncherRecorder {
       this.currentOutputPath = path.join(this.recordingsDir, `${sessionId}.spec.ts`);
       
       // Build codegen command
-      // Note: codegen doesn't support many customization options
-      // The Chrome promotional popup and automation banner are limitations we have to accept
+      // Keep the output flag - we'll monitor for the file OR capture from inspector
       const args = [
         'codegen',
         '--target=playwright-test',
@@ -125,11 +124,11 @@ export class PlaywrightLauncherRecorder {
       console.log('Launching Playwright recorder...');
       console.log('Output will be saved to:', this.currentOutputPath);
       
-      // Create environment - disable inspector for cleaner experience
+      // Create environment - keep inspector enabled so user can save recording
       const env = { 
-        ...process.env,
-        // Disable the inspector window - only show browser
-        PW_CODEGEN_NO_INSPECTOR: 'true'
+        ...process.env
+        // Note: We need the inspector window to save recordings
+        // PW_CODEGEN_NO_INSPECTOR: 'true'  // Commented out - inspector needed
       };
       
       // Launch playwright codegen with environment variable
@@ -329,6 +328,7 @@ export class PlaywrightLauncherRecorder {
         actionCount,
         timestamp: Date.now(),
         specCode: content,
+        content: content,  // Store the actual content for later use
         recordingStopped: isRecordingStopped,
         screenshotPath
       };
@@ -560,19 +560,17 @@ export class PlaywrightLauncherRecorder {
       let recordingFilePath = this.currentOutputPath;
       let fileExists = existsSync(recordingFilePath);
       
-      // If not found, look for any new recording file in the directory
-      if (!fileExists) {
-        console.log('Exact file not found, scanning for any new recording files...');
-        const files = await fs.readdir(this.recordingsDir);
-        const recordingFiles = files.filter(f => f.startsWith('recording-') && f.endsWith('.spec.ts'));
-        
-        if (recordingFiles.length > 0) {
-          // Sort by name (which includes timestamp) and get the most recent
-          recordingFiles.sort();
-          const mostRecentFile = recordingFiles[recordingFiles.length - 1];
-          recordingFilePath = path.join(this.recordingsDir, mostRecentFile);
+      // If the exact file doesn't exist, Playwright may have failed to save
+      // In this case, use the last recording data if available
+      if (!fileExists && this.lastRecordingData) {
+        console.log('Exact file not found, but we have recording data from file watcher');
+        // Create the file with the data we captured
+        try {
+          await fs.writeFile(recordingFilePath, this.lastRecordingData.content);
           fileExists = true;
-          console.log('Found recording file:', recordingFilePath);
+          console.log('Created recording file from captured data:', recordingFilePath);
+        } catch (error) {
+          console.error('Failed to create recording file:', error);
         }
       }
       

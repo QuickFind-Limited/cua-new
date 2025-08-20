@@ -53,6 +53,7 @@ Return ONLY valid JSON matching this schema:
           "skipReason": "Already logged in"
         }
       ],
+      "skipNavigationStates": ["dashboard", "app", "home"],
       "preFlightChecks": [
         {
           "selector": "CSS selector to verify exists",
@@ -135,22 +136,30 @@ For EVERY step that interacts with elements, include preFlightChecks:
 
 ## Skip Conditions
 
-Add intelligent skip conditions to avoid redundant actions:
+CRITICAL: Add intelligent skip conditions to avoid redundant actions. For login/auth steps, ALWAYS analyze the target application to determine skip patterns:
 
 \`\`\`json
+"skipNavigationStates": ["app", "dashboard", "home", "workspace", "account"],
 "skipConditions": [
   {
     "type": "url_match",
-    "value": "/dashboard",
-    "skipReason": "Already on dashboard page"
+    "value": "[URL pattern that indicates logged in state]",
+    "skipReason": "Already in application"
   },
   {
     "type": "element_exists",
-    "value": ".user-menu",
-    "skipReason": "Already logged in"
+    "value": "[selector for user menu or logout button]",
+    "skipReason": "User interface shows authenticated state"
+  },
+  {
+    "type": "text_present",
+    "value": "[text that only appears when logged in]",
+    "skipReason": "Page content indicates authenticated session"
   }
 ]
 \`\`\`
+
+IMPORTANT: Analyze the actual recording to determine what indicates a logged-in state for that specific application!
 
 ## Error Recovery Strategies
 

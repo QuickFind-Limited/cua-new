@@ -54,16 +54,64 @@ export class EnhancedMagnitudeController {
   }
 
   /**
-   * Connect to WebView (existing method - simplified for this example)
+   * Connect to WebView using Playwright CDP
    */
   public async connectToWebView(webView: WebContentsView): Promise<boolean> {
     try {
       this.webView = webView;
-      // Connection logic would go here
+      
+      // Import chromium from playwright
+      const { chromium } = await import('playwright');
+      
+      // Get CDP port from environment or use the same port as main.ts
+      const cdpPort = process.env.CDP_PORT || '9335';
+      const cdpEndpoint = `http://127.0.0.1:${cdpPort}`;
+      
+      console.log(`Connecting Playwright to CDP endpoint: ${cdpEndpoint}`);
+      
+      // Connect to the browser via CDP
+      this.playwrightBrowser = await chromium.connectOverCDP(cdpEndpoint);
+      
+      if (!this.playwrightBrowser) {
+        console.error('Failed to connect browser via CDP');
+        return false;
+      }
+      
+      // Get existing contexts or create new one
+      const contexts = this.playwrightBrowser.contexts();
+      if (contexts.length > 0) {
+        // Use existing context
+        const context = contexts[0];
+        const pages = context.pages();
+        
+        if (pages.length > 0) {
+          // Use existing page
+          this.playwrightPage = pages[0];
+          console.log('Using existing page from context');
+        } else {
+          // Create new page
+          this.playwrightPage = await context.newPage();
+          console.log('Created new page in existing context');
+        }
+      } else {
+        console.error('No contexts found in connected browser');
+        return false;
+      }
+      
+      if (!this.playwrightPage) {
+        console.error('Could not establish page connection');
+        return false;
+      }
+      
       this.isConnected = true;
+      console.log('Successfully connected Playwright to WebContentsView');
       return true;
     } catch (error) {
       console.error('Failed to connect to WebView:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
       return false;
     }
   }
@@ -272,8 +320,8 @@ export class EnhancedMagnitudeController {
 
         const result = await this.magnitudeAgent.act({
           page: this.playwrightPage,
-          instruction,
-          context: preFlightAnalysis.pageContent
+          instruction
+          // Don't pass context as it causes serialization issues
         });
 
         console.log(`✅ Magnitude (Sonnet) completed: ${instruction}`);
@@ -284,17 +332,17 @@ export class EnhancedMagnitudeController {
         };
       } else {
         // Simple AI decisions use Sonnet directly (faster, cheaper)
+        const pageContextString = JSON.stringify(preFlightAnalysis.pageContent);
         const result = await executeRuntimeAIAction(
           instruction,
-          preFlightAnalysis.pageContent
+          pageContextString
         );
 
         console.log(`✅ Sonnet 4 completed: ${result.result} (confidence: ${result.confidence})`);
         return {
           success: result.success,
           data: result.result,
-          executionMethod: 'ai',
-          confidence: result.confidence
+          executionMethod: 'ai'
         };
       }
 
@@ -438,7 +486,7 @@ export class EnhancedMagnitudeController {
   }
 
   /**
-   * Evaluate Playwright snippet (simplified version)
+   * Evaluate Playwright snippet
    */
   private async evaluateSnippet(snippet: string): Promise<any> {
     if (!this.playwrightPage) {
@@ -447,31 +495,78 @@ export class EnhancedMagnitudeController {
 
     const page = this.playwrightPage;
     
-    // This would include full snippet evaluation logic
-    // For now, showing key patterns
-    if (snippet.includes('page.goto')) {
-      const urlMatch = snippet.match(/page\.goto\(['"]([^'"]+)['"]\)/);
-      if (urlMatch) {
-        return await page.goto(urlMatch[1]);
+    try {
+      // Create a function that executes the snippet
+      // Replace 'await' at the beginning since we'll await the whole thing
+      const cleanSnippet = snippet.replace(/^await\s+/, '');
+      
+      // Use Function constructor to create executable code
+      // This allows us to execute arbitrary Playwright code
+      const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+      const executeSnippet = new AsyncFunction('page', `return ${cleanSnippet}`);
+      
+      // Execute the snippet with the page object
+      return await executeSnippet(page);
+    } catch (error) {
+      // If dynamic execution fails, fall back to pattern matching
+      console.log('Dynamic execution failed, trying pattern matching:', error);
+      
+      // Handle page.goto
+      if (snippet.includes('page.goto')) {
+        const urlMatch = snippet.match(/page\.goto\(['"]([^'"]+)['"]\)/);
+        if (urlMatch) {
+          return await page.goto(urlMatch[1]);
+        }
       }
-    }
-    
-    if (snippet.includes('page.click')) {
-      const selectorMatch = snippet.match(/page\.click\(['"]([^'"]+)['"]\)/);
-      if (selectorMatch) {
-        return await page.click(selectorMatch[1]);
+      
+      // Handle page.getByRole (more complex pattern)
+      if (snippet.includes('page.getByRole')) {
+        // Match patterns like: page.getByRole('textbox', { name: 'Email address or mobile number' })
+        const roleMatch = snippet.match(/page\.getByRole\(['"](\w+)['"],\s*\{\s*name:\s*['"]([^'"]+)['"]\s*\}\)/);
+        if (roleMatch) {
+          const [, role, name] = roleMatch;
+          return await page.getByRole(role as any, { name }).first();
+        }
       }
-    }
-    
-    if (snippet.includes('page.fill')) {
-      const match = snippet.match(/page\.fill\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)/);
-      if (match) {
-        return await page.fill(match[1], match[2]);
+      
+      // Handle .click() at the end
+      if (snippet.includes('.click()')) {
+        // First get the element, then click it
+        const elementSnippet = snippet.replace('.click()', '');
+        const element = await this.evaluateSnippet(elementSnippet);
+        if (element) {
+          return await element.click();
+        }
       }
+      
+      // Handle .fill() 
+      if (snippet.includes('.fill(')) {
+        const fillMatch = snippet.match(/(.+)\.fill\(['"]([^'"]+)['"]\)/);
+        if (fillMatch) {
+          const [, elementSnippet, value] = fillMatch;
+          const element = await this.evaluateSnippet(elementSnippet);
+          if (element) {
+            return await element.fill(value);
+          }
+        }
+      }
+      
+      // Handle page.locator
+      if (snippet.includes('page.locator')) {
+        const locatorMatch = snippet.match(/page\.locator\(['"]([^'"]+)['"]\)/);
+        if (locatorMatch) {
+          return await page.locator(locatorMatch[1]).first();
+        }
+      }
+      
+      // Handle .filter()
+      if (snippet.includes('.filter(')) {
+        // This is complex, skip for now and throw error
+        throw new Error(`Complex filter pattern not supported: ${snippet.substring(0, 100)}`);
+      }
+      
+      throw error;
     }
-
-    // Add more patterns as needed
-    throw new Error(`Unsupported snippet pattern: ${snippet.substring(0, 50)}`);
   }
 
   /**

@@ -389,11 +389,21 @@ function startRecorderMonitoring() {
         if (window.electronAPI.onBrowserClosed) {
             window.electronAPI.onBrowserClosed((data) => {
                 console.log('Browser closed, enabling button');
-                // Enable the existing button
+                // Only enable the button if analysis hasn't started
                 const beginAnalysisBtn = document.getElementById('begin-analysis-btn');
                 if (beginAnalysisBtn) {
-                    beginAnalysisBtn.disabled = false;
-                    beginAnalysisBtn.title = 'Analyze Recording';
+                    // Check if analysis is already in progress
+                    // Don't enable if button text is "Analyzing..." or sidebar is showing
+                    const isAnalyzing = beginAnalysisBtn.textContent === 'Analyzing...' || 
+                                       beginAnalysisBtn.classList.contains('analyzing');
+                    const sidebarVisible = document.getElementById('analysis-sidebar')?.classList.contains('open');
+                    
+                    if (!isAnalyzing && !sidebarVisible) {
+                        beginAnalysisBtn.disabled = false;
+                        beginAnalysisBtn.title = 'Analyze Recording';
+                    } else {
+                        console.log('Analysis in progress, keeping button disabled');
+                    }
                 }
             });
         }
@@ -522,6 +532,7 @@ async function analyzeRecording() {
     const beginAnalysisBtn = document.getElementById('begin-analysis-btn');
     if (beginAnalysisBtn) {
         beginAnalysisBtn.disabled = true;
+        beginAnalysisBtn.classList.add('analyzing');
         beginAnalysisBtn.querySelector('.analysis-text').textContent = 'Analyzing...';
     }
     
@@ -873,6 +884,7 @@ async function analyzeLastRecording() {
     if (analyzeBtn) {
         analyzeBtn.disabled = true;
         analyzeBtn.textContent = 'Analyzing...';
+        analyzeBtn.classList.add('analyzing');
     }
     
     if (statusText) {
@@ -973,6 +985,7 @@ async function analyzeLastRecording() {
         if (analyzeBtn) {
             analyzeBtn.disabled = false;
             analyzeBtn.textContent = 'Analyze';
+            analyzeBtn.classList.remove('analyzing');
         }
     }
 }
