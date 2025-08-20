@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { BrowserWindow, WebContentsView, ipcMain } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
+import * as path from 'path';
 import { PlaywrightRecorder, RecordingSession } from './playwright-recorder';
 import { PlaywrightCodegenRecorder, CodegenRecordingSession, CodegenRecordingResult } from './playwright-codegen-recorder';
 import { PlaywrightWindowsHideUIRecorder } from './playwright-windows-hideui-recorder';
@@ -120,8 +121,12 @@ export class WebContentsTabManager extends EventEmitter {
   public async createTab(url: string): Promise<Omit<WebContentsTab, 'view'>> {
     const tabId = uuidv4();
 
-    // Ensure URL has protocol
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    // Handle local files and ensure URL has protocol
+    if (url.startsWith('./') || url.endsWith('.html')) {
+      // Local file - construct file:// URL
+      const htmlPath = path.join(__dirname, '..', '..', 'ui', url.replace('./', ''));
+      url = `file://${htmlPath}`;
+    } else if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('file://')) {
       url = 'https://' + url;
     }
 

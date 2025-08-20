@@ -63,6 +63,7 @@ export class EnhancedFlowExecutor {
     let skippedSteps = 0;
 
     console.log('🚀 Starting enhanced flow execution:', intentSpec.name);
+    console.log('Intent spec:', JSON.stringify(intentSpec, null, 2));
 
     try {
       // Connect to WebView
@@ -77,6 +78,7 @@ export class EnhancedFlowExecutor {
       // Navigate to initial URL if specified in intent spec
       console.log('Checking for initial URL in intent spec...');
       console.log('Intent spec URL:', intentSpec.url);
+      console.log('Intent spec steps[0]:', intentSpec.steps?.[0]);
       
       if (intentSpec.url) {
         console.log(`📍 Navigating to initial URL: ${intentSpec.url}`);

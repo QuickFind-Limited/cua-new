@@ -186,6 +186,8 @@ export class PlaywrightLauncherRecorder {
       }
 
       console.log('Launching Playwright recorder...');
+      console.log('Playwright path:', playwrightPath);
+      console.log('Arguments:', args);
       console.log('Output will be saved to:', this.currentOutputPath);
       console.log('📌 NOTE: If Chrome shows promotional popup, click "Not interested" to proceed');
       console.log('💡 TIP: Inspector window will be minimized automatically for a cleaner experience.');
@@ -233,13 +235,22 @@ export class PlaywrightLauncherRecorder {
       }
 
       // Handle process exit
-      this.codegenProcess.on('exit', (code) => {
-        console.log(`Playwright recorder exited with code ${code}`);
+      this.codegenProcess.on('exit', (code, signal) => {
+        console.log(`Playwright recorder exited with code ${code}, signal ${signal}`);
+        if (code === 1) {
+          console.error('Playwright exited with error code 1. Common causes:');
+          console.error('- Chromium browser not installed (run: npx playwright install chromium)');
+          console.error('- Invalid arguments or configuration');
+        }
         this.handleRecorderClosed();
       });
 
       this.codegenProcess.on('error', (error) => {
         console.error('Failed to launch Playwright recorder:', error);
+        console.error('Error details:', error.message);
+        if (error.message.includes('ENOENT')) {
+          console.error('Playwright executable not found. Try running: npm install playwright');
+        }
         this.cleanup();
       });
 

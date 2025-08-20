@@ -1094,7 +1094,7 @@ function openSettings() {
     
     // Create a new tab for settings
     if (window.electronAPI && window.electronAPI.createTab) {
-        const settingsUrl = 'error-recovery-settings.html';
+        const settingsUrl = './error-recovery-settings.html';
         window.electronAPI.createTab(settingsUrl)
             .then(result => {
                 console.log('Settings tab created:', result);
@@ -1111,7 +1111,7 @@ function openSettings() {
 
 function openSettingsInNewWindow() {
     // Open settings in a new browser window as fallback
-    const settingsWindow = window.open('error-recovery-settings.html', 'settings', 
+    const settingsWindow = window.open('./error-recovery-settings.html', 'settings', 
         'width=900,height=700,scrollbars=yes,resizable=yes');
     
     if (!settingsWindow) {
