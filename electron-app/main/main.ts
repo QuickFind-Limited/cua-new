@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { WebContentsTabManager } from './WebContentsTabManager';
 import { registerIpcHandlers } from './ipc';
+import { settingsManager } from './settings-manager';
 
 // Load environment variables early
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
@@ -114,6 +115,9 @@ function createWindow(): void {
 
   // Register IPC handlers
   registerIpcHandlers();
+  
+  // Register settings manager IPC handlers
+  settingsManager.registerIpcHandlers();
 
   // Setup security policies
   setupSecurity();

@@ -111,6 +111,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onBoundsUpdate: (callback) => ipcRenderer.on('bounds-updated', (event, data) => callback(data))
   },
 
+  // Error Recovery Settings
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get'),
+    save: (settings) => ipcRenderer.invoke('settings:save', settings),
+    getStatistics: () => ipcRenderer.invoke('settings:getStatistics'),
+    getAuditLogs: () => ipcRenderer.invoke('settings:getAuditLogs'),
+    clearCache: () => ipcRenderer.invoke('settings:clearCache'),
+    export: () => ipcRenderer.invoke('settings:export'),
+    import: () => ipcRenderer.invoke('settings:import'),
+    clearAuditLogs: () => ipcRenderer.invoke('settings:clearAuditLogs')
+  },
+
   // Utility
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),

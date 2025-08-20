@@ -160,7 +160,7 @@ body {
   gap: 8px;
 }
 
-.launcher-btn, .begin-analysis-btn {
+.launcher-btn, .begin-analysis-btn, .settings-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -197,6 +197,15 @@ body {
 .begin-analysis-btn {
   background: #4caf50;
   color: white;
+}
+
+.settings-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.settings-btn:hover {
+  background: #5a6268;
 }
 
 .begin-analysis-btn:hover {

@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2025-08-20T16:41:04.664Z",
+  "totalSolutions": 5,
+  "solutions": [
+    {
+      "id": "exportable-solution-001",
+      "strategy": "element_retry_with_wait",
+      "confidence": 0.9,
+      "actualSuccessRate": 0.95,
+      "tags": [
+        "timeout",
+        "retry"
+      ],
+      "categories": [
+        "ui-interaction"
+      ]
+    },
+    {
+      "id": "exportable-solution-002",
+      "strategy": "network_error_recovery",
+      "confidence": 0.8,
+      "actualSuccessRate": 0.87,
+      "tags": [
+        "network",
+        "recovery"
+      ],
+      "categories": [
+        "network-error"
+      ]
+    }
+  ],
+  "metadata": {
+    "exportedBy": "test-user",
+    "exportedAt": "2025-08-20T16:41:04.665Z",
+    "anonymized": true,
+    "platform": "win32"
+  },
+  "statistics": {
+    "totalSolutions": 5,
+    "averageSuccessRate": 0.91,
+    "topCategories": [
+      {
+        "category": "ui-interaction",
+        "count": 3
+      },
+      {
+        "category": "network-error",
+        "count": 2
+      }
+    ]
+  }
+}

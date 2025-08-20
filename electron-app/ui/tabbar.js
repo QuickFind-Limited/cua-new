@@ -25,6 +25,7 @@ function initializeUI() {
     const goBtn = document.getElementById('go-btn');
     const addressBar = document.getElementById('address-bar');
     const launcherBtn = document.getElementById('launcher-btn');
+    const settingsBtn = document.getElementById('settings-btn');
 
     if (backBtn) {
         console.log('🔙 Back button found, adding event listener');
@@ -48,6 +49,7 @@ function initializeUI() {
     if (reloadBtn) reloadBtn.addEventListener('click', () => reloadPage());
     if (goBtn) goBtn.addEventListener('click', () => navigateToUrl());
     if (launcherBtn) launcherBtn.addEventListener('click', () => launchPlaywrightRecorder());
+    if (settingsBtn) settingsBtn.addEventListener('click', () => openSettings());
 
     // Address bar enter key
     if (addressBar) {
@@ -1086,9 +1088,42 @@ function updateTabDisplay(tabsData, activeId) {
     }
 }
 
+// Settings window functionality
+function openSettings() {
+    console.log('Opening settings window...');
+    
+    // Create a new tab for settings
+    if (window.electronAPI && window.electronAPI.createTab) {
+        const settingsUrl = 'error-recovery-settings.html';
+        window.electronAPI.createTab(settingsUrl)
+            .then(result => {
+                console.log('Settings tab created:', result);
+            })
+            .catch(error => {
+                console.error('Failed to create settings tab:', error);
+                // Fallback: open in new window
+                openSettingsInNewWindow();
+            });
+    } else {
+        openSettingsInNewWindow();
+    }
+}
+
+function openSettingsInNewWindow() {
+    // Open settings in a new browser window as fallback
+    const settingsWindow = window.open('error-recovery-settings.html', 'settings', 
+        'width=900,height=700,scrollbars=yes,resizable=yes');
+    
+    if (!settingsWindow) {
+        console.error('Failed to open settings window - popup blocked?');
+        alert('Settings window was blocked. Please allow popups for this application.');
+    }
+}
+
 // Make functions globally available for onclick handlers and external access
 window.closeTab = closeTab;
 window.showVarsPanel = showVarsPanel;
 window.hideVarsPanel = hideVarsPanel;
 window.handleRecordingComplete = handleRecordingComplete;
 window.analyzeLastRecording = analyzeLastRecording;
+window.openSettings = openSettings;
