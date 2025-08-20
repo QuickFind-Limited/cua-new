@@ -602,14 +602,13 @@ html, body {
   font-size: 12px;
   transition: transform var(--duration-quick) ease;
   color: var(--text-secondary);
-  transform: rotate(0deg); /* Default: pointing right when collapsed */
+  transform: rotate(90deg); /* Default: pointing down when open */
   flex-shrink: 0; /* Prevent shrinking */
 }
 
-/* When section is expanded (not collapsed), rotate to point down */
-.section-header:not(.collapsed) .section-chevron,
-.section-chevron:not(.collapsed) {
-  transform: rotate(90deg); /* Expanded: pointing down */
+/* When section is collapsed, rotate to point right */
+.section-chevron.collapsed {
+  transform: rotate(0deg); /* Collapsed: pointing right */
 }
 
 .section-title {

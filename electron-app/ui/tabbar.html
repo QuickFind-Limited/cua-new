@@ -43,11 +43,11 @@
             <!-- Collapsible Analysis Progress Section -->
             <div class="collapsible-section no-border" id="analysis-progress-section">
                 <div class="section-header no-background" onclick="toggleSection('analysis-progress')">
-                    <span class="section-chevron collapsed" id="analysis-progress-chevron">▶</span>
+                    <span class="section-chevron" id="analysis-progress-chevron">▶</span>
                     <span class="section-title">Recording Analysis</span>
                     <span class="section-status" id="analysis-progress-status"></span>
                 </div>
-                <div class="section-content collapsed" id="analysis-progress-content">
+                <div class="section-content" id="analysis-progress-content">
                     <div class="progress-section">
                         <div class="progress-item" id="progress-recording">
                             <span class="progress-icon">
@@ -72,9 +72,12 @@
                         <div class="progress-item" id="progress-analyzing">
                             <span class="progress-icon">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 2a10 10 0 0 0 0 20"></path>
+                                    <circle cx="12" cy="8" r="2" fill="currentColor"></circle>
+                                    <circle cx="8" cy="14" r="2" fill="currentColor"></circle>
+                                    <circle cx="16" cy="14" r="2" fill="currentColor"></circle>
+                                    <path d="M12 10v2M8 14l2-2M16 14l-2-2" stroke-linecap="round"></path>
                                 </svg>
                             </span>
                             <span class="progress-label">AI analysis</span>
