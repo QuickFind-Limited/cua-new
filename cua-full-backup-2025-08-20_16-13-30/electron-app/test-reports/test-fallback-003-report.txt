@@ -1,0 +1,94 @@
+
+==============================================
+    INTENT SPEC EXECUTION REPORT
+==============================================
+Execution ID: test-fallback-003
+Timestamp: 2025-08-16T13:55:08.971Z
+Duration: 13.4s
+Overall Success: ✗ FAILED
+==============================================
+
+
+EXECUTION SUMMARY
+================
+Total Steps: 5
+Successful Steps: 4
+Success Rate: 80%
+
+EXECUTION PATHS
+===============
+AI Used: 2 times (40%)
+Snippets Used: 3 times (60%)
+Fallbacks Occurred: 3 times (60%)
+
+
+STEP DETAILS
+============
+1. Open complex form
+   Status: ✓ AI
+   Duration: 1.3s
+   Screenshot: /screenshots/fallback-step1.png
+2. Fill dynamic date picker
+   Status: ✓ SNIPPET (FALLBACK)
+   Duration: 2.8s
+   Screenshot: /screenshots/fallback-step2.png
+3. Handle file upload
+   Status: ✓ SNIPPET (FALLBACK)
+   Duration: 3.2s
+   Screenshot: /screenshots/fallback-step3.png
+4. Submit form
+   Status: ✓ AI
+   Duration: 1.1s
+   Screenshot: /screenshots/fallback-step4.png
+5. Handle CAPTCHA
+   Status: ✗ SNIPPET (FALLBACK)
+   Duration: 5.0s
+   Error: CAPTCHA detection failed - manual intervention required
+   Screenshot: /screenshots/fallback-step5.png
+
+
+USAGE ANALYSIS
+==============
+⚠️  High Fallback Usage Detected (60%)
+   
+   Analysis:
+   - 3 step(s) required fallback to snippet-based execution
+   - This suggests AI reasoning may need improvement for these actions
+   - Consider reviewing the failing steps for pattern optimization
+   
+   Fallback Steps:
+   - Step 1: Fill dynamic date picker
+   - Step 2: Handle file upload
+   - Step 3: Handle CAPTCHA
+
+
+SUCCESS STATE ANALYSIS
+=====================
+⚠️  Success State Mismatch Detected
+   
+   The final execution state does not match the expected success screenshot.
+   This may indicate:
+   - Changes in the target application's UI
+   - Need for Intent Spec updates
+   - Timing or synchronization issues
+   
+   Screenshots Captured: 5
+   - /screenshots/fallback-step1.png
+   - /screenshots/fallback-step2.png
+   - /screenshots/fallback-step3.png
+   - /screenshots/fallback-step4.png
+   - /screenshots/fallback-step5.png
+
+
+RECOMMENDATIONS
+===============
+🔧 High fallback rate detected - consider reviewing step definitions for AI optimization
+❌ Execution failed - review error messages and consider adding retry logic
+📸 Update success screenshot or review success criteria
+💡 Screenshot Analysis Suggestions:
+   - Consider adding manual CAPTCHA handling step
+   - Review date picker implementation for AI compatibility
+   - File upload patterns may need optimization
+
+For more details, review the execution logs and screenshots.
+Consider updating the Intent Spec based on these findings.

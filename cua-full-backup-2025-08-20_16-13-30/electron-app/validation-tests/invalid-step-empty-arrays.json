@@ -1,0 +1,11 @@
+{
+  "name": "Invalid Empty Steps Array",
+  "description": "Intent Spec with empty steps array",
+  "url": "https://example.com",
+  "params": ["searchTerm"],
+  "steps": [],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

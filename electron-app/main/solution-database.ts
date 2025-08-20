@@ -10,7 +10,7 @@
  * 6. Version compatibility management
  */
 
-import { Database, open } from 'sqlite3';
+import * as sqlite3 from 'sqlite3';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createHash } from 'crypto';
@@ -115,7 +115,7 @@ export interface MigrationScript {
  * SQLite Database Manager for AI Solutions
  */
 export class SolutionDatabase {
-  private db: Database | null = null;
+  private db: sqlite3.Database | null = null;
   private dbPath: string;
   private backupDir: string;
   private isInitialized: boolean = false;
@@ -159,9 +159,9 @@ export class SolutionDatabase {
     }
   }
 
-  private async openDatabase(): Promise<Database> {
+  private async openDatabase(): Promise<sqlite3.Database> {
     return new Promise((resolve, reject) => {
-      const db = new Database(this.dbPath, (err) => {
+      const db = new sqlite3.Database(this.dbPath, (err) => {
         if (err) {
           reject(err);
         } else {
@@ -491,12 +491,12 @@ export class SolutionDatabase {
     // Add additional filtering
     if (options.minConfidence !== undefined) {
       sql += ` AND solutions.confidence >= ?`;
-      params.push(options.minConfidence);
+      params.push(options.minConfidence.toString());
     }
 
     if (options.minSuccessRate !== undefined) {
       sql += ` AND solutions.actual_success_rate >= ?`;
-      params.push(options.minSuccessRate);
+      params.push(options.minSuccessRate.toString());
     }
 
     if (!options.includeDeprecated) {
@@ -507,7 +507,7 @@ export class SolutionDatabase {
 
     if (options.limit) {
       sql += ` LIMIT ?`;
-      params.push(options.limit);
+      params.push(options.limit.toString());
     }
 
     const rows = await this.query(sql, params);

@@ -1,0 +1,13 @@
+{
+  "sessionId": "codegen-1755515515638",
+  "startTime": 1755515515638,
+  "endTime": 1755515603086,
+  "duration": 87448,
+  "url": "https://www.google.com/",
+  "title": "Codegen Recording",
+  "specFile": "codegen-1755515515638-recording.spec.ts",
+  "screenshotFile": "codegen-1755515515638-success-state.png",
+  "timestamp": "2025-08-18T11:13:26.026Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

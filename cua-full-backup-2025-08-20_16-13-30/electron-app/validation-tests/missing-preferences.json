@@ -1,0 +1,15 @@
+{
+  "name": "Test Without Preferences",
+  "description": "Intent Spec missing preferences field",
+  "url": "https://example.com",
+  "params": ["searchTerm"],
+  "steps": [
+    {
+      "name": "Click Search",
+      "ai_instruction": "Click the search button",
+      "snippet": "await page.click('#search');",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ]
+}

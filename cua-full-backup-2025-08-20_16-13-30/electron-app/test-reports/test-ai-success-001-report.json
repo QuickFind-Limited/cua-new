@@ -1,0 +1,71 @@
+{
+  "executionId": "test-ai-success-001",
+  "steps": [
+    {
+      "name": "Navigate to login page",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1200,
+      "screenshot": "/screenshots/step1.png"
+    },
+    {
+      "name": "Fill username field",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 800,
+      "screenshot": "/screenshots/step2.png"
+    },
+    {
+      "name": "Fill password field",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 750,
+      "screenshot": "/screenshots/step3.png"
+    },
+    {
+      "name": "Click login button",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1500,
+      "screenshot": "/screenshots/step4.png"
+    },
+    {
+      "name": "Verify dashboard loaded",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 900,
+      "screenshot": "/screenshots/step5.png"
+    }
+  ],
+  "aiUsageCount": 5,
+  "snippetUsageCount": 0,
+  "fallbackCount": 0,
+  "screenshots": [
+    "/screenshots/step1.png",
+    "/screenshots/step2.png",
+    "/screenshots/step3.png",
+    "/screenshots/step4.png",
+    "/screenshots/step5.png"
+  ],
+  "overallSuccess": true,
+  "suggestions": [],
+  "totalDuration": 5150,
+  "successStateMatch": true,
+  "generatedAt": "2025-08-16T13:55:08.965Z",
+  "summary": {
+    "successfulSteps": 5,
+    "successRate": 100,
+    "fallbackRate": 0,
+    "aiUsageRate": 100
+  },
+  "analysis": {
+    "performanceScore": 99,
+    "reliabilityScore": 100,
+    "adaptabilityScore": 100
+  }
+}

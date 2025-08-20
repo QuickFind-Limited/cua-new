@@ -390,7 +390,7 @@ export class HybridErrorRecovery {
     }
 
     // All strategies failed
-    this.logRecoveryAttempt(error, analysis.category, 'all_failed', false);
+    this.logRecoveryAttempt(error, analysis.category, 'skip_step', false);
     
     return {
       success: false,
@@ -483,15 +483,15 @@ export class HybridErrorRecovery {
 
         case 'bypass_validation':
           // Attempt to bypass client-side validation
-          if (selector && value) {
-            await page.evaluate((sel, val) => {
+          if (selector && value !== undefined) {
+            await page.evaluate(([sel, val]: [string, string]) => {
               const element = document.querySelector(sel) as HTMLInputElement;
               if (element) {
                 element.value = val;
                 element.dispatchEvent(new Event('input', { bubbles: true }));
                 element.dispatchEvent(new Event('change', { bubbles: true }));
               }
-            }, selector, value);
+            }, [selector, value]);
           }
           return { success: true, retryCount: context.retryCount };
 

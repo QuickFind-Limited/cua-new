@@ -1,0 +1,13 @@
+{
+  "sessionId": "codegen-1755501403353",
+  "startTime": 1755501403353,
+  "endTime": 1755501433900,
+  "duration": 30547,
+  "url": "https://inventory.zoho.com/app/893870319#/reports/inventorysummary?filter_by=ThisYear&group_by=%5B%7B%22field%22%3A%22none%22%2C%22group%22%3A%22report%22%7D%5D&select_columns=%5B%7B%22field%22%3A%22item_name%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22sku%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22quantity_ordered%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22quantity_purchased%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22quantity_sold%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22quantity_available%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22quantity_demanded%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22quantity_available_for_sale%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22quantity_in_transit%22%2C%22group%22%3A%22report%22%7D%2C%7B%22field%22%3A%22unit%22%2C%22group%22%3A%22item%22%7D%5D&show_actual_stock=true&sort_column=item_name&sort_order=A&stock_on_hand_filter=AvailableStock&to_date=2025-12-31",
+  "title": "Codegen Recording",
+  "specFile": "codegen-1755501403353-recording.spec.ts",
+  "screenshotFile": "codegen-1755501403353-success-state.png",
+  "timestamp": "2025-08-18T07:17:15.146Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

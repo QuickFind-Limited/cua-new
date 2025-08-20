@@ -1,0 +1,18 @@
+{
+  "name": "Invalid Step Missing AI Instruction",
+  "description": "Intent Spec with step missing ai_instruction field",
+  "url": "https://example.com",
+  "params": ["searchTerm"],
+  "steps": [
+    {
+      "name": "Click Search",
+      "snippet": "await page.click('#search');",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

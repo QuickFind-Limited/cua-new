@@ -1,0 +1,83 @@
+
+==============================================
+    INTENT SPEC EXECUTION REPORT
+==============================================
+Execution ID: test-failed-004
+Timestamp: 2025-08-16T13:55:08.973Z
+Duration: 10.6s
+Overall Success: ✗ FAILED
+==============================================
+
+
+EXECUTION SUMMARY
+================
+Total Steps: 3
+Successful Steps: 1
+Success Rate: 33%
+
+EXECUTION PATHS
+===============
+AI Used: 2 times (67%)
+Snippets Used: 1 times (33%)
+Fallbacks Occurred: 1 times (33%)
+
+
+STEP DETAILS
+============
+1. Navigate to admin panel
+   Status: ✓ AI
+   Duration: 1.4s
+   Screenshot: /screenshots/failed-step1.png
+2. Authenticate with 2FA
+   Status: ✗ AI
+   Duration: 8.0s
+   Error: 2FA token expired - authentication timeout
+   Screenshot: /screenshots/failed-step2.png
+3. Access user management
+   Status: ✗ SNIPPET (FALLBACK)
+   Duration: 1.2s
+   Error: Access denied - insufficient permissions
+   Screenshot: /screenshots/failed-step3.png
+
+
+USAGE ANALYSIS
+==============
+⚠️  High Fallback Usage Detected (33%)
+   
+   Analysis:
+   - 1 step(s) required fallback to snippet-based execution
+   - This suggests AI reasoning may need improvement for these actions
+   - Consider reviewing the failing steps for pattern optimization
+   
+   Fallback Steps:
+   - Step 1: Access user management
+
+
+SUCCESS STATE ANALYSIS
+=====================
+⚠️  Success State Mismatch Detected
+   
+   The final execution state does not match the expected success screenshot.
+   This may indicate:
+   - Changes in the target application's UI
+   - Need for Intent Spec updates
+   - Timing or synchronization issues
+   
+   Screenshots Captured: 3
+   - /screenshots/failed-step1.png
+   - /screenshots/failed-step2.png
+   - /screenshots/failed-step3.png
+
+
+RECOMMENDATIONS
+===============
+🔧 High fallback rate detected - consider reviewing step definitions for AI optimization
+❌ Execution failed - review error messages and consider adding retry logic
+📸 Update success screenshot or review success criteria
+💡 Screenshot Analysis Suggestions:
+   - Implement 2FA token refresh mechanism
+   - Add permission validation before attempting admin operations
+   - Consider adding retry logic for authentication steps
+
+For more details, review the execution logs and screenshots.
+Consider updating the Intent Spec based on these findings.

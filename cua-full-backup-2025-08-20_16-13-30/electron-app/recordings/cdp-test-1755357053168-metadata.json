@@ -1,0 +1,13 @@
+{
+  "sessionId": "cdp-test-1755357053168",
+  "startTime": 1755357053168,
+  "endTime": 1755357062905,
+  "duration": 9737,
+  "url": "https://example.com",
+  "title": "Codegen Recording",
+  "specFile": "cdp-test-1755357053168-recording.spec.ts",
+  "screenshotFile": "cdp-test-1755357053168-success-state.png",
+  "timestamp": "2025-08-16T15:11:03.134Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

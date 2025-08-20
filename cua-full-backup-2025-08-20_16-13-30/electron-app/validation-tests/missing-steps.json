@@ -1,0 +1,10 @@
+{
+  "name": "Test Without Steps",
+  "description": "Intent Spec missing steps field",
+  "url": "https://example.com",
+  "params": ["searchTerm"],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

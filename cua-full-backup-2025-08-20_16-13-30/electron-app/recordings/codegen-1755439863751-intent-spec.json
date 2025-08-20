@@ -1,0 +1,42 @@
+{
+  "name": "Zoho Inventory Item Navigation",
+  "description": "Navigate to a specific inventory item in Zoho Inventory",
+  "url": "https://www.zoho.com/us/inventory/logout/",
+  "params": [
+    "ITEM_ID"
+  ],
+  "steps": [
+    {
+      "name": "Navigate to starting page",
+      "ai_instruction": "Navigate to the Zoho Inventory logout page",
+      "snippet": "await page.goto('https://www.zoho.com/us/inventory/logout/');",
+      "prefer": "snippet",
+      "fallback": "none"
+    },
+    {
+      "name": "Wait for page load",
+      "ai_instruction": "Wait for the page to fully load",
+      "snippet": "await page.waitForLoadState('networkidle');",
+      "prefer": "snippet",
+      "fallback": "none"
+    },
+    {
+      "name": "Navigate to inventory item",
+      "ai_instruction": "Navigate to the specific inventory item page with filters",
+      "snippet": "await page.goto('https://inventory.zoho.com/app/893870319#/inventory/items/{{ITEM_ID}}?filter_by=Status.Active&per_page=200&sort_column=created_time&sort_order=D');",
+      "prefer": "snippet",
+      "fallback": "ai"
+    },
+    {
+      "name": "Verify navigation",
+      "ai_instruction": "Verify that the page has navigated to the inventory item",
+      "snippet": "await expect(page).toHaveURL(/inventory\\.zoho\\.com.*items/);",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

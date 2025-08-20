@@ -1,0 +1,13 @@
+{
+  "sessionId": "test-validation-1755352126916",
+  "startTime": 1755352126916,
+  "endTime": 1755352128683,
+  "duration": 1767,
+  "url": "https://example.com",
+  "title": "Codegen Recording",
+  "specFile": "test-validation-1755352126916-recording.spec.ts",
+  "screenshotFile": "test-validation-1755352126916-success-state.png",
+  "timestamp": "2025-08-16T13:48:48.804Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

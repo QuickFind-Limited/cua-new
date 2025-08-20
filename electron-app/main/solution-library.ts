@@ -376,7 +376,7 @@ export class SolutionLibrary extends EventEmitter {
     const stats = await this.database.getStatistics();
 
     // Anonymize solutions if requested
-    const exportSolutions = options.anonymize 
+    const exportSolutions: StoredSolution[] = options.anonymize 
       ? solutions.map(this.anonymizeSolution.bind(this))
       : solutions;
 
@@ -791,7 +791,7 @@ export class SolutionLibrary extends EventEmitter {
         confidence: Math.min(1.0, originalSolution.confidence + 0.05),
         metadata: {
           ...originalSolution.metadata,
-          source: 'evolution' as const,
+          source: 'claude' as const,
           createdAt: new Date(),
           updatedAt: new Date(),
           reasoning: `Evolved from ${feedback.solutionId} due to: ${feedback.improvements}`

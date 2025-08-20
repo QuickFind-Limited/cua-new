@@ -327,15 +327,29 @@ export class ConfigManager {
           ...baseConfig,
           claudeCode: {
             rateLimitRequestsPerMinute: 60,
+            timeoutMs: 120000,
+            maxRetries: 3,
+            complexityThreshold: 6,
+            failureCountThreshold: 2,
+            confidenceThreshold: 0.6,
+            enableCaching: true,
+            cacheMaxSize: 1000,
+            cacheExpirationHours: 24,
             enableSandboxing: false,
+            sandboxTimeoutMs: 30000,
+            allowedOperations: [],
+            auditLogPath: '',
             enableDetailedLogging: true,
-            confidenceThreshold: 0.6 // Lower threshold for development
+            logRetentionDays: 30
           },
           enhancedRecovery: {
+            enableAIRecovery: true,
+            maxBuiltInAttempts: 3,
+            aiConfidenceThreshold: 0.6,
+            fallbackToBuiltIn: true,
             enableDetailedLogging: true,
             logSuccessfulStrategies: true,
-            trackPerformanceMetrics: true,
-            aiConfidenceThreshold: 0.6
+            trackPerformanceMetrics: true
           },
           system: {
             ...baseConfig.system,
@@ -348,15 +362,29 @@ export class ConfigManager {
           ...baseConfig,
           claudeCode: {
             rateLimitRequestsPerMinute: 30,
+            timeoutMs: 120000,
+            maxRetries: 3,
+            complexityThreshold: 7,
+            failureCountThreshold: 2,
+            confidenceThreshold: 0.8,
+            enableCaching: true,
+            cacheMaxSize: 1000,
+            cacheExpirationHours: 24,
             enableSandboxing: true,
+            sandboxTimeoutMs: 30000,
+            allowedOperations: [],
+            auditLogPath: '',
             enableDetailedLogging: false,
-            confidenceThreshold: 0.8 // Higher threshold for production
+            logRetentionDays: 30
           },
           enhancedRecovery: {
+            enableAIRecovery: true,
+            maxBuiltInAttempts: 3,
+            aiConfidenceThreshold: 0.8,
+            fallbackToBuiltIn: true,
             enableDetailedLogging: false,
             logSuccessfulStrategies: true,
-            trackPerformanceMetrics: true,
-            aiConfidenceThreshold: 0.8
+            trackPerformanceMetrics: true
           },
           system: {
             ...baseConfig.system,
@@ -369,16 +397,29 @@ export class ConfigManager {
           ...baseConfig,
           claudeCode: {
             rateLimitRequestsPerMinute: 120,
-            enableSandboxing: false,
-            enableDetailedLogging: true,
+            timeoutMs: 120000,
+            maxRetries: 3,
+            complexityThreshold: 5,
+            failureCountThreshold: 2,
             confidenceThreshold: 0.5,
-            enableCaching: false // Disable caching in tests
+            enableCaching: false,
+            cacheMaxSize: 1000,
+            cacheExpirationHours: 24,
+            enableSandboxing: false,
+            sandboxTimeoutMs: 30000,
+            allowedOperations: [],
+            auditLogPath: '',
+            enableDetailedLogging: true,
+            logRetentionDays: 30
           },
           enhancedRecovery: {
+            enableAIRecovery: false,
+            maxBuiltInAttempts: 3,
+            aiConfidenceThreshold: 0.7,
+            fallbackToBuiltIn: true,
             enableDetailedLogging: true,
             logSuccessfulStrategies: false,
-            trackPerformanceMetrics: false,
-            enableAIRecovery: false // Disable AI in tests by default
+            trackPerformanceMetrics: false
           },
           system: {
             ...baseConfig.system,

@@ -1,0 +1,5 @@
+ExecutionID,StepIndex,StepName,PathUsed,FallbackOccurred,Success,Duration,Error,Timestamp
+test-performance-005,0,"Load large dataset page",ai,false,true,12000,,2025-08-16T13:55:08.975Z
+test-performance-005,1,"Apply complex filters",snippet,false,true,8500,,2025-08-16T13:55:08.975Z
+test-performance-005,2,"Generate report",ai,false,true,25000,,2025-08-16T13:55:08.975Z
+test-performance-005,3,"Download generated file",snippet,false,true,15000,,2025-08-16T13:55:08.975Z

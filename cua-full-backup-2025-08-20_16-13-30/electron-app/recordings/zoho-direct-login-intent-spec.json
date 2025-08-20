@@ -1,0 +1,59 @@
+{
+  "name": "Zoho Inventory Direct Login",
+  "description": "Direct login to Zoho Inventory without Google search",
+  "url": "https://accounts.zoho.com/signin?servicename=ZohoInventory&signupurl=https://www.zoho.com/us/inventory/signup/index.html",
+  "params": [
+    "EMAIL",
+    "PASSWORD"
+  ],
+  "steps": [
+    {
+      "name": "Enter email",
+      "ai_instruction": "Enter email address shane@quickfindai.com in the email field",
+      "snippet": "await page.fill('input[type=\"email\"], input[name=\"LOGIN_ID\"], input#login_id', '{{EMAIL}}');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "value": "{{EMAIL}}"
+    },
+    {
+      "name": "Click Next",
+      "ai_instruction": "Click the Next button after entering email",
+      "snippet": "await page.click('button#nextbtn, button:has-text(\"Next\"), span#nextbtn');",
+      "prefer": "ai",
+      "fallback": "snippet"
+    },
+    {
+      "name": "Wait for password field",
+      "ai_instruction": "Wait for password field to appear",
+      "snippet": "await page.waitForSelector('input[type=\"password\"]', { timeout: 5000 });",
+      "prefer": "snippet",
+      "fallback": "ai"
+    },
+    {
+      "name": "Enter password",
+      "ai_instruction": "Enter password in the password field",
+      "snippet": "await page.fill('input[type=\"password\"], input[name=\"PASSWORD\"], input#password', '{{PASSWORD}}');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "value": "{{PASSWORD}}"
+    },
+    {
+      "name": "Complete Sign In",
+      "ai_instruction": "Click the Sign In button to complete login",
+      "snippet": "await page.click('button#nextbtn, button:has-text(\"Sign In\"), span#nextbtn');",
+      "prefer": "ai",
+      "fallback": "snippet"
+    },
+    {
+      "name": "Wait for dashboard",
+      "ai_instruction": "Wait for the Zoho Inventory dashboard to load",
+      "snippet": "await page.waitForURL('**/inventory.zoho.com/**', { timeout: 10000 });",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "ai"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "Valid Dual Path Example",
+  "description": "A valid Intent Spec with dual-path execution",
+  "url": "https://example.com",
+  "params": ["searchTerm", "userName"],
+  "steps": [
+    {
+      "name": "Navigate to Search",
+      "ai_instruction": "Click on the search button to open the search interface",
+      "snippet": "await page.click('[data-testid=\"search-button\"]');",
+      "prefer": "snippet",
+      "fallback": "ai",
+      "selector": "[data-testid=\"search-button\"]"
+    },
+    {
+      "name": "Enter Search Term",
+      "ai_instruction": "Type the search term {{searchTerm}} into the search input field",
+      "snippet": "await page.fill('#search-input', '{{searchTerm}}');",
+      "prefer": "ai",
+      "fallback": "snippet",
+      "selector": "#search-input",
+      "value": "{{searchTerm}}"
+    },
+    {
+      "name": "Submit Search",
+      "ai_instruction": "Submit the search form by pressing Enter or clicking the search submit button",
+      "snippet": "await page.press('#search-input', 'Enter');",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  },
+  "success_screenshot": "search-results.png"
+}

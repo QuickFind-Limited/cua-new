@@ -1,0 +1,10 @@
+{
+  "sessionId": "codegen-1755535042142",
+  "startUrl": "https://www.google.com/",
+  "startTime": 1755535042142,
+  "endTime": 1755535104063,
+  "duration": 61921,
+  "actionCount": 9,
+  "tracePath": "C:\\client\\cua-new\\electron-app\\recordings\\codegen-1755535042142-trace.zip",
+  "specPath": "C:\\client\\cua-new\\electron-app\\recordings\\codegen-1755535042142-test.spec.ts"
+}

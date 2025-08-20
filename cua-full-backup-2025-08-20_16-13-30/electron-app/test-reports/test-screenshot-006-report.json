@@ -1,0 +1,57 @@
+{
+  "executionId": "test-screenshot-006",
+  "steps": [
+    {
+      "name": "Navigate to dashboard",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1100,
+      "screenshot": "/screenshots/comparison-step1.png"
+    },
+    {
+      "name": "Check widget layout",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 800,
+      "screenshot": "/screenshots/comparison-step2.png"
+    },
+    {
+      "name": "Verify data refresh",
+      "pathUsed": "ai",
+      "fallbackOccurred": false,
+      "success": true,
+      "duration": 1500,
+      "screenshot": "/screenshots/comparison-step3.png"
+    }
+  ],
+  "aiUsageCount": 3,
+  "snippetUsageCount": 0,
+  "fallbackCount": 0,
+  "screenshots": [
+    "/screenshots/comparison-step1.png",
+    "/screenshots/comparison-step2.png",
+    "/screenshots/comparison-step3.png"
+  ],
+  "overallSuccess": true,
+  "suggestions": [
+    "Widget layout appears to have minor positioning differences",
+    "Data refresh timing may need adjustment for consistency",
+    "Consider updating success screenshot baseline"
+  ],
+  "totalDuration": 3400,
+  "successStateMatch": false,
+  "generatedAt": "2025-08-16T13:55:08.977Z",
+  "summary": {
+    "successfulSteps": 3,
+    "successRate": 100,
+    "fallbackRate": 0,
+    "aiUsageRate": 100
+  },
+  "analysis": {
+    "performanceScore": 99,
+    "reliabilityScore": 100,
+    "adaptabilityScore": 100
+  }
+}

@@ -1,0 +1,7 @@
+ExecutionID,StepIndex,StepName,PathUsed,FallbackOccurred,Success,Duration,Error,Timestamp
+test-mixed-002,0,"Navigate to e-commerce site",ai,false,true,1100,,2025-08-16T13:55:08.970Z
+test-mixed-002,1,"Search for product",snippet,false,true,650,,2025-08-16T13:55:08.970Z
+test-mixed-002,2,"Select product from results",ai,false,true,1800,,2025-08-16T13:55:08.970Z
+test-mixed-002,3,"Add to cart",snippet,false,true,500,,2025-08-16T13:55:08.970Z
+test-mixed-002,4,"Proceed to checkout",ai,false,true,1200,,2025-08-16T13:55:08.970Z
+test-mixed-002,5,"Fill shipping details",snippet,false,true,2100,,2025-08-16T13:55:08.970Z

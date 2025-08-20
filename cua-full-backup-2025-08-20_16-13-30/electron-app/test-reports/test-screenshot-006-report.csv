@@ -1,0 +1,4 @@
+ExecutionID,StepIndex,StepName,PathUsed,FallbackOccurred,Success,Duration,Error,Timestamp
+test-screenshot-006,0,"Navigate to dashboard",ai,false,true,1100,,2025-08-16T13:55:08.978Z
+test-screenshot-006,1,"Check widget layout",ai,false,true,800,,2025-08-16T13:55:08.978Z
+test-screenshot-006,2,"Verify data refresh",ai,false,true,1500,,2025-08-16T13:55:08.978Z

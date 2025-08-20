@@ -129,7 +129,14 @@ export class SettingsManager {
       const data = await fs.readFile(this.configPath, 'utf-8');
       const parsed = JSON.parse(data);
       const validated = SettingsSchema.parse(parsed);
-      this.settings = validated;
+      this.settings = {
+        enabled: validated.enabled,
+        complexityThreshold: validated.complexityThreshold,
+        retryLimit: validated.retryLimit,
+        timeout: validated.timeout,
+        enableAuditLog: validated.enableAuditLog,
+        autoExportSettings: validated.autoExportSettings
+      };
       
       await this.addAuditLog('settings_loaded', 'Settings loaded from disk', true);
     } catch (error) {
@@ -169,7 +176,13 @@ export class SettingsManager {
       const data = await fs.readFile(this.statisticsPath, 'utf-8');
       const parsed = JSON.parse(data);
       const validated = StatisticsSchema.parse(parsed);
-      this.statistics = validated;
+      this.statistics = {
+        totalAttempts: validated.totalAttempts,
+        successfulRecoveries: validated.successfulRecoveries,
+        failedRecoveries: validated.failedRecoveries,
+        averageResponseTime: validated.averageResponseTime,
+        lastRecoveryTime: validated.lastRecoveryTime
+      };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         console.warn('Failed to load statistics, using defaults:', error);
@@ -194,7 +207,13 @@ export class SettingsManager {
     try {
       const data = await fs.readFile(this.auditLogPath, 'utf-8');
       const parsed = JSON.parse(data);
-      this.auditLogs = z.array(AuditLogEntrySchema).parse(parsed);
+      const validatedLogs = z.array(AuditLogEntrySchema).parse(parsed);
+      this.auditLogs = validatedLogs.map(log => ({
+        timestamp: log.timestamp,
+        action: log.action,
+        details: log.details,
+        success: log.success
+      }));
       
       // Keep only the last 1000 entries
       if (this.auditLogs.length > 1000) {
@@ -317,13 +336,27 @@ export class SettingsManager {
     }
     
     const validated = SettingsSchema.parse(parsed.settings);
-    this.settings = validated;
+    this.settings = {
+      enabled: validated.enabled,
+      complexityThreshold: validated.complexityThreshold,
+      retryLimit: validated.retryLimit,
+      timeout: validated.timeout,
+      enableAuditLog: validated.enableAuditLog,
+      autoExportSettings: validated.autoExportSettings
+    };
     await this.saveSettings();
     
     // Optionally import statistics and cache
     if (parsed.statistics) {
       try {
-        this.statistics = StatisticsSchema.parse(parsed.statistics);
+        const validatedStats = StatisticsSchema.parse(parsed.statistics);
+        this.statistics = {
+          totalAttempts: validatedStats.totalAttempts,
+          successfulRecoveries: validatedStats.successfulRecoveries,
+          failedRecoveries: validatedStats.failedRecoveries,
+          averageResponseTime: validatedStats.averageResponseTime,
+          lastRecoveryTime: validatedStats.lastRecoveryTime
+        };
         await this.saveStatistics();
       } catch (error) {
         console.warn('Failed to import statistics:', error);
@@ -352,7 +385,14 @@ export class SettingsManager {
     const merged = { ...this.settings, ...newSettings };
     const validated = SettingsSchema.parse(merged);
     
-    this.settings = validated;
+    this.settings = {
+      enabled: validated.enabled,
+      complexityThreshold: validated.complexityThreshold,
+      retryLimit: validated.retryLimit,
+      timeout: validated.timeout,
+      enableAuditLog: validated.enableAuditLog,
+      autoExportSettings: validated.autoExportSettings
+    };
     await this.saveSettings();
     
     await this.addAuditLog('settings_updated', 'Settings updated via API', true);
@@ -440,7 +480,15 @@ export class SettingsManager {
 
   public sanitizeSettings(settings: any): ErrorRecoverySettings {
     try {
-      return SettingsSchema.parse(settings);
+      const validated = SettingsSchema.parse(settings);
+      return {
+        enabled: validated.enabled,
+        complexityThreshold: validated.complexityThreshold,
+        retryLimit: validated.retryLimit,
+        timeout: validated.timeout,
+        enableAuditLog: validated.enableAuditLog,
+        autoExportSettings: validated.autoExportSettings
+      };
     } catch (error) {
       console.warn('Settings sanitization failed, using defaults:', error);
       return { ...this.defaultSettings };

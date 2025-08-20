@@ -573,7 +573,7 @@ export class ClaudeCodeIntegration {
       
       // Cache successful solution
       if (this.config.enableCaching && solution.confidence >= this.config.confidenceThreshold) {
-        await this.cacheSolution(cacheKey, solution);
+        await this.cacheSuccessfulSolution(cacheKey, solution);
       }
 
       this.logAuditEvent({

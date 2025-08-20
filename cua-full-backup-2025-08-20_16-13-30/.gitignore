@@ -1,0 +1,94 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Electron
+electron-app/dist/
+*.exe
+*.dmg
+*.app
+*.AppImage
+*.snap
+*.deb
+*.rpm
+
+# Screenshots and test files
+*.png
+screenshot*.png
+issue*.png
+
+# Cache
+.cache/
+*.cache
+
+# Backup files
+backup-*.tar.gz
+backup-*.zip
+*.backup
+cua-new-backup-*.tar.gz
+cua-new-backup-*.zip
+*.bak
+*.old
+*.orig
+*.save
+*~
+.#*
+*#
+*.swp
+*.swo
+*.tmp
+*.temp
+
+# Archive files
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tgz
+*.zip
+*.7z
+*.rar
+
+# cua-new directory (if it exists as subdirectory)
+cua-new/
+
+# Chrome/Chromium profile data
+chrome-recording-profile/
+chrome-profile/
+**/chrome-recording-profile/
+**/chrome-profile/
+playwright-profile/
+**/playwright-profile/
+**/browser-profile/
+**/chrome-automation-profile/
+nul
+electron-app/recordings/*.spec.ts
+electron-app/recordings/*.png
+electron-app/backups/

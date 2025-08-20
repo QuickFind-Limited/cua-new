@@ -1,0 +1,19 @@
+{
+  "name": "Mismatched Parameters - Duplicates",
+  "description": "Intent Spec with duplicate parameters in params array",
+  "url": "https://example.com",
+  "params": ["searchTerm", "userName", "searchTerm", "userName"],
+  "steps": [
+    {
+      "name": "Enter Search Term",
+      "ai_instruction": "Type the search term {{searchTerm}} and username {{userName}}",
+      "snippet": "await page.fill('#search', '{{searchTerm}}'); await page.fill('#user', '{{userName}}');",
+      "prefer": "snippet",
+      "fallback": "ai"
+    }
+  ],
+  "preferences": {
+    "dynamic_elements": "ai",
+    "simple_steps": "snippet"
+  }
+}

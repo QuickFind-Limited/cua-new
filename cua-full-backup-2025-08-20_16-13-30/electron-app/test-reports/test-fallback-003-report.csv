@@ -1,0 +1,6 @@
+ExecutionID,StepIndex,StepName,PathUsed,FallbackOccurred,Success,Duration,Error,Timestamp
+test-fallback-003,0,"Open complex form",ai,false,true,1300,,2025-08-16T13:55:08.972Z
+test-fallback-003,1,"Fill dynamic date picker",snippet,true,true,2800,,2025-08-16T13:55:08.972Z
+test-fallback-003,2,"Handle file upload",snippet,true,true,3200,,2025-08-16T13:55:08.972Z
+test-fallback-003,3,"Submit form",ai,false,true,1100,,2025-08-16T13:55:08.972Z
+test-fallback-003,4,"Handle CAPTCHA",snippet,true,false,5000,"CAPTCHA detection failed - manual intervention required",2025-08-16T13:55:08.972Z

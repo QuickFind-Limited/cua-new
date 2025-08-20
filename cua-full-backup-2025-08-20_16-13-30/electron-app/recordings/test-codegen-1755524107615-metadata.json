@@ -1,0 +1,13 @@
+{
+  "sessionId": "test-codegen-1755524107615",
+  "startTime": 1755524107615,
+  "endTime": 1755524112104,
+  "duration": 4489,
+  "url": "https://store.google.com/magazine/google_pixel_10?utm_source=search&utm_medium=google_oo&utm_campaign=GS108487&utm_term=ms&utm_content=hpp&hl=en-US",
+  "title": "Codegen Recording",
+  "specFile": "test-codegen-1755524107615-recording.spec.ts",
+  "screenshotFile": "test-codegen-1755524107615-success-state.png",
+  "timestamp": "2025-08-18T13:35:12.599Z",
+  "version": "1.0",
+  "type": "playwright-codegen-recording"
+}

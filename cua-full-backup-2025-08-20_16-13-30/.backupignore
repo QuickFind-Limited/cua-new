@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-electron/
+*.log
+.git/
+recordings/*.png
+recordings/*.mp4
+recordings/execution-*.png
+recordings/zoho-*.png
+test-reports/
+coverage/
+*.tmp
+.cache/

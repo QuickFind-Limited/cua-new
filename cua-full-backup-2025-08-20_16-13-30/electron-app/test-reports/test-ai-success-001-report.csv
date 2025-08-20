@@ -1,0 +1,6 @@
+ExecutionID,StepIndex,StepName,PathUsed,FallbackOccurred,Success,Duration,Error,Timestamp
+test-ai-success-001,0,"Navigate to login page",ai,false,true,1200,,2025-08-16T13:55:08.966Z
+test-ai-success-001,1,"Fill username field",ai,false,true,800,,2025-08-16T13:55:08.966Z
+test-ai-success-001,2,"Fill password field",ai,false,true,750,,2025-08-16T13:55:08.966Z
+test-ai-success-001,3,"Click login button",ai,false,true,1500,,2025-08-16T13:55:08.966Z
+test-ai-success-001,4,"Verify dashboard loaded",ai,false,true,900,,2025-08-16T13:55:08.966Z
