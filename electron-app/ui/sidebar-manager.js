@@ -426,7 +426,7 @@ class ModernSidebar {
           }
           if (flowVarsChevron) {
             flowVarsChevron.classList.remove('collapsed');
-            flowVarsChevron.textContent = '▼';
+            // Keep the same character, CSS handles rotation
           }
         }
       }, 1000); // Wait 1 second after completion before collapsing

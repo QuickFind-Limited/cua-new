@@ -602,10 +602,14 @@ html, body {
   font-size: 12px;
   transition: transform var(--duration-quick) ease;
   color: var(--text-secondary);
+  transform: rotate(0deg); /* Default: pointing right when collapsed */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
-.section-chevron.collapsed {
-  transform: rotate(90deg);
+/* When section is expanded (not collapsed), rotate to point down */
+.section-header:not(.collapsed) .section-chevron,
+.section-chevron:not(.collapsed) {
+  transform: rotate(90deg); /* Expanded: pointing down */
 }
 
 .section-title {
@@ -625,11 +629,13 @@ html, body {
 .section-content {
   max-height: 500px;
   overflow: hidden;
-  transition: max-height var(--duration-moderate) ease;
+  transition: max-height var(--duration-moderate) ease, opacity var(--duration-quick) ease;
+  opacity: 1;
 }
 
 .section-content.collapsed {
   max-height: 0;
+  opacity: 0; /* Hide content during collapse to prevent text alignment issues */
 }
 
 /* Analysis Progress Content - reduce top spacing */
@@ -644,13 +650,15 @@ html, body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  transition: max-height var(--duration-moderate) ease;
+  transition: max-height var(--duration-moderate) ease, opacity var(--duration-quick) ease;
+  opacity: 1;
 }
 
 #flow-variables-content.collapsed {
   max-height: 0;
   padding: 0;
   overflow: hidden;
+  opacity: 0; /* Hide content during collapse to prevent text alignment issues */
 }
 
 /* Ensure flow-actions stays visible */
