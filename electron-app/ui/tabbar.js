@@ -380,8 +380,21 @@ function startRecorderMonitoring() {
             window.electronAPI.onRecordingStarted((data) => {
                 console.log('Recording started:', data);
                 lastRecordingData = data;
-                // Show Begin Analysis button immediately
-                showBeginAnalysisButton();
+                // Show Begin Analysis button immediately (disabled initially)
+                showBeginAnalysisButton(data.buttonEnabled || false);
+            });
+        }
+        
+        // Listen for when browser closes (enable the button)
+        if (window.electronAPI.onBrowserClosed) {
+            window.electronAPI.onBrowserClosed((data) => {
+                console.log('Browser closed, enabling button');
+                // Enable the existing button
+                const beginAnalysisBtn = document.getElementById('begin-analysis-btn');
+                if (beginAnalysisBtn) {
+                    beginAnalysisBtn.disabled = false;
+                    beginAnalysisBtn.title = 'Analyze Recording';
+                }
             });
         }
         
@@ -435,13 +448,13 @@ function startRecorderMonitoring() {
 }
 
 // Show Begin Analysis button immediately when recording starts
-function showBeginAnalysisButton() {
-    console.log('Showing Begin Analysis button immediately');
+function showBeginAnalysisButton(enabled = false) {
+    console.log('Showing Begin Analysis button, enabled:', enabled);
     
     const recordingControls = document.querySelector('.recording-controls');
     if (recordingControls) {
         recordingControls.innerHTML = `
-            <button class="begin-analysis-btn" id="begin-analysis-btn" title="Analyze Recording">
+            <button class="begin-analysis-btn" id="begin-analysis-btn" title="${enabled ? 'Analyze Recording' : 'Close browser to enable'}" ${enabled ? '' : 'disabled'}>
                 <span class="analysis-text">Begin Analysis</span>
             </button>
         `;

@@ -271,11 +271,12 @@ export class PlaywrightLauncherRecorder {
           const sessionId = path.basename(filePath, '.spec.ts');
           await this.capturePlaywrightScreenshot(sessionId);
           
-          // Notify UI to show Begin Analysis button immediately
+          // Notify UI to show Begin Analysis button immediately (but disabled)
           this.electronWindow.webContents.send('recording-started', {
             path: filePath,
             sessionId,
-            screenshotPath: this.screenshotPath
+            screenshotPath: this.screenshotPath,
+            buttonEnabled: false // Button should be disabled initially
           });
         }
         
@@ -511,6 +512,13 @@ export class PlaywrightLauncherRecorder {
    * Handle recorder closed
    */
   private async handleRecorderClosed(): Promise<void> {
+    // Send event to enable the Begin Analysis button now that browser is closed
+    if (this.recordingStarted) {
+      this.electronWindow.webContents.send('browser-closed', {
+        buttonEnabled: true // Enable the button now
+      });
+    }
+    
     if (!this.currentOutputPath) {
       this.cleanup();
       // Notify UI that recorder exited without recording
